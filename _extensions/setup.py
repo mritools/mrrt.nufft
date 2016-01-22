@@ -28,7 +28,7 @@ def configuration(parent_package='', top_path=None):
 
     config.add_extension(
         "_dtft",
-        sources=['_dtft.pyx'],
+        sources=['_dtft.c'],
         depends=['c/_complexstuff.h'],
         include_dirs=[np.get_include(), ],
         extra_compile_args=['-fopenmp', '-O3', ],
