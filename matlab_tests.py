@@ -38,11 +38,8 @@ def test_nufft_table_make1():
 
 def load_matlab_newfft(filename):
     import scipy.io
-    #data = scipy.io.loadmat('/media/Data1/matlab_data/Gtest_data.mat')
-    #data = scipy.io.loadmat('/media/Data1/matlab_data/Gtest_minmax_sparse.mat')
     data = scipy.io.loadmat(
         '/media/Data1/matlab_data/Gtest_beatty_sparse_real.mat')
-    #data = scipy.io.loadmat('/media/Data1/matlab_data/Gtest_beatty_table0')
 
     dd = data['data']['dd'][0, 0][0, 0]
 
@@ -110,13 +107,13 @@ def load_matlab_newfft(filename):
 
     # now call python version using inputs from matlab
     st = NufftBase(om=om,
-                     Nd=Nd,
-                     Jd=Jd,
-                     Kd=Kd,
-                     n_shift=n_shift,
-                     kernel_type=ktype,
-                     phasing=phasing,
-                     mode=mode)
+                   Nd=Nd,
+                   Jd=Jd,
+                   Kd=Kd,
+                   n_shift=n_shift,
+                   kernel_type=ktype,
+                   phasing=phasing,
+                   mode=mode)
     # st.init_sparsemat()
     spmat = np.asarray(st.p.todense())
 
@@ -153,19 +150,11 @@ def load_matlab_newfft(filename):
     self.table_order = 0
     self.Ld = 1024
 
-    # idx=np.arange(spmat.shape[1]).reshape(st.Kd).ravel(order='F')
-    # idx=np.arange(spmat.shape[1]).reshape(st.Kd,order='F').ravel(order='C')
-    #ridx = []
-    # for r in range(10):
-    #    ridx.append(np.where(idx==r)[0][0])
-
 
 def load_matlab_old_nufft(filename):
     import scipy.io
-    #data = scipy.io.loadmat('/media/Data1/matlab_data/Gtest_data.mat')
     data = scipy.io.loadmat(
         '/media/Data1/matlab_data/OLD_Gtest_minmax_table0.mat')
-    #data = scipy.io.loadmat('/media/Data1/matlab_data/OLD_Gtest_minmax_sparse.mat')
 
     om = data['data']['om'][0, 0]
     om.flags  # F_CONTIGUOUS = True, WRITEABLE = True
@@ -191,34 +180,15 @@ def load_matlab_old_nufft(filename):
             kb_m.append(float(km[0, d]))
         alpha = None
         beta = None
-    ktype = data['data']['ktype'][0, 0][0]
-    try:
-        phase_shift = np.squeeze(data['data']['phase_shift'][0, 0])
-    except:
-        phase_shift = None
-#    mode = data['data']['mode'][0,0][0]
-#    phasing = data['data']['phasing'][0,0][0]
-#    if data['data']['phase_before'][0,0].size>0:
-#        phase_before = data['data']['phase_before'][0,0][0,0]
-#        phase_after = data['data']['phase_after'][0,0][0,0]
 
-    n_shift = data['data']['n_shift'][0, 0]
-    Nd = data['data']['Nd'][0, 0][0]
-    Jd = data['data']['Jd'][0, 0][0]
-    Kd = data['data']['Kd'][0, 0][0]
     try:
-        Ld = data['data']['Ld'][0, 0][0]
         h_data = data['data']['h'][0, 0]
         h = []
         for d in range(dd):
             h.append(np.squeeze(h_data[0, d]))
     except:
-        Ld = None
         h = None
 
-    if mode in ['sparse', ]:
-        p = data['data']['p'][0, 0]
-    M = om.shape[0]
     sn = data['data']['sn'][0, 0]
 
     plt.figure()
