@@ -6,12 +6,16 @@ Created on Wed Oct  1 18:21:05 2014
 """
 from __future__ import division, print_function, absolute_import
 
+import os
+from os.path import join as pjoin
 import numpy as np
-import warnings
 from matplotlib import pyplot as plt
 
+import PyIRT.nufft
 from PyIRT.nufft.nufft import NufftKernel, NufftBase
 
+data_dir = pjoin(os.path.dirname(PyIRT.nufft.__file__),
+                 'tests', 'data', 'mat_files')
 
 def test_nufft_table_make1():
     from PyIRT.nufft.nufft import _nufft_table_make1
@@ -38,8 +42,7 @@ def test_nufft_table_make1():
 
 def load_matlab_newfft(filename):
     import scipy.io
-    data = scipy.io.loadmat(
-        '/media/Data1/matlab_data/Gtest_beatty_sparse_real.mat')
+    data = scipy.io.loadmat(pjoin(data_dir, 'Gtest_beatty_sparse_real.mat'))
 
     dd = data['data']['dd'][0, 0][0, 0]
 
@@ -126,7 +129,7 @@ def load_matlab_newfft(filename):
     plt.plot(np.angle(st.phase_after))
 
     from numpy.testing import assert_equal
-    from grl_utils.max_percent_diff import max_percent_diff
+    from grl_utils import max_percent_diff
 
     print("sn max diff: %0.4g" % max_percent_diff(st.sn, sn))
     print("om max diff: %0.4g" % max_percent_diff(st.om, om))
@@ -136,14 +139,10 @@ def load_matlab_newfft(filename):
     # assert_equal(st.phase_before.shape,st.Kd)
     print(
         "phase_before max diff: %0.4g" %
-        max_percent_diff(
-            st.phase_before,
-            phase_before))
+        max_percent_diff(st.phase_before, phase_before))
     print(
         "phase_after max diff: %0.4g" %
-        max_percent_diff(
-            st.phase_after,
-            phase_after))
+        max_percent_diff(st.phase_after, phase_after))
     print("p max diff: %0.4g" % max_percent_diff(spmat, p))
 
     self = st
@@ -153,8 +152,7 @@ def load_matlab_newfft(filename):
 
 def load_matlab_old_nufft(filename):
     import scipy.io
-    data = scipy.io.loadmat(
-        '/media/Data1/matlab_data/OLD_Gtest_minmax_table0.mat')
+    data = scipy.io.loadmat(pjoin(data_dir, 'OLD_Gtest_minmax_table0.mat'))
 
     om = data['data']['om'][0, 0]
     om.flags  # F_CONTIGUOUS = True, WRITEABLE = True

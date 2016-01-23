@@ -209,7 +209,7 @@ def _kaiser_bessel_params(alpha='best', J=6, K_N=2):
             alpha = 2.34 * J
         return alpha, kb_m
     elif alpha == 'beatty':
-        #Eq. 5 of Beatty2005:  IEEE TMI 24(6):799:808, kb_m = 0
-        alpha = np.pi * np.sqrt(J**2/K_N**2 * (K_N - 0.5)**2 - 0.8)  
+        # Eq. 5 of Beatty2005:  IEEE TMI 24(6):799:808, kb_m = 0
+        alpha = np.pi * np.sqrt(J**2/K_N**2 * (K_N - 0.5)**2 - 0.8)
     else:
         raise ValueError('Error in %s:  unknown alpha mode' % __name__)

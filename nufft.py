@@ -58,14 +58,12 @@ from grl_utils import (outer_sum, complexify)
 
 from PyIRT.nufft.kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
 
-
 from PyIRT.nufft.interp_table import (interp1_table,
                                       interp2_table,
-                                      interp3_table)
-
-from PyIRT.nufft.interp_table_adj import (interp1_table_adj,
-                                          interp2_table_adj,
-                                          interp3_table_adj)
+                                      interp3_table,
+                                      interp1_table_adj,
+                                      interp2_table_adj,
+                                      interp3_table_adj)
 
 from grl_utils import is_string_like
 
