@@ -976,7 +976,7 @@ class NufftBase(object):
             if self.phasing == 'complex':
                 gam = 2 * np.pi / K
                 phase_scale = 1j * gam * (N - 1) / 2.
-                phase = np.exp(phase_scale * arg)   # [J?,M] linear phase
+                phase = np.exp(phase_scale * arg)   # [J,M] linear phase
             elif self.phasing in ['real', None]:
                 phase = 1.
             else:
@@ -988,7 +988,6 @@ class NufftBase(object):
         tend1 = time()
         if self.verbose:
             print("Nd={}".format(Nd))
-
 
         """
         build sparse matrix that is [M,*Kd]
@@ -1015,9 +1014,10 @@ class NufftBase(object):
             uu = uu.conj()
 
         if self.phasing == 'complex':
-            phase = np.exp(1j * np.dot(om, self.n_shift.ravel()))			# [1,M]
-            phase = phase.reshape((1, -1), order='F')
-            uu *= phase  # use broadcasting along first dimension
+            if np.any(self.n_shift != 0):
+                phase = np.exp(1j * np.dot(om, self.n_shift.ravel()))			# [1,M]
+                phase = phase.reshape((1, -1), order='F')
+                uu *= phase  # use broadcasting along first dimension
             sparse_dtype = self._cplx_dtype
         elif self.phasing == 'real' or self.phasing is None:
             sparse_dtype = self._real_dtype
@@ -1057,7 +1057,11 @@ class NufftBase(object):
         # how = 'ratio'  #currently a bug in ratio case for non-integer K/N
         #     else:
         how = 'fast'
-        self.phase_shift = None  # compute on-the-fly
+        if self.phasing == 'complex':
+            self.phase_shift = np.exp(
+                1j * np.dot(self.om, self.n_shift.ravel()))  # [M 1]
+        else:
+            self.phase_shift = None  # compute on-the-fly
         if self.Ld is None:
             if self.table_order == 0:
                 self.Ld = 2 ** 11
