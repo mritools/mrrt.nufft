@@ -5,6 +5,8 @@ import numpy as np
 from scipy.special import iv, jv
 from grl_utils import reale, is_string_like
 
+__all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
+
 
 def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     '''  generalized Kaiser-Bessel function for x in support [-J/2,J/2]
@@ -59,9 +61,6 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     '''
 
     if alpha is None:
-        alpha = 2.34 * J
-
-    if not alpha:
         alpha = 2.34 * J
 
     if isinstance(alpha, str):

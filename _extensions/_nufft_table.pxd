@@ -27,7 +27,6 @@ cdef extern from "c/nufft_table.h":
         const double *i_ck,
         const int K1,
         const double *r_h1, # [J1*L1+1,1] in (real)
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const double *p_tm, # [M,1] in
@@ -40,7 +39,6 @@ cdef extern from "c/nufft_table.h":
         const double *i_ck,
         const int K1,
         const double *r_h1, # [J1*L1+1,1] in (real)
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const double *p_tm, # [M,1] in
@@ -68,7 +66,6 @@ cdef extern from "c/nufft_table.h":
         double *i_ck,
         const int K1,
         const double *r_h1, # [J1*L1+1,1] in
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const double *p_tm, # [M,2] in
@@ -82,7 +79,6 @@ cdef extern from "c/nufft_table.h":
         double *i_ck,
         const int K1,
         const double *r_h1, # [J1*L1+1,1] in
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const double *p_tm, # [M,2] in
@@ -117,8 +113,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -136,8 +130,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -192,8 +184,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -210,8 +200,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -295,9 +283,6 @@ cdef extern from "c/nufft_table.h":
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
         const double *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -319,9 +304,6 @@ cdef extern from "c/nufft_table.h":
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
         const double *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -390,9 +372,6 @@ cdef extern from "c/nufft_table.h":
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
         const double *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -414,9 +393,6 @@ cdef extern from "c/nufft_table.h":
         const double *r_h1, # [J1*L1+1,1] in
         const double *r_h2, # [J2*L2+1,1] in
         const double *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -447,7 +423,6 @@ cdef extern from "c/nufft_table.h":
         const float *i_ck,
         const int K1,
         const float *r_h1, # [J1*L1+1,1] in (real)
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const float *p_tm, # [M,1] in
@@ -460,7 +435,6 @@ cdef extern from "c/nufft_table.h":
         const float *i_ck,
         const int K1,
         const float *r_h1, # [J1*L1+1,1] in (real)
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const float *p_tm, # [M,1] in
@@ -488,7 +462,6 @@ cdef extern from "c/nufft_table.h":
         float *i_ck,
         const int K1,
         const float *r_h1, # [J1*L1+1,1] in
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const float *p_tm, # [M,2] in
@@ -502,7 +475,6 @@ cdef extern from "c/nufft_table.h":
         float *i_ck,
         const int K1,
         const float *r_h1, # [J1*L1+1,1] in
-        const int flip1,    # sign flips every K?
         const int J1,
         const int L1,
         const float *p_tm, # [M,2] in
@@ -537,8 +509,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -556,8 +526,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -612,8 +580,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -630,8 +596,6 @@ cdef extern from "c/nufft_table.h":
         const int K2,
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
         const int J1,
         const int J2,
         const int L1,
@@ -715,9 +679,6 @@ cdef extern from "c/nufft_table.h":
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
         const float *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -739,9 +700,6 @@ cdef extern from "c/nufft_table.h":
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
         const float *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -810,9 +768,6 @@ cdef extern from "c/nufft_table.h":
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
         const float *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -834,9 +789,6 @@ cdef extern from "c/nufft_table.h":
         const float *r_h1, # [J1*L1+1,1] in
         const float *r_h2, # [J2*L2+1,1] in
         const float *r_h3, # [J3*L3+1,1] in
-        const int flip1,    # sign flips every K?
-        const int flip2,
-        const int flip3,
         const int J1,
         const int J2,
         const int J3,
@@ -862,7 +814,6 @@ ctypedef void float_interp1_per_real(const float *, const float *,
                                      const float *,
                                      const int,
                                      const int,
-                                     const int,
                                      const float *, const int,
                                      float *, float *)
 ctypedef void double_interp1_per_cplx(const double *, const double *,
@@ -875,7 +826,6 @@ ctypedef void double_interp1_per_cplx(const double *, const double *,
 ctypedef void double_interp1_per_real(const double *, const double *,
                                       const int,
                                       const double *,
-                                      const int,
                                       const int,
                                       const int,
                                       const double *, const int,
@@ -899,7 +849,6 @@ ctypedef void float_interp2_per_real(const float *, const float *,
                                      const float *, const float *,
                                      const int, const int,
                                      const int, const int,
-                                     const int, const int,
                                      const float *, const int,
                                      float *, float *)
 ctypedef void double_interp2_per_cplx(const double *, const double *,
@@ -913,7 +862,6 @@ ctypedef void double_interp2_per_cplx(const double *, const double *,
 ctypedef void double_interp2_per_real(const double *, const double *,
                                       const int, const int,
                                       const double *, const double *,
-                                      const int, const int,
                                       const int, const int,
                                       const int, const int,
                                       const double *, const int,
@@ -939,7 +887,6 @@ ctypedef void float_interp3_per_real(const float *, const float *,
                                      const float *,
                                      const int, const int, const int,
                                      const int, const int, const int,
-                                     const int, const int, const int,
                                      const float *, const int,
                                      float *, float *)
 ctypedef void double_interp3_per_cplx(const double *, const double *,
@@ -955,7 +902,6 @@ ctypedef void double_interp3_per_real(const double *, const double *,
                                       const int, const int, const int,
                                       const double *, const double *,
                                       const double *,
-                                      const int, const int, const int,
                                       const int, const int, const int,
                                       const int, const int, const int,
                                       const double *, const int,
@@ -979,7 +925,6 @@ ctypedef void float_interp1_per_adj_real(float *, float *,
                                      const float *,
                                      const int,
                                      const int,
-                                     const int,
                                      const float *, const int,
                                      const float *, const float *,
                                      const int)
@@ -994,7 +939,6 @@ ctypedef void double_interp1_per_adj_cplx(double *, double *,
 ctypedef void double_interp1_per_adj_real(double *, double *,
                                       const int,
                                       const double *,
-                                      const int,
                                       const int,
                                       const int,
                                       const double *, const int,
@@ -1020,7 +964,6 @@ ctypedef void float_interp2_per_adj_real(float *, float *,
                                      const float *, const float *,
                                      const int, const int,
                                      const int, const int,
-                                     const int, const int,
                                      const float *, const int,
                                      const float *, const float *,
                                      const int)
@@ -1036,7 +979,6 @@ ctypedef void double_interp2_per_adj_cplx(double *, double *,
 ctypedef void double_interp2_per_adj_real(double *, double *,
                                       const int, const int,
                                       const double *, const double *,
-                                      const int, const int,
                                       const int, const int,
                                       const int, const int,
                                       const double *, const int,
@@ -1064,7 +1006,6 @@ ctypedef void float_interp3_per_adj_real(float *, float *,
                                      const float *,
                                      const int, const int, const int,
                                      const int, const int, const int,
-                                     const int, const int, const int,
                                      const float *, const int,
                                      const float *, const float *,
                                      const int)
@@ -1082,7 +1023,6 @@ ctypedef void double_interp3_per_adj_real(double *, double *,
                                       const int, const int, const int,
                                       const double *, const double *,
                                       const double *,
-                                      const int, const int, const int,
                                       const int, const int, const int,
                                       const int, const int, const int,
                                       const double *, const int,

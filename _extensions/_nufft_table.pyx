@@ -5,19 +5,25 @@ import numpy as np
 cimport numpy as cnp
 
 
+def _determine_dtypes(h1):
+    kernel_dtype = h1.dtype
+    cplx_dtype = np.result_type(kernel_dtype, np.complex64)
+    if kernel_dtype in [np.complex64, np.complex128]:
+        cplx_kernel = True
+    else:
+        cplx_kernel = False
+    return kernel_dtype, cplx_dtype, cplx_kernel
+
+
 def _interp1_table_per(
-    ck, int K1, h1, int J1, int L1, tm, int M, int N, order=0, int flip=0):
+    ck, int K1, h1, int J1, int L1, tm, int M, int N, order=0):
     cdef:
         float_interp1_per_cplx_t floatfunc_cplx
         float_interp1_per_real_t floatfunc_real
         double_interp1_per_cplx_t doublefunc_cplx
         double_interp1_per_real_t doublefunc_real
 
-    kernel_dtype = h1.dtype
-    complex_kernel = (
-        kernel_dtype == np.complex64) or (
-        kernel_dtype == np.complex128)
-    cplx_dtype = np.result_type(kernel_dtype, np.complex64)
+    kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.asfortranarray(np.zeros((M, N), dtype=cplx_dtype))
     ck = np.asarray(ck, dtype=cplx_dtype)
     tm = tm.astype(h1.real.dtype)
@@ -43,7 +49,7 @@ def _interp1_table_per(
     i_fm = np.asfortranarray(fm.imag)
 
     r_h1 = np.asfortranarray(h1.real)
-    if complex_kernel:
+    if cplx_kernel:
         i_h1 = np.asfortranarray(h1.imag)
 
     for nn in range(0, N):  # never tested for N>1!
@@ -82,7 +88,6 @@ def _interp1_table_per(
                 <float*>cnp.PyArray_DATA(i_ck),
                 K1,
                 <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-                flip,
                 J1,
                 L1,
                 <float*>cnp.PyArray_DATA(tm), # [M,2] in
@@ -95,7 +100,6 @@ def _interp1_table_per(
                 <double*>cnp.PyArray_DATA(i_ck),
                 K1,
                 <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-                flip,
                 J1,
                 L1,
                 <double*>cnp.PyArray_DATA(tm), # [M,2] in
@@ -110,7 +114,7 @@ def _interp1_table_per(
 
 
 def _interp1_table_adj(
-        fm, int K1, h1, int J1, int L1, tm, int M, int N, order, int flip):
+        fm, int K1, h1, int J1, int L1, tm, int M, int N, order):
     cdef:
         float_interp1_per_adj_cplx_t floatfunc_cplx
         float_interp1_per_adj_real_t floatfunc_real
@@ -121,12 +125,8 @@ def _interp1_table_adj(
     if fm.ndim == 1:
         fm = fm[..., np.newaxis]
 
-    kernel_dtype = h1.dtype
-    complex_type = np.result_type(kernel_dtype, np.complex64)
-    ck = np.asfortranarray(np.zeros((K1, N), dtype=complex_type))
-    complex_kernel = (
-        kernel_dtype == np.complex64) or (
-        kernel_dtype == np.complex128)
+    kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
+    ck = np.asfortranarray(np.zeros((K1, N), dtype=cplx_dtype))
     tm = tm.astype(h1.real.dtype)
 
     if order == 0:
@@ -152,7 +152,7 @@ def _interp1_table_adj(
     i_ck = np.asfortranarray(np.zeros_like(ck.imag))
 
     r_h1 = np.asfortranarray(h1.real)
-    if complex_kernel:
+    if cplx_kernel:
         i_h1 = np.asfortranarray(h1.imag)
 
     if kernel_dtype == np.complex64:
@@ -189,7 +189,6 @@ def _interp1_table_adj(
             <float*>cnp.PyArray_DATA(i_ck),
             K1,
             <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-            flip,
             J1,
             L1,
             <float*>cnp.PyArray_DATA(tm), # [M,2] in
@@ -203,7 +202,6 @@ def _interp1_table_adj(
             <double*>cnp.PyArray_DATA(i_ck),
             K1,
             <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-            flip,
             J1,
             L1,
             <double*>cnp.PyArray_DATA(tm), # [M,2] in
@@ -220,7 +218,7 @@ def _interp1_table_adj(
 
 
 def _interp2_table_per(
-    ck, Kd, h1, h2, Jd, Ld, tm, int M, int N, order=0, flips=[0, 0]):
+    ck, Kd, h1, h2, Jd, Ld, tm, int M, int N, order=0):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -228,18 +226,12 @@ def _interp2_table_per(
         int K2 = Kd[1]
         int L1 = Ld[0]
         int L2 = Ld[1]
-        int flip1 = flips[0]
-        int flip2 = flips[1]
         float_interp2_per_cplx_t floatfunc_cplx
         float_interp2_per_real_t floatfunc_real
         double_interp2_per_cplx_t doublefunc_cplx
         double_interp2_per_real_t doublefunc_real
 
-    kernel_dtype = h1.dtype
-    complex_kernel = (
-        kernel_dtype == np.complex64) or (
-        kernel_dtype == np.complex128)
-    cplx_dtype = np.result_type(kernel_dtype, np.complex64)
+    kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.asfortranarray(np.zeros((M, N), dtype=cplx_dtype))
     ck = np.asarray(ck, dtype=cplx_dtype)
     tm = tm.astype(h1.real.dtype)
@@ -265,7 +257,7 @@ def _interp2_table_per(
 
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
-    if complex_kernel:
+    if cplx_kernel:
         i_h2 = np.asfortranarray(h2.imag)
         i_h1 = np.asfortranarray(h1.imag)
 
@@ -317,8 +309,6 @@ def _interp2_table_per(
                 K2,
                 <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-                flip1,
-                flip2,
                 J1,
                 J2,
                 L1,
@@ -335,8 +325,6 @@ def _interp2_table_per(
                 K2,
                 <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-                flip1,
-                flip2,
                 J1,
                 J2,
                 L1,
@@ -354,7 +342,7 @@ def _interp2_table_per(
 
 
 def _interp2_table_adj(
-        fm, Kd, h1, h2, Jd, Ld, tm, int M, int N, order, flips):
+        fm, Kd, h1, h2, Jd, Ld, tm, int M, int N, order):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -362,8 +350,6 @@ def _interp2_table_adj(
         int K2 = Kd[1]
         int L1 = Ld[0]
         int L2 = Ld[1]
-        int flip1 = flips[0]
-        int flip2 = flips[1]
         float_interp2_per_adj_cplx_t floatfunc_cplx
         float_interp2_per_adj_real_t floatfunc_real
         double_interp2_per_adj_cplx_t doublefunc_cplx
@@ -373,12 +359,9 @@ def _interp2_table_adj(
     if fm.ndim == 1:
         fm = fm[..., np.newaxis]
 
-    kernel_dtype = h1.dtype
-    complex_type = np.result_type(kernel_dtype, np.complex64)
-    ck = np.asfortranarray(np.zeros((np.prod(Kd), N), dtype=complex_type))
-    complex_kernel = (
-        kernel_dtype == np.complex64) or (
-        kernel_dtype == np.complex128)
+    kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
+
+    ck = np.asfortranarray(np.zeros((np.prod(Kd), N), dtype=cplx_dtype))
     tm = tm.astype(h1.real.dtype)
 
     if order == 0:
@@ -404,7 +387,7 @@ def _interp2_table_adj(
 
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
-    if complex_kernel:
+    if cplx_kernel:
         i_h1 = np.asfortranarray(h1.imag)
         i_h2 = np.asfortranarray(h2.imag)
 
@@ -454,8 +437,6 @@ def _interp2_table_adj(
             K2,
             <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-            flip1,
-            flip2,
             J1,
             J2,
             L1,
@@ -473,8 +454,6 @@ def _interp2_table_adj(
             K2,
             <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-            flip1,
-            flip2,
             J1,
             J2,
             L1,
@@ -493,7 +472,7 @@ def _interp2_table_adj(
 
 
 def _interp3_table_per(
-    ck, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N, order=0, flips=[0, 0, 0]):
+    ck, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N, order=0):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -504,19 +483,12 @@ def _interp3_table_per(
         int L1 = Ld[0]
         int L2 = Ld[1]
         int L3 = Ld[2]
-        int flip1 = flips[0]
-        int flip2 = flips[1]
-        int flip3 = flips[2]
         float_interp3_per_cplx_t floatfunc_cplx
         float_interp3_per_real_t floatfunc_real
         double_interp3_per_cplx_t doublefunc_cplx
         double_interp3_per_real_t doublefunc_real
 
-    kernel_dtype = h1.dtype
-    complex_kernel = (
-        kernel_dtype == np.complex64) or (
-        kernel_dtype == np.complex128)
-    cplx_dtype = np.result_type(kernel_dtype, np.complex64)
+    kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.asfortranarray(np.zeros((M, N), dtype=cplx_dtype))
     ck = np.asarray(ck, dtype=cplx_dtype)
     tm = tm.astype(h1.real.dtype)
@@ -543,7 +515,7 @@ def _interp3_table_per(
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
     r_h3 = np.asfortranarray(h3.real)
-    if complex_kernel:
+    if cplx_kernel:
         i_h1 = np.asfortranarray(h1.imag)
         i_h2 = np.asfortranarray(h2.imag)
         i_h3 = np.asfortranarray(h3.imag)
@@ -608,9 +580,6 @@ def _interp3_table_per(
                 <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
                 <float*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
-                flip1,
-                flip2,
-                flip3,
                 J1,
                 J2,
                 J3,
@@ -631,9 +600,6 @@ def _interp3_table_per(
                 <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
                 <double*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
-                flip1,
-                flip2,
-                flip3,
                 J1,
                 J2,
                 J3,
@@ -652,7 +618,7 @@ def _interp3_table_per(
 
 
 def _interp3_table_adj(
-        fm, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N, order, flips):
+        fm, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N, order):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -663,9 +629,6 @@ def _interp3_table_adj(
         int L1 = Ld[0]
         int L2 = Ld[1]
         int L3 = Ld[2]
-        int flip1 = flips[0]
-        int flip2 = flips[1]
-        int flip3 = flips[2]
         float_interp3_per_adj_cplx_t floatfunc_cplx
         float_interp3_per_adj_real_t floatfunc_real
         double_interp3_per_adj_cplx_t doublefunc_cplx
@@ -675,12 +638,8 @@ def _interp3_table_adj(
     if fm.ndim == 1:
         fm = fm[..., np.newaxis]
 
-    kernel_dtype = h1.dtype
-    complex_type = np.result_type(kernel_dtype, np.complex64)
-    ck = np.asfortranarray(np.zeros((np.prod(Kd), N), dtype=complex_type))
-    complex_kernel = (
-        kernel_dtype == np.complex64) or (
-        kernel_dtype == np.complex128)
+    kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
+    ck = np.asfortranarray(np.zeros((np.prod(Kd), N), dtype=cplx_dtype))
     tm = tm.astype(h1.real.dtype)
 
     if order == 0:
@@ -707,7 +666,7 @@ def _interp3_table_adj(
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
     r_h3 = np.asfortranarray(h3.real)
-    if complex_kernel:
+    if cplx_kernel:
         i_h1 = np.asfortranarray(h1.imag)
         i_h2 = np.asfortranarray(h2.imag)
         i_h3 = np.asfortranarray(h3.imag)
@@ -770,9 +729,6 @@ def _interp3_table_adj(
             <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
             <float*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
-            flip1,
-            flip2,
-            flip3,
             J1,
             J2,
             J3,
@@ -794,9 +750,6 @@ def _interp3_table_adj(
             <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
             <double*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
-            flip1,
-            flip2,
-            flip3,
             J1,
             J2,
             J3,

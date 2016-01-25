@@ -84,9 +84,6 @@ const TYPE *r_ck, /* [K,1] in */
 const TYPE *i_ck,
 const int K1,
 const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-#endif
 const int J1,
 const int L1,
 const TYPE *p_tm, /* [M,1] in */
@@ -116,10 +113,6 @@ TYPE *i_fm)
         register TYPE coef1r = r_h1[n1];
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* sum1 += coef1 * ck */
         sum1r += coef1r * r_ck[k1mod];
@@ -140,9 +133,6 @@ const TYPE *r_ck, /* [K,1] in */
 const TYPE *i_ck,
 const int K1,
 const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-#endif
 const int J1,
 const int L1,
 const TYPE *p_tm, /* [M,1] in */
@@ -174,10 +164,6 @@ TYPE *i_fm)
         register TYPE coef1r = (1 - alf1) * *ph1 + alf1 * *(ph1+1);
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* sum1 += coef1 * ck */
         sum1r += coef1r * r_ck[k1mod];
@@ -276,9 +262,6 @@ TYPE *r_ck,       /* [K1,1] out */
 TYPE *i_ck,
 const int K1,
 const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-#endif
 const int J1,
 const int L1,
 const TYPE *p_tm, /* [M,1] in */
@@ -312,10 +295,6 @@ const TYPE *i_fm)
         register TYPE coef1r = r_h1[n1];
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* instead of f = h c, we have c += h^* f */
         r_ck[k1mod] += coef1r * fmr;
@@ -334,9 +313,6 @@ TYPE *r_ck,   /* [K1,K2] in */
 TYPE *i_ck,
 const int K1,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-#endif
 const int J1,
 const int L1,
 const TYPE *p_tm, /* [M,2] in */
@@ -353,9 +329,6 @@ const int N)
        CAT(TYPE, _interp1_table0_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1,
                         r_h1, 
-                        #ifdef Provide_flip
-                        flip1,    /* sign flips every K? */
-                        #endif 
                         J1, L1, 
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
@@ -368,9 +341,6 @@ TYPE *r_ck,       /* [K1,1] out */
 TYPE *i_ck,
 const int K1,
 const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-#endif
 const int J1,
 const int L1,
 const TYPE *p_tm, /* [M,1] in */
@@ -406,10 +376,6 @@ const TYPE *i_fm)
         register TYPE coef1r = (1 - alf1) * *ph1 + alf1 * *(ph1+1);
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* instead of f = h c, we have c += h^* f */
         r_ck[k1mod] += coef1r * fmr;
@@ -427,9 +393,6 @@ TYPE *r_ck,   /* [K1,K2] in */
 TYPE *i_ck,
 const int K1,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-#endif
 const int J1,
 const int L1,
 const TYPE *p_tm, /* [M,2] in */
@@ -446,9 +409,6 @@ const int N)
        CAT(TYPE, _interp1_table1_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1,
                         r_h1, 
-                        #ifdef Provide_flip
-                        flip1,    /* sign flips every K? */
-                        #endif 
                         J1, L1, 
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
@@ -574,10 +534,6 @@ const int K1,
 const int K2,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-#endif
 const int J1,
 const int J2,
 const int L1,
@@ -621,11 +577,6 @@ const TYPE *i_fm)
         const int k2mod = k2 - K2 * wrap2;
         const int k12mod = k2mod * K1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
-
         const TYPE v2r = coef2r * fmr;
         const TYPE v2i = coef2r * fmi;
         int k1 = koff1;
@@ -637,11 +588,6 @@ const TYPE *i_fm)
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k12mod + k1mod; /* 2D array index */
-
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         r_ck[kk] += coef1r * v2r;
         i_ck[kk] += coef1r * v2i;
@@ -661,10 +607,6 @@ const int K1,
 const int K2,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,    /* sign flips every K? */
-#endif
 const int J1,
 const int J2,
 const int L1,
@@ -683,9 +625,6 @@ const int N)
        CAT(TYPE, _interp2_table0_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, 
                         r_h1, r_h2, 
-                        #ifdef Provide_flip
-                        flip1,  flip2,  /* sign flips every K? */
-                        #endif 
                         J1, J2, L1, L2, 
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
@@ -700,10 +639,6 @@ const int K1,
 const int K2,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-#endif
 const int J1,
 const int J2,
 const int L1,
@@ -749,10 +684,6 @@ const TYPE *i_fm)
         const int k2mod = k2 - K2 * wrap2;
         const int k12mod = k2mod * K1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
 
         const TYPE v2r = coef2r * fmr;
         const TYPE v2i = coef2r * fmi;
@@ -768,10 +699,6 @@ const TYPE *i_fm)
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k12mod + k1mod; /* 2D array index */
 
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         r_ck[kk] += coef1r * v2r;
         i_ck[kk] += coef1r * v2i;
@@ -791,10 +718,6 @@ const int K1,
 const int K2,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,    /* sign flips every K? */
-#endif
 const int J1,
 const int J2,
 const int L1,
@@ -813,9 +736,6 @@ const int N)
        CAT(TYPE, _interp2_table1_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, 
                         r_h1, r_h2, 
-                        #ifdef Provide_flip
-                        flip1,  flip2,  /* sign flips every K? */
-                        #endif 
                         J1, J2, L1, L2, 
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
@@ -1031,10 +951,6 @@ const int K1,
 const int K2,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-#endif
 const int J1,
 const int J2,
 const int L1,
@@ -1078,11 +994,6 @@ TYPE *i_fm)
         register TYPE sum1i = 0;
         int k1 = koff1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
-
     for (jj1=0; jj1 < J1; jj1++, k1++) {
         const TYPE p1 = (t1 - k1) * L1;
         const int n1 = /* ncenter1 + */ iround(p1);
@@ -1090,11 +1001,6 @@ TYPE *i_fm)
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k12mod + k1mod; /* 2D array index */
-
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* sum1 += coef1 * ck */
         sum1r += coef1r * r_ck[kk];
@@ -1122,10 +1028,6 @@ const int K1,
 const int K2,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-#endif
 const int J1,
 const int J2,
 const int L1,
@@ -1171,11 +1073,6 @@ TYPE *i_fm)
         register TYPE sum1i = 0;
         int k1 = koff1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
-
     for (jj1=0; jj1 < J1; jj1++, k1++) {
         const TYPE p1 = (t1 - k1) * L1;
         const int n1 = floor(p1);
@@ -1185,11 +1082,6 @@ TYPE *i_fm)
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k12mod + k1mod; /* 2D array index */
-
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* sum1 += coef1 * ck */
         sum1r += coef1r * r_ck[kk];
@@ -1534,11 +1426,6 @@ const int K3,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
 const TYPE *r_h3, /* [J3*L3+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-const int flip3,
-#endif
 const int J1,
 const int J2,
 const int J3,
@@ -1590,11 +1477,6 @@ TYPE *i_fm)
         register TYPE sum2i = 0;
         int k2 = koff2;
 
-#ifdef Provide_flip
-        if (flip3 && (wrap3 % 2))
-            coef3r = -coef3r; /* trick: sign flip */
-#endif
-
     for (jj2=0; jj2 < J2; jj2++, k2++) {
         const TYPE p2 = (t2 - k2) * L2;
         const int n2 = /* ncenter2 + */ iround(p2);
@@ -1607,11 +1489,6 @@ TYPE *i_fm)
         register TYPE sum1i = 0;
         int k1 = koff1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
-
     for (jj1=0; jj1 < J1; jj1++, k1++) {
         const TYPE p1 = (t1 - k1) * L1;
         const int n1 = /* ncenter1 + */ iround(p1);
@@ -1619,11 +1496,6 @@ TYPE *i_fm)
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k23mod + k1mod;
-
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* sum1 += coef1 * ck */
         sum1r += coef1r * r_ck[kk];
@@ -1659,11 +1531,6 @@ const int K3,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
 const TYPE *r_h3, /* [J3*L3+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-const int flip3,
-#endif
 const int J1,
 const int J2,
 const int J3,
@@ -1716,11 +1583,6 @@ TYPE *i_fm)
         register TYPE sum2i = 0;
         int k2 = koff2;
 
-#ifdef Provide_flip
-        if (flip3 && (wrap3 % 2))
-            coef3r = -coef3r; /* trick: sign flip */
-#endif
-
     for (jj2=0; jj2 < J2; jj2++, k2++) {
         const TYPE p2 = (t2 - k2) * L2;
         const int n2 = floor(p2);
@@ -1734,11 +1596,6 @@ TYPE *i_fm)
         register TYPE sum1i = 0;
         int k1 = koff1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
-
     for (jj1=0; jj1 < J1; jj1++, k1++) {
         const TYPE p1 = (t1 - k1) * L1;
         const int n1 = floor(p1);
@@ -1747,11 +1604,6 @@ TYPE *i_fm)
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k23mod + k1mod;
-
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         /* sum1 += coef1 * ck */
         sum1r += coef1r * r_ck[kk];
@@ -2078,11 +1930,6 @@ const int K3,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
 const TYPE *r_h3, /* [J3*L3+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-const int flip3,
-#endif
 const int J1,
 const int J2,
 const int J3,
@@ -2133,11 +1980,6 @@ const TYPE *i_fm)
         const int wrap3 = floor(k3 / (TYPE) K3);
         const int k3mod = k3 - K3 * wrap3;
 
-#ifdef Provide_flip
-        if (flip3 && (wrap3 % 2))
-            coef3r = -coef3r; /* trick: sign flip */
-#endif
-
         const TYPE v3r = coef3r * fmr;
         const TYPE v3i = coef3r * fmi;
         int k2 = koff2;
@@ -2150,11 +1992,6 @@ const TYPE *i_fm)
         const int k2mod = k2 - K2 * wrap2;
         const int k23mod = (k3mod * K2 + k2mod) * K1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
-
         const TYPE v2r = coef2r * v3r;
         const TYPE v2i = coef2r * v3i;
         int k1 = koff1;
@@ -2166,11 +2003,6 @@ const TYPE *i_fm)
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k23mod + k1mod;
-
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         r_ck[kk] += coef1r * v2r;
         i_ck[kk] += coef1r * v2i;
@@ -2193,11 +2025,6 @@ const int K3,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
 const TYPE *r_h3, /* [J3*L3+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,    /* sign flips every K? */
-const int flip3,    /* sign flips every K? */
-#endif
 const int J1,
 const int J2,
 const int J3,
@@ -2218,9 +2045,6 @@ const int N)
        CAT(TYPE, _interp3_table0_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, K3, 
                         r_h1, r_h2, r_h3, 
-                        #ifdef Provide_flip
-                        flip1,  flip2,  flip3, /* sign flips every K? */
-                        #endif 
                         J1, J2, J3, L1, L2, L3, 
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
@@ -2236,11 +2060,6 @@ const int K3,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
 const TYPE *r_h3, /* [J3*L3+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,
-const int flip3,
-#endif
 const int J1,
 const int J2,
 const int J3,
@@ -2293,11 +2112,6 @@ const TYPE *i_fm)
         const int wrap3 = floor(k3 / (TYPE) K3);
         const int k3mod = k3 - K3 * wrap3;
 
-#ifdef Provide_flip
-        if (flip3 && (wrap3 % 2))
-            coef3r = -coef3r; /* trick: sign flip */
-#endif
-
         const TYPE v3r = coef3r * fmr;
         const TYPE v3i = coef3r * fmi;
         int k2 = koff2;
@@ -2312,11 +2126,6 @@ const TYPE *i_fm)
         const int k2mod = k2 - K2 * wrap2;
         const int k23mod = (k3mod * K2 + k2mod) * K1;
 
-#ifdef Provide_flip
-        if (flip2 && (wrap2 % 2))
-            coef2r = -coef2r; /* trick: sign flip */
-#endif
-
         const TYPE v2r = coef2r * v3r;
         const TYPE v2i = coef2r * v3i;
         int k1 = koff1;
@@ -2330,11 +2139,6 @@ const TYPE *i_fm)
         const int wrap1 = floor(k1 / (TYPE) K1);
         const int k1mod = k1 - K1 * wrap1;
         const int kk = k23mod + k1mod;
-
-#ifdef Provide_flip
-        if (flip1 && (wrap1 % 2))
-            coef1r = -coef1r; /* trick: sign flip */
-#endif
 
         r_ck[kk] += coef1r * v2r;
         i_ck[kk] += coef1r * v2i;
@@ -2357,11 +2161,6 @@ const int K3,
 const TYPE *r_h1, /* [J1*L1+1,1] in */
 const TYPE *r_h2, /* [J2*L2+1,1] in */
 const TYPE *r_h3, /* [J3*L3+1,1] in */
-#ifdef Provide_flip
-const int flip1,    /* sign flips every K? */
-const int flip2,    /* sign flips every K? */
-const int flip3,    /* sign flips every K? */
-#endif
 const int J1,
 const int J2,
 const int J3,
@@ -2382,9 +2181,6 @@ const int N)
        CAT(TYPE, _interp3_table1_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, K3, 
                         r_h1, r_h2, r_h3, 
-                        #ifdef Provide_flip
-                        flip1,  flip2,  flip3, /* sign flips every K? */
-                        #endif 
                         J1, J2, J3, L1, L2, L3, 
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }

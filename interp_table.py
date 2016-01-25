@@ -9,7 +9,7 @@ from ._extensions._nufft_table import (_interp1_table_per,
                                        _interp3_table_adj)
 
 
-def interp1_table(ck, h1, J1, L1, tm, order=0, flip=0):
+def interp1_table(ck, h1, J1, L1, tm, order=0):
     K1 = ck.shape[0]
     N = ck.shape[1]
     M = tm.shape[0]
@@ -26,11 +26,11 @@ def interp1_table(ck, h1, J1, L1, tm, order=0, flip=0):
 
     J1 = int(J1)
     L1 = int(L1)
-    fm = _interp1_table_per(ck, K1, h1, J1, L1, tm, M, N, order, flip)
+    fm = _interp1_table_per(ck, K1, h1, J1, L1, tm, M, N, order)
     return fm
 
 
-def interp1_table_adj(fm, h1, J1, L1, tm, K1, order=None, flip=0):
+def interp1_table_adj(fm, h1, J1, L1, tm, K1, order=None):
 
     M = fm.shape[0]
     N = fm.shape[1]
@@ -49,11 +49,11 @@ def interp1_table_adj(fm, h1, J1, L1, tm, K1, order=None, flip=0):
 
     J1 = int(J1)
     L1 = int(L1)
-    ck = _interp1_table_adj(fm, K1, h1, J1, L1, tm, M, N, order, flip)
+    ck = _interp1_table_adj(fm, K1, h1, J1, L1, tm, M, N, order)
     return ck
 
 
-def interp2_table(ck, h1, h2, Jd, Ld, tm, order=0, flips=None):
+def interp2_table(ck, h1, h2, Jd, Ld, tm, order=0):
     Kd = ck.shape
     if(ck.ndim == 2):
         N = 1
@@ -68,13 +68,6 @@ def interp2_table(ck, h1, h2, Jd, Ld, tm, order=0, flips=None):
     M = tm.shape[0]
     Jd = np.asanyarray(Jd).astype(np.int32)
     Ld = np.asanyarray(Ld).astype(np.int32)
-    if flips is None:
-        flips = np.zeros((2, ), dtype=np.int32)
-    else:
-        flips = np.asanyarray(flips)
-        if not (flips.size is 2):
-            raise ValueError("flips must be length 2 array")
-        flips = flips.astype(np.int32)
 
     if not ((len(Jd) == 2) & (len(Ld) == 2) & (len(Kd) == 2)):
         print("Error:  J, K and L must all be length 2")
@@ -90,11 +83,11 @@ def interp2_table(ck, h1, h2, Jd, Ld, tm, order=0, flips=None):
     if not tm.shape == (M, 2):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx2")
 
-    fm = _interp2_table_per(ck, Kd, h1, h2, Jd, Ld, tm, M, N, order, flips)
+    fm = _interp2_table_per(ck, Kd, h1, h2, Jd, Ld, tm, M, N, order)
     return fm
 
 
-def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd, order=None, flips=None):
+def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd, order=None):
 
     M = fm.shape[0]
     N = fm.shape[1]
@@ -105,11 +98,6 @@ def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd, order=None, flips=None):
 
     Jd = np.asanyarray(Jd).astype(np.int32)
     Ld = np.asanyarray(Ld).astype(np.int32)
-    flips = np.asanyarray(flips)
-    if flips.any():
-        if not (flips.size is 2):
-            raise ValueError("flips must be length 2 array")
-        flips = flips.astype(np.int32)
 
     if not ((len(Jd) == 2) & (len(Ld) == 2) & (len(Kd) == 2)):
         raise ValueError("Error:  J, K and L must all be length 2")
@@ -125,11 +113,11 @@ def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd, order=None, flips=None):
     if not tm.shape == (M, 2):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx2")
 
-    ck = _interp2_table_adj(fm, Kd, h1, h2, Jd, Ld, tm, M, N, order, flips)
+    ck = _interp2_table_adj(fm, Kd, h1, h2, Jd, Ld, tm, M, N, order)
     return ck
 
 
-def interp3_table(ck, h1, h2, h3, Jd, Ld, tm, order=0, flips=None):
+def interp3_table(ck, h1, h2, h3, Jd, Ld, tm, order=0):
     Kd = ck.shape
     if(ck.ndim == 3):
         N = 1
@@ -146,13 +134,6 @@ def interp3_table(ck, h1, h2, h3, Jd, Ld, tm, order=0, flips=None):
     M = tm.shape[0]
     Jd = np.asanyarray(Jd).astype(np.int32)
     Ld = np.asanyarray(Ld).astype(np.int32)
-    if flips is None:
-        flips = np.zeros((3, ), dtype=np.int32)
-    else:
-        flips = np.asanyarray(flips)
-        if not (flips.size is 3):
-            raise ValueError("flips must be length 3 array")
-        flips = flips.astype(np.int32)
 
     if not ((len(Jd) == 3) & (len(Ld) == 3) & (len(Kd) == 3)):
         print("Error:  J, K and L must all be length 3")
@@ -172,11 +153,11 @@ def interp3_table(ck, h1, h2, h3, Jd, Ld, tm, order=0, flips=None):
     if not tm.shape == (M, 3):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx3")
 
-    fm = _interp3_table_per(ck, Kd, h1, h2, h3, Jd, Ld, tm, M, N, order, flips)
+    fm = _interp3_table_per(ck, Kd, h1, h2, h3, Jd, Ld, tm, M, N, order)
     return fm
 
 
-def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd, order=None, flips=None):
+def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd, order=None):
 
     M = fm.shape[0]
     N = fm.shape[1]
@@ -189,11 +170,6 @@ def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd, order=None, flips=None):
 
     Jd = np.asanyarray(Jd).astype(np.int32)
     Ld = np.asanyarray(Ld).astype(np.int32)
-    flips = np.asanyarray(flips)
-    if flips.any():
-        if not (flips.size is 2):
-            raise ValueError("flips must be length 2 array")
-        flips = flips.astype(np.int32)
 
     if not ((len(Jd) == 3) & (len(Ld) == 3) & (len(Kd) == 3)):
         raise ValueError("Error:  J, K and L must all be length 3")
@@ -213,5 +189,5 @@ def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd, order=None, flips=None):
     if not tm.shape == (M, 3):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx2")
 
-    ck = _interp3_table_adj(fm, Kd, h1, h2, h3, Jd, Ld, tm, M, N, order, flips)
+    ck = _interp3_table_adj(fm, Kd, h1, h2, h3, Jd, Ld, tm, M, N, order)
     return ck

@@ -4,10 +4,6 @@
 #include "templating.h"
 
 
-#ifndef Provide_flip
-#define Provide_flip
-#endif  /* Provide flip */
-
 #ifndef TYPE
 #error TYPE must be defined here.
 #else
@@ -48,9 +44,6 @@ void CAT(TYPE, _interp1_table0_real_per)(
     const TYPE *i_ck,
     const int K1,
     const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    #endif
     const int J1,
     const int L1,
     const TYPE *p_tm, /* [M,1] in */
@@ -67,9 +60,6 @@ void CAT(TYPE, _interp1_table1_real_per)(
     const TYPE *i_ck,
     const int K1,
     const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    #endif
     const int J1,
     const int L1,
     const TYPE *p_tm, /* [M,1] in */
@@ -107,9 +97,6 @@ void CAT(TYPE, _interp1_table0_real_per_adj)(
     TYPE *i_ck,
     const int K1,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    #endif
     const int J1,
     const int L1,
     const TYPE *p_tm, /* [M,2] in */
@@ -128,9 +115,6 @@ void CAT(TYPE, _interp1_table1_real_per_adj)(
     TYPE *i_ck,
     const int K1,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    #endif
     const int J1,
     const int L1,
     const TYPE *p_tm, /* [M,2] in */
@@ -175,10 +159,6 @@ void CAT(TYPE, _interp2_table0_real_per_adj)(
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    #endif
     const int J1,
     const int J2,
     const int L1,
@@ -200,10 +180,6 @@ void CAT(TYPE, _interp2_table1_real_per_adj)(
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    #endif
     const int J1,
     const int J2,
     const int L1,
@@ -269,10 +245,6 @@ void CAT(TYPE, _interp2_table0_real_per)(
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    #endif
     const int J1,
     const int J2,
     const int L1,
@@ -294,10 +266,6 @@ void CAT(TYPE, _interp2_table1_real_per)(
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    #endif
     const int J1,
     const int J2,
     const int L1,
@@ -400,11 +368,6 @@ void CAT(TYPE, _interp3_table0_real_per)(
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
     const TYPE *r_h3, /* [J3*L3+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    const int flip3,
-    #endif
     const int J1,
     const int J2,
     const int J3,
@@ -430,11 +393,6 @@ void CAT(TYPE, _interp3_table1_real_per)(
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
     const TYPE *r_h3, /* [J3*L3+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    const int flip3,
-    #endif
     const int J1,
     const int J2,
     const int J3,
@@ -518,11 +476,6 @@ void CAT(TYPE, _interp3_table0_real_per_adj)(
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
     const TYPE *r_h3, /* [J3*L3+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    const int flip3,
-    #endif
     const int J1,
     const int J2,
     const int J3,
@@ -549,11 +502,6 @@ void CAT(TYPE, _interp3_table1_real_per_adj)(
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *r_h2, /* [J2*L2+1,1] in */
     const TYPE *r_h3, /* [J3*L3+1,1] in */
-    #ifdef Provide_flip
-    const int flip1,    /* sign flips every K? */
-    const int flip2,
-    const int flip3,
-    #endif
     const int J1,
     const int J2,
     const int J3,

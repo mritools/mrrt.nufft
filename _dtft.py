@@ -5,6 +5,8 @@ import numpy as np
 """ Slow, brute force DTFT routines.  These can be used to validate the NUFFT
 on small problem sizes. """
 
+__all__ = ['dtft', 'dtft_adj']
+
 
 def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
     """  Compute d-dimensional DTFT of signal x at frequency locations omega

@@ -1,5 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
+__all__ = ['NufftKernel', 'NufftBase']
+
 from time import time
 import warnings
 import numpy as np
@@ -193,7 +195,15 @@ def _get_legend_text(ax):
         return [t.get_text() for t in l.get_texts()]
 
 
-
+kernel_types = ['minmax:kb',
+                'linear',
+                'diric',
+                'kb:beatty'
+                'kb:minmax'
+                'minmax:unif',
+                'minmax:tuned',
+                ]
+                
 class NufftKernel(object):
     """ Interpolation kernel for use in the gridding stage of the NUFFT. """
 
@@ -413,17 +423,10 @@ class NufftKernel(object):
 
     def plot(self, axes=None):
         """ plot the (separable) kernel for each axis """
-        legend_text = 'type: {}'.format(self.kernel_type)
+        title_text = 'type: {}'.format(self.kernel_type)
         if axes is None:
             f, axes = plt.subplots(self.ndim, 1, sharex=True)
             axes = np.atleast_1d(axes)
-            legend_labels = [legend_text, ]
-        else:
-            legend_labels = _get_legend_text(axes[0])
-            if legend_labels is None:
-                legend_labels = [legend_text, ]
-            else:
-                legend_labels.append(legend_text)
         for d in range(self.ndim):
             if 'Jd' in self.params:
                 J = self.params['Jd'][d]
@@ -439,12 +442,13 @@ class NufftKernel(object):
                                        phasing='real')[0]
             else:
                 y = self.kernel[d](x, J)
-            axes[d].plot(x, y)
+            axes[d].plot(x, np.abs(y), 'k-', label='magnitude')
             if d == self.ndim - 1:
                 axes[d].xaxis.set_ticks([-J/2, J/2])
                 axes[d].xaxis.set_ticklabels(['-J/2', 'J/2'])
             axes[d].set_ylabel('kernel amplitude, axis {}'.format(d))
-            axes[d].legend(legend_labels)
+            axes[d].set_title(title_text)
+            axes[d].legend()
         plt.draw()
         return axes
 
@@ -909,8 +913,7 @@ class NufftBase(object):
                                                kernel.kernel[id],
                                                self.Nmid[id])
                 elif ktype == 'linear':
-                    raise ValueError("Not Implemented")
-                    # TODO: _scale_tri
+                    #raise ValueError("Not Implemented")
                     tmp = _scale_tri(Nd[id], Jd[id], Kd[id], self.Nmid[id])
 #                elif 'minmax:' in ktype:
 #                    tmp = nufft_scale(Nd[id], Kd[id], kernel.alpha[id],
@@ -1013,7 +1016,7 @@ class NufftBase(object):
 
         if self.phasing == 'complex':
             phase = np.exp(1j * np.dot(om, self.n_shift.ravel()))			# [1,M]
-            phase = phase.reshape((1, -1), order='F')  # =(phase.shape[0],1)
+            phase = phase.reshape((1, -1), order='F')
             uu *= phase  # use broadcasting along first dimension
             sparse_dtype = self._cplx_dtype
         elif self.phasing == 'real' or self.phasing is None:
@@ -1108,31 +1111,36 @@ class NufftBase(object):
             # print(str)
         return str
 
-    def plot_kernels(self):
-        """may want to change to subplot_stack"""
-        f = plt.figure()
-        plt.hold('on')
-        if self.kernel.kernel is not None:
-            legend_labels = []
-            x = np.zeros((1000, self.ndim), dtype=self._real_dtype)
-            if self.phasing == 'complex':
-                Y = np.zeros((1000, self.ndim), dtype=self._cplx_dtype)
+    def plot_kernels(self, with_phasing=False):
+        """Plots the NUFFT gridding kernel for each axis of the NUFFT."""
+        gridspec_kw=dict(hspace=0.1)
+        fig, axes = plt.subplots(self.ndim, 1, sharex='col',
+                                 gridspec_kw=gridspec_kw)
+        for d in range(self.ndim):
+            if self.mode != 'sparse':
+                x = np.linspace(-self.Jd[d]/2, self.Jd[d]/2, self.h[d].size)
+                y = self.h[d]
             else:
-                Y = np.zeros((1000, self.ndim), dtype=self._real_dtype)
-            d = 0
-            while d < self.ndim:
-                x[:, d] = np.linspace(-self.Jd[d] / 2, self.Jd[d] / 2, 1000)
-                Y[:, d] = self.kernel.kernel[d](x[:, d], self.Jd[d])
-                legend_labels.append('axis %d' % d)
-                d += 1
-            subplot_stack(x, Y, ncols=1,
-                          title='NUFFT kernel shapes (type: {})'.format(
-                              self.kernel.kernel_type),
-                          legends=legend_labels,
-                          use_yticks=True)
-        else:
-            print("Kernel is not an inline function. will not be plotted")
-        return f
+                if self.kernel.kernel is not None:
+                    if with_phasing:
+                        raise ValueError(
+                            "with_phasing option only supported for "
+                            "table-based NUFFT")
+                    x = np.linspace(-self.Jd[d]/2, self.Jd[d]/2, 1000)
+                    y = self.kernel.kernel[d](x, self.Jd[d])
+                else:
+                    print("Kernel is not an inline function. will not be"
+                          "plotted")
+            axes[d].plot(x, np.abs(y), 'k-', label='magnitude')
+            if with_phasing:
+                axes[d].plot(x, y.real, 'k--', label='real')
+                axes[d].plot(x, y.imag, 'k:', label='imag')
+                axes[d].legend()
+            axes[d].set_ylabel('axis %d' % d)
+            if d == self.ndim-1:
+                axes[d].set_xlabel('oversampled grid offset')
+        return fig, axes
+
 
 
 def _nufft_table_interp(st, Xk, om=None):
@@ -1149,7 +1157,6 @@ def _nufft_table_interp(st, Xk, om=None):
     """
 
     order = st.table_order
-    flips = np.zeros(st.Nd.shape)  # TODO: remove
 
     if om is None:
         om = st.om
@@ -1174,7 +1181,7 @@ def _nufft_table_interp(st, Xk, om=None):
     Xk = complexify(Xk)  # force complex
 
     # X = np.zeros((om.shape[0], nc),dtype=Xk.dtype)
-    arg = [st.Jd, st.Ld, tm, order, flips]
+    arg = [st.Jd, st.Ld, tm, order]
 
     if ndim == 1:
         X = interp1_table(Xk, st.h[0], *arg)
@@ -1212,8 +1219,6 @@ def _nufft_table_adj(st, X, om=None):
     """
 
     order = st.table_order
-    flips = np.zeros(st.Nd.shape)  # TODO: remove
-
     if om is None:
         om = st.om
 
@@ -1243,7 +1248,7 @@ def _nufft_table_adj(st, X, om=None):
                 # elementwise multiplication
                 X = np.asarray(X) * np.asarray(ph)
 
-    arg = [st.Jd, st.Ld, tm, st.Kd[0:ndim], order, flips]
+    arg = [st.Jd, st.Ld, tm, st.Kd[0:ndim], order]
 
     # Xk = np.zeros((np.product(st.Kd), nc))
     if ndim == 1:
@@ -1269,9 +1274,11 @@ def nufft():  # TODO: remove this
 def _nufft_table_make1(
         how, N, J, K, L, kernel_type, phasing, kernel_kwargs={}):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
-    nufft_args = {'Jd': J, 'n_shift': 0,
-                  'kernel_type': kernel_type, 'kernel_kwargs': kernel_kwargs,
-                  'mode': 'sparse', 'phasing': phasing, 'sparse_format': 'csc'}
+    nufft_args = dict(Jd=J, n_shift=0, kernel_type=kernel_type,
+                      kernel_kwargs=kernel_kwargs,
+                      mode='sparse',
+                      phasing=phasing,
+                      sparse_format='csc')
     t0 = np.arange(-J * L / 2., J * L / 2. + 1) / L  # [J*L+1]
     pi = np.pi
     # This is a slow and inefficient (but simple) way to get the table
