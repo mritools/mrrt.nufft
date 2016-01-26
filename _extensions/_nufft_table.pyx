@@ -53,8 +53,8 @@ def _interp1_table_per(
         i_h1 = np.asfortranarray(h1.imag)
 
     for nn in range(0, N):  # never tested for N>1!
-        r_ck = np.asfortranarray(ck[:, :, nn].real)
-        i_ck = np.asfortranarray(ck[:, :, nn].imag)
+        r_ck = np.asfortranarray(ck[:, nn].real)
+        i_ck = np.asfortranarray(ck[:, nn].imag)
 
         if kernel_dtype == np.complex64:
             floatfunc_cplx(
@@ -521,8 +521,8 @@ def _interp3_table_per(
         i_h3 = np.asfortranarray(h3.imag)
 
     for nn in range(0, N):  # never tested for N>1!
-        r_ck = np.asfortranarray(ck[:, :, nn].real)
-        i_ck = np.asfortranarray(ck[:, :, nn].imag)
+        r_ck = np.asfortranarray(ck[:, :, :, nn].real)
+        i_ck = np.asfortranarray(ck[:, :, :, nn].imag)
 
         if kernel_dtype == np.complex64:
             floatfunc_cplx(

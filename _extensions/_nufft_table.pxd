@@ -315,6 +315,7 @@ cdef extern from "c/nufft_table.h":
         double *r_fm,       # [M,1] out
         double *i_fm)
 
+
     cdef void double_interp3_table0_complex_per_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
