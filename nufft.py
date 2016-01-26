@@ -79,6 +79,8 @@ def _to_1d_int_array(arr, nelem=None, dtype_out=np.intp):
         arr = np.squeeze(arr)
         if arr.ndim > 1:
             raise ValueError("dimensions of arr cannot exceed 1")
+        if arr.ndim == 0:
+            arr = np.atleast_1d(arr)
     # arr.dtype.kind in ['i','u']
     if not issubclass(arr.dtype.type, np.integer):
         # float only OK if values are integers
