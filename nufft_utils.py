@@ -1116,9 +1116,8 @@ def nufft_alpha_kb_fit(N, J, K, L=None, beta=1, Nmid=None, verbose=False):
         if N > 40:
             L = 13		# empirically found to be reasonable
         else:
-            L = np.ceil(
-                N /
-                3.)  # a kludge to avoid "rank deficient" complaints
+            # a kludge to avoid "rank deficient" complaints
+            L = np.ceil(N / 3.)
 
     # kb_alf = 2.34 * J;	# KB shape parameter
     # kb_m = 0;		# KB order
