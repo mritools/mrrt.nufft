@@ -3,12 +3,12 @@ from __future__ import division, print_function, absolute_import
 __all__ = ['NufftKernel', 'NufftBase']
 
 from time import time
+from grl_utils import fftn, ifftn
 import warnings
 import numpy as np
 import collections
 try:
     from matplotlib import pyplot as plt
-    from pyvolplot import subplot_stack
 except:
     warnings.warn("matplotlib not found.  won't be able to plot")
 
@@ -18,31 +18,9 @@ except:
     # most cases don't need scipy
     pass
 
-try:
-    import pyfftw
-    has_pyfftw = True
-    fftn = pyfftw.interfaces.numpy_fft.fftn
-    ifftn = pyfftw.interfaces.numpy_fft.ifftn
-    # Turn on the cache for optimum performance
-    pyfftw.interfaces.cache.enable()
-except ImportError as e:
-    try:
-        warnings.warn("pyFFTW not found.  will try to use mklfft instead.")
-        has_pyfftw = False
-        import mklfft
-        fftn = mklfft.fftpack.fftn
-        ifftn = mklfft.fftpack.ifftn
-    except ImportError as e:
-        warnings.warn("pyFFTW & mklfft not found.  using numpy FFTs instead.")
-        # Numpy's n-dimensional FFT routines may be using MKL, so prefered over scipy
-        fftn = np.fft.fftn
-        ifftn = np.fft.ifftn
-
-
 # TODO: move this to a global configuration
 
 from scipy.sparse import coo_matrix
-# import scipy.fftpack  #faster than numpy.fft
 
 from PyIRT.nufft.nufft_utils import (_nufft_samples,
                                      nufft_alpha_kb_fit,
@@ -1407,11 +1385,6 @@ def nufft_forward(st, x, copy_x=True):
         X *= st.phase_after[:, None]  # broadcast rather than np.tile
 
     return X
-
-
-
-
-
 
 
 def nufft_adj(st, X, copy_X=True):
