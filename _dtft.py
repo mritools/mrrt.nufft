@@ -10,17 +10,28 @@ __all__ = ['dtft', 'dtft_adj']
 
 def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
     """  Compute d-dimensional DTFT of signal x at frequency locations omega
-    In
-    	x	[[Nd],L]	signal values
-    	omega	[M,dd]		frequency locations (radians)
-    	n_shift [dd,1]		use [0:N-1]-n_shift (default [0 0])
-    	useloop			1 to reduce memory use (slower)
-     Out
-    	X	[M,L]		DTFT values
 
-     Requires enough memory to store M * prod(Nd) size matrices (for testing only)
+    Parameters
+    ----------
+    x : array
+        signal values
+    omega : array, optional
+        frequency locations (radians)
+    n_shift : array, optional
+        indexed as range(0, N)-n_shift
+    useloop : bool, optional
+        True to reduce memory use (slower)
 
-    Matlab version Copyright 2001-9-17, Jeff Fessler, The University of Michigan
+    Returns
+    -------
+    X : array
+        DTFT values
+
+    Requires enough memory to store M * prod(Nd) size matrices
+    (for testing only)
+
+    Matlab version: Copyright 2001-9-17, Jeff Fessler,
+                    The University of Michigan
     """
 
     dd = omega.shape[1]
@@ -89,17 +100,27 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
 def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
     """  Compute adjoint of d-dim DTFT for spectrum X at frequency locations omega
 
-     In
-    	X	[M,L]		dD DTFT values
-    	omega	[M,d]		frequency locations (radians)
-    	n_shift [d,1]		use [0:N-1]-n_shift (default [0 ... 0])
-    	useloop			1 to reduce memory use (slower)
-     Out
-    	x	[(Nd),L]	signal values
+    Parameters
+    ----------
+    X : array
+        DTFT values
+    omega : array, optional
+        frequency locations (radians)
+    n_shift : array, optional
+        indexed as range(0, N)-n_shift
+    useloop : bool, optional
+        True to reduce memory use (slower)
 
-     Requires enough memory to store M * (*Nd) size matrices. (For testing only)
+    Returns
+    -------
+    X : array
+        signal values
 
-    Matlab version: Copyright 2003-4-13, Jeff Fessler, The University of Michigan
+    Requires enough memory to store M * (*Nd) size matrices.
+    (For testing only)
+
+    Matlab version: Copyright 2003-4-13, Jeff Fessler,
+                    The University of Michigan
     """
     dd = omega.shape[1]
     if Nd is None:

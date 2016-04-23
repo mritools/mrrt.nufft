@@ -1,5 +1,4 @@
 import numpy as np
-#from PyIRT.nufft.nufft import nufft_forward
 
 from ._extensions._nufft_table import (_interp1_table_per,
                                        _interp2_table_per,

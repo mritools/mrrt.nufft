@@ -18,9 +18,9 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     J : int, optional
         kernel size in each dimension
     alpha : float, optional
-        shape parameter
+        shape parameter (default 2.34 * J)
     kb_m : float, optional
-        order parameter (default: 0)
+        order parameter
     K_N :
         grid oversampling factor (typically 1.25 < K_N <= 2)
 
@@ -30,15 +30,9 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
         [M,1] KB function values, if x is an array of numbers
         or string for kernel(k,J), if x is 'string'
         or inline function, if x is 'inline'
-    alpha
-        shape parameter
-    kb_m
-        order parameter
 
     Notes
     -----
-    shape parameter "alpha" (default 2.34 J)
-    order parameter "kb_m" (default 0)
     see (A1) in lewitt:90:mdi, JOSA-A, Oct. 1990
 
     Adapted from Matlab version:
@@ -63,40 +57,25 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     if alpha is None:
         alpha = 2.34 * J
 
-    if isinstance(alpha, str):
-        alpha, kb_m = _kaiser_bessel_params(alpha, J, K_N)
-        # print "alpha = ", alpha
-
-    if isinstance(x, str):
-        if isinstance(alpha, str):
-            if not K_N:
-                raise ValueError('ERROR in %s:  K_N required' % __name__)
-            kb = lambda k, J: kaiser_bessel(k, J, alpha, None, K_N)[0]
-        else:
-            kb = lambda k, J: kaiser_bessel(k, J, alpha, kb_m)[0]
-        return kb, alpha, kb_m
+    # if isinstance(alpha, str):
+    #     alpha, kb_m = _kaiser_bessel_params(alpha, J, K_N)
 
     """Warn about use of modified formula for negative kb_m"""
     if (kb_m < 0) & ((abs(round(kb_m) - kb_m)) > np.finfo(float).eps):
-        # persistent warned  #TODO
-        # if isempty(warned)	# only print this reminder the first time
-        wstr = 'Warning in %s: Negative NonInt kb_m=%g in ' % (__name__, kb_m)
-        wstr += 'kaiser_bessel().\n\t- using modified definition of KB '
-        wstr += 'function\n'
+        wstr = 'Negative NonInt kb_m=%g\n' % (kb_m)
+        wstr += '\t- using modified definition of KB function\n'
         warnings.warn(wstr)
-
     kb_m_bi = abs(kb_m)		# modified "kb_m" as described above
     ii = (2 * np.abs(x) < J).nonzero()
     tmp = (2 * x[ii] / J)
     f = np.sqrt(1 - tmp * tmp)
-    denom = iv(kb_m_bi, alpha)  # denom = besseli(kb_m_bi,alpha)
+    denom = iv(kb_m_bi, alpha)
     if denom == 0:
-        print('%s:  m=%g alpha=%g' % (__name__, kb_m, alpha))
+        print('m=%g alpha=%g' % (kb_m, alpha))
     kb = np.zeros_like(x)
     kb[ii] = (f ** kb_m * iv(kb_m_bi, alpha * f)) / float(denom)
-    kb = kb.real  # TODD:  reale
-
-    return kb, alpha, kb_m
+    kb = kb.real
+    return kb
 
 
 def kaiser_bessel_ft(u=None, J=6, alpha=None, kb_m=0, d=1):
@@ -133,26 +112,16 @@ def kaiser_bessel_ft(u=None, J=6, alpha=None, kb_m=0, d=1):
     if not alpha:
         alpha = 2.34 * J
 
-    if is_string_like(u):
-        kernel_ft = 'kaiser_bessel_ft(t, %d, %g, %g, 1)' % (J, alpha, kb_m)
-        if u == 'string':
-            y = kernel_ft
-        elif u == 'inline':
-            y = eval('lambda t: ' + kernel_ft)
-        else:
-            raise ValueError('ERROR in %s: bad argument for u' % __name__)
-        return y
-
     # persistent warned  #TODO
     if (kb_m < -1):  # Check for validity of FT formula
         # if isempty(warned)	% only print this reminder the first time
-        wstr = '\nWarning in %s: kb_m=%g < -1' % (__name__, kb_m)
+        wstr = 'kb_m=%g < -1' % (kb_m)
         wstr += ' in kaiser_bessel_ft()\n'
-        wstr += '\t- validity of FT formula uncertain for kb_m < -1\n'
+        wstr += ' - validity of FT formula uncertain for kb_m < -1\n'
         warnings.warn(wstr)
     elif (kb_m < 0) & ((abs(round(kb_m) - kb_m)) > np.finfo(float).eps):
         # if isempty(warned)	% only print this reminder the first time
-        wstr = '\nWarning in %s: Neg NonInt kb_m=%g in ' % (__name__, kb_m)
+        wstr = '\nNeg NonInt kb_m=%g in ' % (kb_m)
         wstr += 'kaiser_bessel_ft()\n\t- validity of FT formula uncertain\n'
         warnings.warn(wstr)
 
@@ -195,20 +164,18 @@ def _kaiser_bessel_params(alpha='best', J=6, K_N=2):
             if(np.sum(ii) == 0):
                 ii = np.abs(J - Jlist).argmin()
                 warnings.warn(
-                    'WARNING in %s:  J=%d not found, using %d' %
-                    (__name__, J, int(
-                        Jlist[ii])))
+                    'J=%d not found, using %d' % (J, int(Jlist[ii])))
             alpha = J * abest[ii]
         else:
-            wstr = ('WARNING in %s: kaiser_bessel optimized '
-                    'only for K/N=2!\n'
-                    '\tusing good defaults: m=0 and alpha = 2.34*J')
+            wstr = ('kaiser_bessel optimized only for K/N=2!\n'
+                    'using good defaults: m=0 and alpha = 2.34*J')
             warnings.warn(wstr)
             kb_m = 0
             alpha = 2.34 * J
-        return alpha, kb_m
     elif alpha == 'beatty':
         # Eq. 5 of Beatty2005:  IEEE TMI 24(6):799:808, kb_m = 0
         alpha = np.pi * np.sqrt(J**2/K_N**2 * (K_N - 0.5)**2 - 0.8)
+        kb_m = 0
     else:
-        raise ValueError('Error in %s:  unknown alpha mode' % __name__)
+        raise ValueError('unknown alpha mode')
+    return alpha, kb_m

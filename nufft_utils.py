@@ -1,13 +1,15 @@
 from __future__ import division, print_function, absolute_import
 
+import functools
 import warnings
+import collections
+
 import numpy as np
 import scipy.sparse
 
-# from grl_utils import outer_sum
-from PyIRT.nufft.kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
+from PyIRT.nufft.kaiser_bessel import (kaiser_bessel, kaiser_bessel_ft,
+                                       _kaiser_bessel_params)
 from grl_utils import is_string_like
-import collections
 
 # TODO: add linear and diric options as in newfft.m
 # newfft_scale_tri(Nd(id), Jd(id), Kd(id), st.Nmid)
@@ -1005,7 +1007,7 @@ def nufft1_error(om, N1, J1, K1, kernel, sn=[]):
 
         # Dirichlet (truncated)
         elif kernel == 'diric':
-            kernel = 'nufft_diric(k,%d,%d,use_true_diric=True) * (abs(k) < J/2.)' % (
+            kernel = 'nufft_diric(k, %d, %d, use_true_diric=True) * (abs(k) < J/2.)' % (
                 N1, N1)
 
         # gaussian (truncated) with previously numerically-optimized width
@@ -1021,19 +1023,21 @@ def nufft1_error(om, N1, J1, K1, kernel, sn=[]):
 
         # kaiser-bessel with previously numerically-optimized shape
         elif kernel == 'kaiser':
-            [kernel, kb_a, kb_m] = kaiser_bessel(
-                'string', J1, 'best', 0, K1 / float(N1))
-            kernel_ft = kaiser_bessel_ft('inline', J1, kb_a, kb_m, 1)
+            K_N = K1 / float(N1)
+            kb_a, kb_m = _kaiser_bessel_params('best', J=J1, K_N=K_N)
+            kernel = functools.partial(
+                kaiser_bessel, J=J1, alpha=kb_a, kb_m=kb_m, K_N=K_N)
+            kernel_ft = functools.partial(
+                kaiser_bessel_ft, J=J1, alpha=kb_a, kb_m=kb_m)
 
         # linear interpolation via triangular function (possibly "wide"!)
         elif kernel == 'linear':
             kernel = '(1 - abs(k/(J/2.))) * (abs(k) < J/2.)'
-
         else:
             raise ValueError('unknown kernel: %s' % kernel)
 
-        if not isinstance(kernel, collections.Callable):  # convert string to kernel
-            kernel = eval('lambda k,J: ' + kernel)
+        if not isinstance(kernel, collections.Callable):
+            kernel = eval('lambda k, J: ' + kernel)
         # if not callable(kernel_ft): #convert string to kernel
         #    kernel_ft = eval('lambda t: ' + kernel_ft)
 
@@ -1041,12 +1045,6 @@ def nufft1_error(om, N1, J1, K1, kernel, sn=[]):
         raise ValueError('need callable kernel or recognized kernel string')
 
     gam = 2 * pi / K1
-
-    # if False:
-    #    %	plot interpolator
-    #    k = np.linspace(-J/2.-1,J/2.+1,101)
-    #    figure(),subplot(221), plot(k, kernel(k, J))
-    #    xlabel k, ylabel kernel(k), axis tight, grid
 
     # Compute scaling factors using the "do no harm" strategy.
     # This may not be optimal; analytical FT could also be reasonable.
@@ -1132,32 +1130,29 @@ def nufft_alpha_kb_fit(N, J, K, L=None, beta=1, Nmid=None, verbose=False):
         sn_kaiser = sn_kaiser.real
     else:
         # kaiser-bessel with previously numerically-optimized shape
-        [kernel, kb_a, kb_m] = kaiser_bessel(
-            'string', J, 'best', 0, K / float(N))
-        kernel_ft = kaiser_bessel_ft('inline', J, kb_a, kb_m, 1)
+        K_N = K / float(N)
+        kb_a, kb_m = _kaiser_bessel_params('best', J=J, K_N=K_N)
+        kernel_ft = functools.partial(
+            kaiser_bessel_ft, J=J, alpha=kb_a, kb_m=kb_m)
         sn_kaiser = 1 / kernel_ft(nlist / float(K))  # [N]
 
     # use regression to match NUFFT with BEST kaiser scaling's
     gam = 2 * np.pi / K
-    nlist = np.asmatrix(nlist).T
-    ar = np.asmatrix(np.arange(0, L + 1))
+    nlist = nlist.reshape((-1, 1))        # np.asmatrix(nlist).T
+    ar = np.arange(L+1).reshape((1, -1))  # np.asmatrix(np.arange(0, L + 1))
     X = np.cos(beta * gam * nlist * ar)  # [N,L]
-    # TODO:  how to do regress() in Python?
-    # coef = (X \ sn_kaiser)';	% regress(sn_kaiser, X)';
 
-    if sn_kaiser.ndim == 1:  # need 2D for matrix multiply below
-        sn_kaiser = sn_kaiser[:, np.newaxis]
     # TODO: pinv(X)*sn is not always equivalent to Matlab's mldivide()
-    coef = np.linalg.pinv(X) * sn_kaiser
+    coef = np.dot(np.linalg.pinv(X), sn_kaiser.reshape((-1, 1)))
     coef = np.squeeze(np.asarray(coef))
 
     alphas = np.zeros(coef.shape)
     alphas[0] = coef[0].real
     alphas[1:] = coef[1:] / 2.
 
-    return alphas, beta
-
     if verbose:
         print(
             'condition # for LS fit to KB scale factors: %g' %
             np.linalg.cond(X))
+
+    return alphas, beta

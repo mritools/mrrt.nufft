@@ -1,24 +1,11 @@
 from __future__ import division, print_function, absolute_import
 
-__all__ = ['NufftKernel', 'NufftBase']
-
-from time import time
-from grl_utils import fftn, ifftn
-import warnings
-import numpy as np
 import collections
-try:
-    from matplotlib import pyplot as plt
-except:
-    warnings.warn("matplotlib not found.  won't be able to plot")
+import warnings
+import functools
+from time import time
+import numpy as np
 
-try:
-    import scipy.sparse
-except:
-    # most cases don't need scipy
-    pass
-
-# TODO: move this to a global configuration
 
 from scipy.sparse import coo_matrix
 
@@ -34,8 +21,6 @@ from PyIRT.nufft.nufft_utils import (_nufft_samples,
                                      nufft_diric,
                                      )
 
-from grl_utils import (outer_sum, complexify)
-
 from PyIRT.nufft.kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
 
 from PyIRT.nufft.interp_table import (interp1_table,
@@ -45,12 +30,33 @@ from PyIRT.nufft.interp_table import (interp1_table,
                                       interp2_table_adj,
                                       interp3_table_adj)
 
-from grl_utils import is_string_like
+from grl_utils import fftn, ifftn, outer_sum, complexify, is_string_like
+
+# TODO: move this to a global configuration
+
+try:
+    from matplotlib import pyplot as plt
+except:
+    warnings.warn("matplotlib not found.  won't be able to plot")
+
+try:
+    import scipy.sparse
+except:
+    # most cases don't need scipy
+    pass
+
+__all__ = ['NufftKernel', 'NufftBase']
+
+supported_real_types = [np.float32, np.float64]
+supported_cplx_types = [np.complex64, np.float128]
 
 
 def _to_1d_int_array(arr, nelem=None, dtype_out=np.intp):
     """ convert to 1D integer array.  returns an error if the elements of arr
     aren't an integer type or arr has more than one non-singleton dimension.
+
+    If nelem is specified, an error is raised if the array doesn't contain
+    nelem elements.
     """
     arr = np.atleast_1d(arr)
     if arr.ndim > 1:
@@ -59,7 +65,6 @@ def _to_1d_int_array(arr, nelem=None, dtype_out=np.intp):
             raise ValueError("dimensions of arr cannot exceed 1")
         if arr.ndim == 0:
             arr = np.atleast_1d(arr)
-    # arr.dtype.kind in ['i','u']
     if not issubclass(arr.dtype.type, np.integer):
         # float only OK if values are integers
         if not np.all(np.mod(arr, 1) == 0):
@@ -83,7 +88,8 @@ def _scale_tri(N, J, K, Nmid):
     """
     # TODO: test this one
     nc = np.arange(N, dtype=np.float64) - Nmid
-    fun = lambda x: J * np.sinc(J * x / K) ** 2
+
+    def fun(x): J * np.sinc(J * x / K) ** 2
     cent = fun(nc)
     sn = 1 / cent
 
@@ -94,77 +100,6 @@ def _scale_tri(N, J, K, Nmid):
         tmp += np.abs(fun(nc - ll * K)) ** 2
     sn = cent / tmp
     return sn
-
-supported_real_types = [np.float32, np.float64]
-supported_cplx_types = [np.complex64, np.float128]
-
-"""
-See:
-http://stackoverflow.com/questions/7019643/overriding-properties-in-python
-
-And then subclasses can override a single setter/getter like this:
-
-class C(object):
-    def __init__(self):
-        self._x = None
-
-    @property
-    def x(self):
-        return self._x
-
-    @x.setter
-    def x(self, value):
-        self._x = value
-
-    def printx(self):  #just to test calling function from parent class
-        print(self.x)
-
-class C2(C):
-    @C.x.setter
-    def x(self, x):
-        C.printx(self)
-        C.x.fset(self, x * 2)
-        C.printx(self)
-
-
-
-c2=C2(); c2.x=5; c2.x
-
-
-This is a little warty because overriding multiple methods seems to require
-you to do something like:
-
-class C3(C):
-    @C.x.getter
-    def x(self):
-        return self._x * -1
-    # C3 now has an x property with a modified getter
-    # so modify its setter rather than C.x's setter.
-    @x.setter
-    def x(self, value):
-        self._x = value * 2
-
-Of course at the point that you're overriding getter, setter, and deleter you
-can probably just redefine the property for C3.
-
-
-"""
-
-# class NufftExact(Nufft):
-#     def __init__(self,**kwargs):
-#         super(NufftExact, self).__init__(**kwargs)
-
-# class NufftSparse(Nufft):
-#     def __init__(self,**kwargs):
-#         super(NufftSparse, self).__init__(**kwargs)
-#         self.p = None
-
-# class NufftTable(Nufft):
-#     def __init__(self,**kwargs):
-#         super(NufftTable, self).__init__(**kwargs)
-# @Nufft.Kd.setter
-# def x(self, Kd):
-# Nufft.Kd.fset(self, Kd)
 
 
 def _get_legend_text(ax):
@@ -183,7 +118,25 @@ kernel_types = ['minmax:kb',
                 'minmax:unif',
                 'minmax:tuned',
                 ]
-                
+
+
+# class NufftExact(Nufft):
+#     def __init__(self,**kwargs):
+#         super(NufftExact, self).__init__(**kwargs)
+
+# class NufftSparse(Nufft):
+#     def __init__(self,**kwargs):
+#         super(NufftSparse, self).__init__(**kwargs)
+#         self.p = None
+
+# class NufftTable(Nufft):
+#     def __init__(self,**kwargs):
+#         super(NufftTable, self).__init__(**kwargs)
+# @Nufft.Kd.setter
+# def x(self, Kd):
+# Nufft.Kd.fset(self, Kd)
+
+
 class NufftKernel(object):
     """ Interpolation kernel for use in the gridding stage of the NUFFT. """
 
@@ -203,18 +156,17 @@ class NufftKernel(object):
             self._kernel_type = kernel_type
             self._initialize_kernel(kernel_type)
         elif isinstance(kernel_type, (list, tuple, set)):
+            # list containing 1 kernel per dimension
             kernel_type = list(kernel_type)
             if isinstance(kernel_type[0], collections.Callable):
                 if len(kernel_type) != self.ndim:
                     raise ValueError(
                         'wrong # of kernels specified in list')
-                # list of kernels was already passed in
                 self.kernel = kernel_type
             else:
                 raise ValueError('kernel_type list must contain a series of ' +
                                  'callable kernel functions')
             self._kernel_type = 'inline'
-        # if single kernel was passed, replicate over all dimensions
         elif isinstance(kernel_type, collections.Callable):
             # replicate to fill list for each dim
             self.kernel = [kernel_type, ] * self.ndim
@@ -264,16 +216,15 @@ class NufftKernel(object):
         # linear interpolator straw man
         if kernel_type == 'linear':
             kernel_type = 'inline'
-            kernel = lambda k, J: (1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
+
+            def kernel(k, J): return(1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
             self.kernel = [kernel, ] * ndim
 
         elif kernel_type == 'diric':   # exact interpolator
             if (Kd is None) or (Nd is None):
                 raise ValueError("kwargs must contain Kd, Nd for diric case")
-
             if not np.all(np.equal(Jd, Kd)):
                 warnings.warn('diric inexact unless Jd=Kd')
-
             self.kernel = []
             for id in range(ndim):
                 N = Nd[id]
@@ -284,7 +235,6 @@ class NufftKernel(object):
                     N / K * nufft_diric(k, N, K, True)))
         elif kernel_type == 'kb:beatty':  # KB with Beatty et al parameters
             self.is_kaiser_scale = True
-
             # TODO: could take K_N directly instead
             if (Kd is None) or (Nd is None) or (Jd is None):
                 raise ValueError("kwargs must contain Kd, Nd, Jd for " +
@@ -292,18 +242,20 @@ class NufftKernel(object):
 
             # warn if user specified specific alpha, m
             if (kb_m is not None) or (kb_alf is not None):
-                warnings.warn('user supplied kb_alf and kb_m ignored')
+                warnings.warn(
+                    'kb:beatty:  user supplied kb_alf and kb_m ignored')
 
             K_N = Kd / Nd
             params['kb_alf'] = \
                 np.pi * np.sqrt(Jd ** 2 / K_N ** 2 * (K_N - 0.5) ** 2 - 0.8)
-            params['kb_m'] = np.zeros((ndim,))
+            params['kb_m'] = np.zeros(ndim)
             self.kernel = []
             for id in range(ndim):
-                self.kernel.append(kaiser_bessel('inline',
-                                                 Jd[id],
-                                                 params['kb_alf'][id],
-                                                 params['kb_m'][id])[0])
+                self.kernel.append(
+                    functools.partial(kaiser_bessel,
+                                      J=Jd[id],
+                                      alpha=params['kb_alf'][id],
+                                      kb_m=params['kb_m'][id]))
         # alpha = pi * sqrt(J^2/K_N^2 * (K_N - 0.5)^2 - 0.8);  %Eq. 5 of
         # Beatty2005:  IEEETMI 24(6):799:808
 
@@ -323,10 +275,12 @@ class NufftKernel(object):
             params['kb_alf'] = []
             params['kb_m'] = []
             for id in range(ndim):
-                k, alf, m = kaiser_bessel('inline', Jd[id])
-                self.kernel.append(k)
+                alf = 2.34 * Jd[id]
+                m = 0
+                self.kernel.append(
+                    functools.partial(kaiser_bessel, J=Jd[id], alpha=alf, m=m))
                 params['kb_alf'].append(alf)
-                params['kb_m'].append(m)
+                params['kb_m'].append(0)
 
         elif kernel_type == 'kb:user':  # KB with Beatty et al parameters
             self.is_kaiser_scale = True
@@ -337,10 +291,10 @@ class NufftKernel(object):
 
             self.kernel = []
             for id in range(ndim):
-                self.kernel.append(kaiser_bessel('inline',
-                                                 J=Jd[id],
-                                                 alpha=kb_alf[id],
-                                                 kb_m=kb_m[id])[0])
+                self.kernel.append(functools.partial(kaiser_bessel,
+                                                     J=Jd[id],
+                                                     alpha=kb_alf[id],
+                                                     kb_m=kb_m[id]))
 
         # minmax interpolator with KB scaling factors (recommended default)
         elif kernel_type == 'minmax:kb':
@@ -402,7 +356,7 @@ class NufftKernel(object):
         self.params = params
 
     def plot(self, axes=None):
-        """ plot the (separable) kernel for each axis """
+        """plot the (separable) kernel for each axis."""
         title_text = 'type: {}'.format(self.kernel_type)
         if axes is None:
             f, axes = plt.subplots(self.ndim, 1, sharex=True)

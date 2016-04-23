@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import functools
 import numpy as np
 from numpy.testing import dec
 
@@ -23,14 +24,14 @@ def test_kaiser_bessel(verbose=False):
     leg = []
     yy = np.zeros((len(x), len(mlist)))
     for i, kb_m in enumerate(mlist):
-        yy[:, i] = kaiser_bessel(x, J, alpha, kb_m)[0]
+        yy[:, i] = kaiser_bessel(x, J, alpha, kb_m)
         leg.append('m = %d' % kb_m)
-        func = kaiser_bessel('inline', 0, alpha, kb_m)[0]
+        func = functools.partial(kaiser_bessel, 0, alpha, kb_m)
         yf = func(x, J)
         if (yf != yy[:, i]).any():
             print('ERROR in %s:  bug' % __name__)
 
-    yb = kaiser_bessel(x, J, 'best', [], 2)[0]
+    yb = kaiser_bessel(x, J, 'best', [], 2)
     leg.append('best')
     if verbose:
         from matplotlib import pyplot as plt
@@ -68,7 +69,7 @@ def test_kaiser_bessel_ft(verbose=False):
     Yu = np.zeros((len(uu), len(mlist)))
     for ii, kb_m in enumerate(mlist):
         kb_m = mlist[ii]
-        yy[:, ii] = kaiser_bessel(x, J, alpha, kb_m)[0]
+        yy[:, ii] = kaiser_bessel(x, J, alpha, kb_m)
         Yf[:, ii] = np.real(fftshift(fft(fftshift(yy[:, ii])))) * dx
         Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
         Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
@@ -88,14 +89,14 @@ def test_kaiser_bessel_ft(verbose=False):
                     'FFT', 'FT coarse', 'FT fine'], loc='upper right')
             plt.axis('tight')
             plt.grid(True)  # , axisx(range(uu)), grid
-    
+
             plt.figure()
             plt.plot(x, yy[:, 0], 'c-', x, yy[:, 1], 'y-',
                      x, yy[:, 2], 'm-', x, yy[:, 3], 'g-')
         plt.figure()
         l1, l2, l3, l4 = plt.plot(uu, Yu[:, 0], 'c-', uu, Yu[:, 1], 'y-',
                                   uu, Yu[:, 2], 'm-', uu, Yu[:, 3], 'g-')
-        
+
         plt.axis('tight')
         plt.legend((l1, l2, l3, l4), leg, loc='upper right')
         plt.hold('on')
@@ -144,7 +145,7 @@ def _kaiser_matlab_compare(show_figures=True):
         exec('k=np.array(%s)' % mlab.get_variable('k'))
         exec('kft=np.array(%s)' % mlab.get_variable('kft'))
         exec('kft_uu=np.array(%s)' % mlab.get_variable('kft_uu'))
-        k_py = kaiser_bessel(x, J, alpha, kb_m)[0]
+        k_py = kaiser_bessel(x, J, alpha, kb_m)
         kft_py = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
         kft_uu_py = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
         diff_k = np.max(k_py - k)
