@@ -369,8 +369,7 @@ def _nufft_coef(om, J, K, kernel):
 
     # outer sum via broadcasting
     arg = -np.arange(1, J + 1)[:, None] + dk[None, :]  # [J,M]
-
-    coef = kernel(arg, J)
+    coef = kernel(arg)
 
     return (coef, arg)
 
