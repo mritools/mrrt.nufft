@@ -402,9 +402,6 @@ class NufftKernel(object):
         return repstr
 
 
-
-
-
 # change name of NufftBase to NFFT_Base
 # Note: must have object here to get a new-style class!
 # TODO: change default n_shift to Nd/2?
@@ -1201,14 +1198,6 @@ def _nufft_table_adj(st, X, om=None):
     return Xk.astype(X.dtype)
 
 
-def nufft_init():  # TODO: remove this
-    pass
-
-
-def nufft():  # TODO: remove this
-    pass
-
-
 def _nufft_table_make1(
         how, N, J, K, L, kernel_type, phasing, kernel_kwargs={}):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
@@ -1258,23 +1247,23 @@ def _nufft_table_make1(
 
 def _block_outer_sum(x1, x2):
     """#function y = _block_outer_sum(x1, x2)"""
-    [J1, M] = x1.shape
-    [J2, M] = x2.shape
-    xx1 = np.reshape(x1, (J1, 1, M))  # [J1,1,M] from [J1,M]
-    xx2 = np.reshape(x2, (1, J2, M))  # [1,J2,M] from [J2,M]
+    J1, M = x1.shape
+    J2, M = x2.shape
+    xx1 = np.reshape(x1, (J1, 1, M))  # (J1 ,1, M) from (J1, M)
+    xx2 = np.reshape(x2, (1, J2, M))  # (1, J2, M) from (J2, M)
     # use numpy broadcasting
-    y = xx1 + xx2			# [J1,J2,M]
+    y = xx1 + xx2			# (J1, J2, M)
     return y
 
 
 def _block_outer_prod(x1, x2):
     """#function y = _block_outer_prod(x1, x2)"""
-    [J1, M] = x1.shape
-    [J2, M] = x2.shape
-    xx1 = np.reshape(x1, (J1, 1, M))  # [J1,1,M] from [J1,M]
-    xx2 = np.reshape(x2, (1, J2, M))  # [1,J2,M] from [J2,M]
+    J1, M = x1.shape
+    J2, M = x2.shape
+    xx1 = np.reshape(x1, (J1, 1, M))  # (J1 ,1, M) from (J1, M)
+    xx2 = np.reshape(x2, (1, J2, M))  # (1, J2, M) from (J2, M)
     # use numpy broadcasting
-    y = xx1 * xx2			# [J1,J2,M]
+    y = xx1 * xx2			# (J1, J2, M)
     return y
 
 
