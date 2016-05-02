@@ -1156,3 +1156,33 @@ def nufft_alpha_kb_fit(N, J, K, L=None, beta=1, Nmid=None, verbose=False):
             np.linalg.cond(X))
 
     return alphas, beta
+
+
+def to_1d_int_array(arr, nelem=None, dtype_out=np.intp):
+    """ convert to 1D integer array.  returns an error if the elements of arr
+    aren't an integer type or arr has more than one non-singleton dimension.
+
+    If nelem is specified, an error is raised if the array doesn't contain
+    nelem elements.
+    """
+    arr = np.atleast_1d(arr)
+    if arr.ndim > 1:
+        arr = np.squeeze(arr)
+        if arr.ndim > 1:
+            raise ValueError("dimensions of arr cannot exceed 1")
+        if arr.ndim == 0:
+            arr = np.atleast_1d(arr)
+    if not issubclass(arr.dtype.type, np.integer):
+        # float only OK if values are integers
+        if not np.all(np.mod(arr, 1) == 0):
+            print("arr = {}".format(arr))
+            raise ValueError("arr contains non-integer values")
+    if nelem is not None:
+        if arr.size != nelem:
+            if arr.size == 1:
+                arr = np.asarray([arr[0], ] * nelem)
+            else:
+                raise ValueError(
+                    "array did not have the expected size of {}".format(nelem))
+
+    return arr.astype(dtype_out)

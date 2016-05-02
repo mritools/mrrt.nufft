@@ -3,7 +3,7 @@ from __future__ import division, print_function, absolute_import
 import warnings
 import numpy as np
 from scipy.special import iv, jv
-from grl_utils import reale, is_string_like
+from grl_utils import reale
 
 __all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
 

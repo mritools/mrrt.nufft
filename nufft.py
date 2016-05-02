@@ -2,7 +2,7 @@ from __future__ import division, print_function, absolute_import
 
 import collections
 import warnings
-import functools
+
 from time import time
 import numpy as np
 
@@ -10,18 +10,16 @@ import numpy as np
 from scipy.sparse import coo_matrix
 
 from PyIRT.nufft.nufft_utils import (_nufft_samples,
-                                     nufft_alpha_kb_fit,
-                                     nufft_best_alpha,
                                      nufft_scale,
                                      _nufft_interp_zn,
                                      _nufft_coef,
                                      _nufft_r,
                                      _nufft_T,
                                      _nufft_offset,
-                                     nufft_diric,
+                                     to_1d_int_array
                                      )
 
-from PyIRT.nufft.kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
+from PyIRT.nufft.kaiser_bessel import kaiser_bessel_ft
 
 from PyIRT.nufft.interp_table import (interp1_table,
                                       interp2_table,
@@ -32,12 +30,7 @@ from PyIRT.nufft.interp_table import (interp1_table,
 
 from grl_utils import fftn, ifftn, outer_sum, complexify, is_string_like
 
-# TODO: move this to a global configuration
-
-try:
-    from matplotlib import pyplot as plt
-except:
-    warnings.warn("matplotlib not found.  won't be able to plot")
+from ._kernels import NufftKernel
 
 try:
     import scipy.sparse
@@ -45,40 +38,10 @@ except:
     # most cases don't need scipy
     pass
 
-__all__ = ['NufftKernel', 'NufftBase']
+__all__ = ['NufftBase']
 
 supported_real_types = [np.float32, np.float64]
 supported_cplx_types = [np.complex64, np.float128]
-
-
-def _to_1d_int_array(arr, nelem=None, dtype_out=np.intp):
-    """ convert to 1D integer array.  returns an error if the elements of arr
-    aren't an integer type or arr has more than one non-singleton dimension.
-
-    If nelem is specified, an error is raised if the array doesn't contain
-    nelem elements.
-    """
-    arr = np.atleast_1d(arr)
-    if arr.ndim > 1:
-        arr = np.squeeze(arr)
-        if arr.ndim > 1:
-            raise ValueError("dimensions of arr cannot exceed 1")
-        if arr.ndim == 0:
-            arr = np.atleast_1d(arr)
-    if not issubclass(arr.dtype.type, np.integer):
-        # float only OK if values are integers
-        if not np.all(np.mod(arr, 1) == 0):
-            print("arr = {}".format(arr))
-            raise ValueError("arr contains non-integer values")
-    if nelem is not None:
-        if arr.size != nelem:
-            if arr.size == 1:
-                arr = np.asarray([arr[0], ] * nelem)
-            else:
-                raise ValueError(
-                    "array did not have the expected size of {}".format(nelem))
-
-    return arr.astype(dtype_out)
 
 
 def _scale_tri(N, J, K, Nmid):
@@ -110,14 +73,6 @@ def _get_legend_text(ax):
         return [t.get_text() for t in l.get_texts()]
 
 
-kernel_types = ['minmax:kb',
-                'linear',
-                'diric',
-                'kb:beatty'
-                'kb:minmax'
-                'minmax:unif',
-                'minmax:tuned',
-                ]
 
 
 # class NufftExact(Nufft):
@@ -135,271 +90,6 @@ kernel_types = ['minmax:kb',
 # @Nufft.Kd.setter
 # def x(self, Kd):
 # Nufft.Kd.fset(self, Kd)
-
-
-class NufftKernel(object):
-    """ Interpolation kernel for use in the gridding stage of the NUFFT. """
-
-    def __init__(self, kernel_type='minmax:kb', **kwargs):
-        self.kernel = None
-        self.is_kaiser_scale = False
-        self.params = kwargs.copy()
-        self.kernel_type = kernel_type
-
-    @property
-    def kernel_type(self):
-        return self._kernel_type
-
-    @kernel_type.setter
-    def kernel_type(self, kernel_type):
-        if is_string_like(kernel_type):
-            self._kernel_type = kernel_type
-            self._initialize_kernel(kernel_type)
-        elif isinstance(kernel_type, (list, tuple, set)):
-            # list containing 1 kernel per dimension
-            kernel_type = list(kernel_type)
-            if isinstance(kernel_type[0], collections.Callable):
-                if len(kernel_type) != self.ndim:
-                    raise ValueError(
-                        'wrong # of kernels specified in list')
-                self.kernel = kernel_type
-            else:
-                raise ValueError('kernel_type list must contain a series of ' +
-                                 'callable kernel functions')
-            self._kernel_type = 'inline'
-        elif isinstance(kernel_type, collections.Callable):
-            # replicate to fill list for each dim
-            self.kernel = [kernel_type, ] * self.ndim
-            self._kernel_type = 'inline'
-        else:
-            raise ValueError('invalid type for kernel_type: {}'.format(
-                type(kernel_type)))
-
-    def _initialize_kernel(self, kernel_type):
-
-        params = self.params.copy()
-
-        # if no dimensions specified, using longest among Kd, Jd, Nd
-        if params.get('ndim', None) is None:
-            max_len = 0
-            for k, v in list(params.items()):
-                if k in ['Kd', 'Jd', 'Nd']:
-                    params[k] = _to_1d_int_array(v)
-                    max_len = len(params[k])
-            self.ndim = max_len
-        else:
-            self.ndim = params.pop('ndim')
-
-        # replicate any that were length one to ndim array
-        for k, v in list(params.items()):
-            if k in ['Kd', 'Jd', 'Nd']:
-                params[k] = _to_1d_int_array(v, self.ndim)
-            # Nmid is not necessarily an integer, so handle it manually
-            if 'Nmid' in params and len(params['Nmid']) < self.ndim:
-                if len(params['Nmid']) > 1:
-                    raise ValueError("Nmid dimension mismatch")
-                else:
-                    params['Nmid'] = np.asarray(
-                        [params['Nmid'][0], ] * self.ndim)
-
-        ndim = self.ndim  # number of dimensions
-
-        Kd = params.get('Kd', None)  # oversampled image size
-        Jd = params.get('Jd', None)  # kernel size
-        Nd = params.get('Nd', None)  # image size
-        Nmid = params.get('Nmid', None)
-        kb_alf = params.get('kb_alf', None)  # alpha for kb:* cases
-        kb_m = params.get('kb_m', None)  # m for kb:* cases
-        alpha = params.get('alpha', None)  # alpha for minmax:* cases
-        beta = params.get('beta', None)  # beta for minmax:* cases
-
-        # linear interpolator straw man
-        if kernel_type == 'linear':
-            kernel_type = 'inline'
-
-            def kernel(k, J): return(1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
-            self.kernel = [kernel, ] * ndim
-
-        elif kernel_type == 'diric':   # exact interpolator
-            if (Kd is None) or (Nd is None):
-                raise ValueError("kwargs must contain Kd, Nd for diric case")
-            if not np.all(np.equal(Jd, Kd)):
-                warnings.warn('diric inexact unless Jd=Kd')
-            self.kernel = []
-            for id in range(ndim):
-                N = Nd[id]
-                K = Kd[id]
-                if self.params.get('phasing', None) == 'real':
-                    N = 2 * np.floor((K + 1) / 2.) - 1  # trick
-                self.kernel.append(lambda k, J: (
-                    N / K * nufft_diric(k, N, K, True)))
-        elif kernel_type == 'kb:beatty':  # KB with Beatty et al parameters
-            self.is_kaiser_scale = True
-            # TODO: could take K_N directly instead
-            if (Kd is None) or (Nd is None) or (Jd is None):
-                raise ValueError("kwargs must contain Kd, Nd, Jd for " +
-                                 "{} case".format(kernel_type))
-
-            # warn if user specified specific alpha, m
-            if (kb_m is not None) or (kb_alf is not None):
-                warnings.warn(
-                    'kb:beatty:  user supplied kb_alf and kb_m ignored')
-
-            K_N = Kd / Nd
-            params['kb_alf'] = \
-                np.pi * np.sqrt(Jd ** 2 / K_N ** 2 * (K_N - 0.5) ** 2 - 0.8)
-            params['kb_m'] = np.zeros(ndim)
-            self.kernel = []
-            for id in range(ndim):
-                self.kernel.append(
-                    functools.partial(kaiser_bessel,
-                                      J=Jd[id],
-                                      alpha=params['kb_alf'][id],
-                                      kb_m=params['kb_m'][id]))
-        # alpha = pi * sqrt(J^2/K_N^2 * (K_N - 0.5)^2 - 0.8);  %Eq. 5 of
-        # Beatty2005:  IEEETMI 24(6):799:808
-
-        # KB with minmax-optimized parameters
-        elif kernel_type == 'kb:minmax':
-            self.is_kaiser_scale = True
-
-            if (Jd is None):
-                raise ValueError("kwargs must contain Jd for " +
-                                 "{} case".format(kernel_type))
-
-            # warn if user specified specific alpha, m
-            if (kb_m is not None) or (kb_alf is not None):
-                warnings.warn('user supplied kb_alf and kb_m ignored')
-
-            self.kernel = []
-            params['kb_alf'] = []
-            params['kb_m'] = []
-            for id in range(ndim):
-                alf = 2.34 * Jd[id]
-                m = 0
-                self.kernel.append(
-                    functools.partial(kaiser_bessel, J=Jd[id], alpha=alf, m=m))
-                params['kb_alf'].append(alf)
-                params['kb_m'].append(0)
-
-        elif kernel_type == 'kb:user':  # KB with Beatty et al parameters
-            self.is_kaiser_scale = True
-
-            if (Jd is None) or (kb_m is None) or (kb_alf is None):
-                raise ValueError("kwargs must contain Jd, kb_m, kb_alf for" +
-                                 "{} case".format(kernel_type))
-
-            self.kernel = []
-            for id in range(ndim):
-                self.kernel.append(functools.partial(kaiser_bessel,
-                                                     J=Jd[id],
-                                                     alpha=kb_alf[id],
-                                                     kb_m=kb_m[id]))
-
-        # minmax interpolator with KB scaling factors (recommended default)
-        elif kernel_type == 'minmax:kb':
-            if (Kd is None) or (Nd is None) or (Jd is None) or (Nmid is None):
-                raise ValueError("kwargs must contain Kd, Nd, Jd, Nmid for " +
-                                 "{} case".format(kernel_type))
-            params['alpha'] = []
-            params['beta'] = []
-            for id in range(ndim):
-                [al, be] = nufft_alpha_kb_fit(N=Nd[id], J=Jd[id], K=Kd[id],
-                                              Nmid=Nmid[id])
-                params['alpha'].append(al)
-                params['beta'].append(be)
-
-        # minmax interpolator with numerically "tuned" scaling factors
-        elif kernel_type == 'minmax:tuned':  # TODO
-            if (Kd is None) or (Nd is None) or (Jd is None):
-                raise ValueError("kwargs must contain Kd, Nd, Jd for " +
-                                 "{} case".format(kernel_type))
-            params['alpha'] = []
-            params['beta'] = []
-            for id in range(ndim):
-                [al, be, ok] = nufft_best_alpha(J=Jd[id], L=0,
-                                                K_N=Kd[id] / Nd[id])
-                params['alpha'].append(al)
-                params['beta'].append(be)
-                if not ok:
-                    raise ValueError('unknown J,K/N')
-
-        # minmax interpolator with user-provided scaling factors
-        elif kernel_type == 'minmax:user':
-            if (alpha is None) or (beta is None):
-                raise ValueError("user must provide alpha, beta for " +
-                                 "{} case".format(kernel_type))
-            if len(alpha) != ndim or len(beta) != ndim:
-                print("alpha={}".format(alpha))
-                print("beta={}".format(beta))
-                print("ndim={}".format(ndim))
-                raise ValueError('alpha/beta size mismatch')
-
-        elif kernel_type == 'minmax:unif':
-            params['alpha'] = []
-            params['beta'] = []
-            for id in range(ndim):
-                params['alpha'].append(1.)
-                params['beta'].append(0.)
-        else:
-            raise ValueError('unknown kernel type')
-
-        if 'alpha' in params:
-            self.alpha = params['alpha']
-        if 'beta' in params:
-            self.beta = params['beta']
-        if 'kb_m' in params:
-            self.kb_m = params['kb_m']
-        if 'kb_alf' in params:
-            self.kb_alf = params['kb_alf']
-
-        self.params = params
-
-    def plot(self, axes=None):
-        """plot the (separable) kernel for each axis."""
-        title_text = 'type: {}'.format(self.kernel_type)
-        if axes is None:
-            f, axes = plt.subplots(self.ndim, 1, sharex=True)
-            axes = np.atleast_1d(axes)
-        for d in range(self.ndim):
-            if 'Jd' in self.params:
-                J = self.params['Jd'][d]
-            else:
-                J = 1
-            x = np.linspace(-J/2, J/2, 1001)
-
-            if 'minmax:kb' in self.kernel_type:
-                y = _nufft_table_make1('fast', N=self.params['Nd'][d],
-                                       K=self.params['Kd'][d],
-                                       J=self.params['Jd'][d],
-                                       L=250, kernel_type=self.kernel_type,
-                                       phasing='real')[0]
-            else:
-                y = self.kernel[d](x, J)
-            axes[d].plot(x, np.abs(y), 'k-', label='magnitude')
-            if d == self.ndim - 1:
-                axes[d].xaxis.set_ticks([-J/2, J/2])
-                axes[d].xaxis.set_ticklabels(['-J/2', 'J/2'])
-            axes[d].set_ylabel('kernel amplitude, axis {}'.format(d))
-            axes[d].set_title(title_text)
-            axes[d].legend()
-        plt.draw()
-        return axes
-
-    def __repr__(self):
-        repstr = "kernel type: {}\n".format(self.kernel_type)
-        repstr += "kernel dimensions: {}\n".format(self.ndim)
-        if 'kb:' in self.kernel_type:
-            repstr += "Kaiser Bessel params:\n"
-            for d in range(self.ndim):
-                repstr += "    alpha[{}], m[{}] = {}, {}\n".format(
-                    d, d, self.kb_alf[d], self.kb_m[d])
-        elif 'minmax:' in self.kernel_type:
-            repstr += "Minmax params:\n"
-            for d in range(self.ndim):
-                repstr += "    alpha[{}], beta[{}] = {}, {}".format(
-                    d, d, self.alpha[d], self.beta[d])
-        return repstr
 
 
 # change name of NufftBase to NFFT_Base
@@ -421,7 +111,7 @@ class NufftBase(object):
 
         # must set the __ version of these to avoid circular calls by the
         # setters
-        self.__Nd = _to_1d_int_array(Nd)
+        self.__Nd = to_1d_int_array(Nd)
         if self.verbose:
             print("Nd={}".format(Nd))
             print("self.__Nd={}".format(self.__Nd))
@@ -438,11 +128,11 @@ class NufftBase(object):
             if precision is not None and precision == 'single':
                 warnings.warn("Forcing double precision for 1D case")
             precision = 'double'
-        self._Jd = _to_1d_int_array(Jd, nelem=self.ndim)
+        self._Jd = to_1d_int_array(Jd, nelem=self.ndim)
 
         if Kd is None:
             Kd = 2 * self.__Nd
-        self.__Kd = _to_1d_int_array(Kd, nelem=self.ndim)
+        self.__Kd = to_1d_int_array(Kd, nelem=self.ndim)
 
         self.ortho = ortho  # normalization for orthogonal FFT
         if self.ortho:
@@ -506,7 +196,7 @@ class NufftBase(object):
             self.__Ld = None
         elif 'table' in self.mode:
             # TODO: change name of Ld to table_oversampling
-            self.Ld = _to_1d_int_array(Ld, nelem=self.ndim)
+            self.Ld = to_1d_int_array(Ld, nelem=self.ndim)
             if self.mode == 'table0':
                 self.table_order = 0  # just order in newfft
             elif self.mode == 'table1':
@@ -657,7 +347,7 @@ class NufftBase(object):
     @Nd.setter
     def Nd(self, Nd):
         K_N_ratio = self.__Kd / self.__Nd
-        self.__Nd = _to_1d_int_array(Nd, nelem=self.ndim)
+        self.__Nd = to_1d_int_array(Nd, nelem=self.ndim)
         self._set_Nmid()
         # update Kd to maintain approximately the same amount of oversampling
         self.__Kd = np.round(K_N_ratio * self.__Nd).astype(self.__Kd.dtype)
@@ -670,7 +360,7 @@ class NufftBase(object):
 
     @Jd.setter
     def Jd(self, Jd):
-        self._Jd = _to_1d_int_array(Jd, nelem=self.ndim)
+        self._Jd = to_1d_int_array(Jd, nelem=self.ndim)
         if self.__init_complete:
             self._reinitialize()
 
@@ -680,7 +370,7 @@ class NufftBase(object):
 
     @Ld.setter
     def Ld(self, Ld):
-        self.__Ld = _to_1d_int_array(Ld, nelem=self.ndim)
+        self.__Ld = to_1d_int_array(Ld, nelem=self.ndim)
         if 'table' not in self.mode:
             warnings.warn("Ld is ignored for mode = {}".format(self.mode))
         elif self.__init_complete:
@@ -692,8 +382,7 @@ class NufftBase(object):
 
     @Kd.setter
     def Kd(self, Kd):
-        self.__Kd = _to_1d_int_array(Kd, nelem=self.ndim)
-        # if (not self._lowmem) and (self.phasing == 'real'):
+        self.__Kd = to_1d_int_array(Kd, nelem=self.ndim)
         if isinstance(self.phase_before, np.ndarray):
             self.phase_before = self._phase_before(Kd, self.Nmid)
         if self.__init_complete:
@@ -805,11 +494,11 @@ class NufftBase(object):
 
     def _phase_before(self, Kd, Nmid):
         phase = 2 * np.pi * np.arange(Kd[0]) / Kd[0] * Nmid[0]
-        for id in range(1, Kd.size):
-            tmp = 2 * np.pi * np.arange(Kd[id]) / Kd[id] * Nmid[id]
+        for d in range(1, Kd.size):
+            tmp = 2 * np.pi * np.arange(Kd[d]) / Kd[d] * Nmid[d]
             # fast outer sum via broadcasting
             phase = phase.reshape(
-                (phase.shape) + (1,)) + tmp.reshape((1,) * id + (tmp.size,))
+                (phase.shape) + (1,)) + tmp.reshape((1,) * d + (tmp.size,))
         return np.exp(1j * phase).astype(self._cplx_dtype)  # [(Kd)]
 
     def _phase_after(self, om, Nmid, n_shift):
@@ -832,23 +521,23 @@ class NufftBase(object):
                                   kernel.beta, self.Nmid)
         else:
             self.sn = np.array([1.])
-            for id in range(self.ndim):
+            for d in range(self.ndim):
                 if kernel.is_kaiser_scale:
-                    # nc = np.arange(Nd[id])-(Nd[id]-1)/2.  #OLD WAY
-                    nc = np.arange(Nd[id]) - self.Nmid[id]
-                    tmp = 1 / kaiser_bessel_ft(nc / Kd[id], Jd[id],
-                                               kernel.kb_alf[id],
-                                               kernel.kb_m[id], 1)
+                    # nc = np.arange(Nd[d])-(Nd[d]-1)/2.  #OLD WAY
+                    nc = np.arange(Nd[d]) - self.Nmid[d]
+                    tmp = 1 / kaiser_bessel_ft(nc / Kd[d], Jd[d],
+                                               kernel.kb_alf[d],
+                                               kernel.kb_m[d], 1)
                 elif ktype == 'inline':
-                    tmp = 1 / _nufft_interp_zn(0, Nd[id], Jd[id], Kd[id],
-                                               kernel.kernel[id],
-                                               self.Nmid[id])
+                    tmp = 1 / _nufft_interp_zn(0, Nd[d], Jd[d], Kd[d],
+                                               kernel.kernel[d],
+                                               self.Nmid[d])
                 elif ktype == 'linear':
                     #raise ValueError("Not Implemented")
-                    tmp = _scale_tri(Nd[id], Jd[id], Kd[id], self.Nmid[id])
+                    tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.Nmid[d])
 #                elif 'minmax:' in ktype:
-#                    tmp = nufft_scale(Nd[id], Kd[id], kernel.alpha[id],
-#                                      kernel.beta[id], self.Nmid[id])
+#                    tmp = nufft_scale(Nd[d], Kd[d], kernel.alpha[d],
+#                                      kernel.beta[d], self.Nmid[d])
                 else:
                     raise ValueError("Unsupported ktype: {}".format(ktype))
                 # tmp = reale(tmp)  #TODO: reale?
@@ -874,35 +563,35 @@ class NufftBase(object):
             # recall just to be safe in case Kd, Nmid, etc changed?
             self._set_phase_funcs()
 
-        for id in range(self.ndim):
-            N = self.Nd[id]
-            J = self.Jd[id]
-            K = self.Kd[id]
+        for d in range(self.ndim):
+            N = self.Nd[d]
+            J = self.Jd[d]
+            K = self.Kd[d]
 
             # callable kernel:  kaiser, linear, etc
             if (self.kernel.kernel is not None):
-                kernel_func = self.kernel.kernel[id]
+                kernel_func = self.kernel.kernel[d]
                 if not isinstance(kernel_func, collections.Callable):
                     raise ValueError("callable kernel function required")
                 # [J?,M]
-                [c, arg] = _nufft_coef(om[:, id], J, K, kernel_func)
+                [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func)
             else:  # minmax:
-                alpha = self.kernel.alpha[id]
-                beta = self.kernel.beta[id]
+                alpha = self.kernel.alpha[d]
+                beta = self.kernel.beta[d]
                 # [J?,J?]  TODO: move .tol into kernel object
                 T = _nufft_T(N, J, K, tol=self.tol, alpha=alpha, beta=beta)
                 [r, arg] = _nufft_r(
-                    om[:, id], N, J, K, alpha=alpha, beta=beta)  # [J?,M]
+                    om[:, d], N, J, K, alpha=alpha, beta=beta)  # [J?,M]
                 # c = T * r  clear T r
                 c = np.dot(T, r)
             #
             # indices into oversampled FFT components
             #
             # [M,1] to leftmost near nbr
-            koff = _nufft_offset(om[:, id], J, K)
+            koff = _nufft_offset(om[:, d], J, K)
 
             # [J,M]
-            kd[id] = np.mod(outer_sum(np.arange(1, J + 1), koff), K).T
+            kd[d] = np.mod(outer_sum(np.arange(1, J + 1), koff), K).T
 
             if self.phasing == 'complex':
                 gam = 2 * np.pi / K
@@ -913,12 +602,12 @@ class NufftBase(object):
             else:
                 raise ValueError("Unknown phasing {}".format(self.phasing))
 
-            ud[id] = phase * c      # [J?,M]
+            ud[d] = phase * c      # [J?,M]
 
 
         tend1 = time()
         if self.verbose:
-            print("Nd={}".format(Nd))
+            print("Nd={}".format(self.Nd))
 
         """
         build sparse matrix that is [M,*Kd]
@@ -927,13 +616,13 @@ class NufftBase(object):
         kk = kd[0]  # [J1,M]
         uu = ud[0]  # [J1,M]
 
-        for id in range(1, self.ndim):
-            Jprod = np.prod(self.Jd[0:id + 1])
+        for d in range(1, self.ndim):
+            Jprod = np.prod(self.Jd[0:d + 1])
             # trick: pre-convert these indices into offsets! (Fortran order)
-            tmp = kd[id] * np.prod(self.Kd[:id])
+            tmp = kd[d] * np.prod(self.Kd[:d])
             kk = _block_outer_sum(kk, tmp)  # outer sum of indices
             kk = kk.reshape(Jprod, M, order='F')
-            uu = _block_outer_prod(uu, ud[id])  # outer product of coefficients
+            uu = _block_outer_prod(uu, ud[d])  # outer product of coefficients
             uu = uu.reshape(Jprod, M, order='F')
         # now kk and uu are [*Jd, M]
 
@@ -1007,16 +696,16 @@ class NufftBase(object):
 
         self.h = []
         # build kernel lookup table (LUT) for each dimension
-        for id in range(ndim):
+        for d in range(ndim):
             if 'alpha' in kernel_kwargs:
-                kernel_kwargs['alpha'] = [self.kernel.params['alpha'][id], ]
-                kernel_kwargs['beta'] = [self.kernel.params['beta'][id], ]
+                kernel_kwargs['alpha'] = [self.kernel.params['alpha'][d], ]
+                kernel_kwargs['beta'] = [self.kernel.params['beta'][d], ]
             if 'kb_alf' in kernel_kwargs:
-                kernel_kwargs['kb_alf'] = [self.kernel.params['kb_alf'][id], ]
-                kernel_kwargs['kb_m'] = [self.kernel.params['kb_m'][id], ]
+                kernel_kwargs['kb_alf'] = [self.kernel.params['kb_alf'][d], ]
+                kernel_kwargs['kb_m'] = [self.kernel.params['kb_m'][d], ]
 
-            h, t0 = _nufft_table_make1(how=how, N=self.Nd[id], J=self.Jd[id],
-                                       K=self.Kd[id], L=self.Ld[id],
+            h, t0 = _nufft_table_make1(how=how, N=self.Nd[d], J=self.Jd[d],
+                                       K=self.Kd[d], L=self.Ld[d],
                                        phasing=self.phasing,
                                        kernel_type=self.kernel.kernel_type,
                                        kernel_kwargs=kernel_kwargs)
@@ -1047,6 +736,7 @@ class NufftBase(object):
         return str
 
     def plot_kernels(self, with_phasing=False):
+        from matplotlib import pyplot as plt
         """Plots the NUFFT gridding kernel for each axis of the NUFFT."""
         gridspec_kw=dict(hspace=0.1)
         fig, axes = plt.subplots(self.ndim, 1, sharex='col',
@@ -1100,9 +790,9 @@ def _nufft_table_interp(st, Xk, om=None):
 
     tm = np.zeros_like(om)
     pi = np.pi
-    for id in range(0, ndim):
-        gam = 2 * pi / st.Kd[id]
-        tm[:, id] = om[:, id] / gam  # t = omega / gamma
+    for d in range(0, ndim):
+        gam = 2 * pi / st.Kd[d]
+        tm[:, d] = om[:, d] / gam  # t = omega / gamma
 
     if Xk.ndim == 1:
         Xk = Xk[:, np.newaxis]
@@ -1161,9 +851,9 @@ def _nufft_table_adj(st, X, om=None):
 
     tm = np.zeros_like(om)
     pi = np.pi
-    for id in range(0, ndim):
-        gam = 2 * pi / st.Kd[id]
-        tm[:, id] = om[:, id] / gam  # t = omega / gamma
+    for d in range(0, ndim):
+        gam = 2 * pi / st.Kd[d]
+        tm[:, d] = om[:, d] / gam  # t = omega / gamma
 
     if X.shape[0] != om.shape[0]:
         raise ValueError('X size problem')
