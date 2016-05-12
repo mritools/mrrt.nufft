@@ -979,7 +979,7 @@ def nufft_forward(st, x, copy_x=True):
         x = x.copy()
 
     try:  # collapse all excess dimensions into just one
-        x = x.reshape(list(Nd) + [-1, ],)
+        x = x.reshape(list(Nd) + [-1, ], )
     except:
         raise ValueError('input signal has wrong size')
 
