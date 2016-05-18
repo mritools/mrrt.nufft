@@ -75,7 +75,9 @@ class NufftKernel(object):
             for k, v in list(params.items()):
                 if k in ['Kd', 'Jd', 'Nd']:
                     params[k] = to_1d_int_array(v)
-                    max_len = len(params[k])
+                    plen = len(params[k])
+                    if plen > max_len:
+                        max_len = plen
             self.ndim = max_len
         else:
             self.ndim = params.pop('ndim')
@@ -93,7 +95,6 @@ class NufftKernel(object):
                         [params['Nmid'][0], ] * self.ndim)
 
         ndim = self.ndim  # number of dimensions
-
         Kd = params.get('Kd', None)  # oversampled image size
         Jd = params.get('Jd', None)  # kernel size
         Nd = params.get('Nd', None)  # image size
@@ -106,10 +107,12 @@ class NufftKernel(object):
         # linear interpolator straw man
         if kernel_type == 'linear':
             kernel_type = 'inline'
-
-            def kernel(k, J): return(1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
-            self.kernel = [kernel, ] * ndim
-
+            def kernel_linear(k, J):
+                return (1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
+            self.kernel = []
+            for d in range(ndim):
+                self.kernel.append(functools.partial(kernel_linear,
+                                                     J=Jd[d]))
         elif kernel_type == 'diric':   # exact interpolator
             if (Kd is None) or (Nd is None):
                 raise ValueError("kwargs must contain Kd, Nd for diric case")
@@ -121,11 +124,12 @@ class NufftKernel(object):
                 K = Kd[d]
                 if self.params.get('phasing', None) == 'real':
                     N = 2 * np.floor((K + 1) / 2.) - 1  # trick
-                self.kernel.append(lambda k, J: (
+                self.kernel.append(lambda k: (
                     N / K * nufft_diric(k, N, K, True)))
-        elif kernel_type == 'kb:beatty':  # KB with Beatty et al parameters
+        elif kernel_type == 'kb:beatty':
+        # KB with Beatty et al parameters
+        # Beatty2005:  IEEETMI 24(6):799:808
             self.is_kaiser_scale = True
-            # TODO: could take K_N directly instead
             if (Kd is None) or (Nd is None) or (Jd is None):
                 raise ValueError("kwargs must contain Kd, Nd, Jd for " +
                                  "{} case".format(kernel_type))
@@ -136,6 +140,7 @@ class NufftKernel(object):
                     'kb:beatty:  user supplied kb_alf and kb_m ignored')
 
             K_N = Kd / Nd
+            # Eq. 5 for alpha
             params['kb_alf'] = \
                 np.pi * np.sqrt(Jd ** 2 / K_N ** 2 * (K_N - 0.5) ** 2 - 0.8)
             params['kb_m'] = np.zeros(ndim)
@@ -146,8 +151,8 @@ class NufftKernel(object):
                                       J=Jd[d],
                                       alpha=params['kb_alf'][d],
                                       kb_m=params['kb_m'][d]))
-        # alpha = pi * sqrt(J^2/K_N^2 * (K_N - 0.5)^2 - 0.8);  %Eq. 5 of
-        # Beatty2005:  IEEETMI 24(6):799:808
+        
+        
 
         # KB with minmax-optimized parameters
         elif kernel_type == 'kb:minmax':
@@ -168,7 +173,8 @@ class NufftKernel(object):
                 alf = 2.34 * Jd[d]
                 m = 0
                 self.kernel.append(
-                    functools.partial(kaiser_bessel, J=Jd[d], alpha=alf, m=m))
+                    functools.partial(kaiser_bessel, J=Jd[d], alpha=alf,
+                                      kb_m=m))
                 params['kb_alf'].append(alf)
                 params['kb_m'].append(0)
 
@@ -267,7 +273,7 @@ class NufftKernel(object):
                                        L=250, kernel_type=self.kernel_type,
                                        phasing='real')[0]
             else:
-                y = self.kernel[d](x, J)
+                y = self.kernel[d](x)
             axes[d].plot(x, np.abs(y), 'k-', label='magnitude')
             if d == self.ndim - 1:
                 axes[d].xaxis.set_ticks([-J/2, J/2])
