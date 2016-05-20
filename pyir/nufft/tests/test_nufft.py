@@ -4,7 +4,7 @@ from os.path import join as pjoin
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_equal, assert_, assert_allclose
 
-data_dir = '/media/Data1/src_repositories/my_git/pyrecon/PyIRT/nufft/test/data'
+data_dir = '/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/test/data'
 
 __all__ = ['test_nufft_init',
            'test_nufft',
@@ -12,7 +12,7 @@ __all__ = ['test_nufft_init',
 
 
 def test_nufft_init(verbose=False):
-    from PyIRT.nufft.nufft import NufftBase
+    from pyir.nufft.nufft import NufftBase
     Nd = np.array([20, 10])
     st = NufftBase(om='epi', Nd=Nd, Jd=[5, 5], Kd=2 * Nd)
     om = st.om
@@ -27,10 +27,10 @@ def test_nufft_init(verbose=False):
 
 def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
     # from numpy.fft import fft2
-    from PyIRT.nufft.nufft import NufftBase, nufft_forward
-    from PyIRT.nufft.nufft_utils import nufft2_err_mm
-    from PyIRT.nufft.dtft import dtft
-    from grl_utils import max_percent_diff
+    from pyir.nufft.nufft import NufftBase, nufft_forward
+    from pyir.nufft.nufft_utils import nufft2_err_mm
+    from pyir.nufft.dtft import dtft
+    from pyir.utils import max_percent_diff
 
     if test3d:
         Jd = np.array([5, 4, 4])
@@ -229,9 +229,9 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
 
 def test_nufft_adj():
     """ test nufft_adj() """
-    from PyIRT.nufft.dtft import dtft_adj
-    from PyIRT.nufft.nufft import NufftBase, nufft_adj
-    # from grl_utils import max_percent_diff
+    from pyir.nufft.dtft import dtft_adj
+    from pyir.nufft.nufft import NufftBase, nufft_adj
+    # from pyir.utils import max_percent_diff
     from numpy.testing import assert_almost_equal
 
     N1 = 4

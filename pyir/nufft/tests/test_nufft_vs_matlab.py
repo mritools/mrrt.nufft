@@ -16,16 +16,16 @@ import scipy.io
 
 from matplotlib import pyplot as plt
 
-import PyIRT.nufft
-from PyIRT.nufft.nufft import NufftKernel, NufftBase, nufft_forward, nufft_adj
-from grl_utils import max_percent_diff
+import pyir.nufft
+from pyir.nufft.nufft import NufftKernel, NufftBase, nufft_forward, nufft_adj
+from pyir.utils import max_percent_diff
 
-data_dir = pjoin(os.path.dirname(PyIRT.nufft.__file__),
+data_dir = pjoin(os.path.dirname(pyir.nufft.__file__),
                  'tests', 'data', 'mat_files')
 
 
 def test_nufft_table_make1():
-    from PyIRT.nufft.nufft import _nufft_table_make1
+    from pyir.nufft.nufft import _nufft_table_make1
     from numpy.testing import assert_almost_equal
     for N in [33, 64]:
         for phasing in ['real', 'complex']:
@@ -73,7 +73,7 @@ def NufftBase_tests():
 
 def kernel_tests():
     from matplotlib import pyplot as plt
-    from PyIRT.nufft.nufft_utils import _nufft_coef
+    from pyir.nufft.nufft_utils import _nufft_coef
 
     ktype_tests = [{'kernel_type': 'linear',
                     'kw_args': {'dd': 2,
@@ -160,7 +160,7 @@ def kernel_tests():
                     kt['kw_args'].items())]))
 
     if False:  # error test
-        from PyIRT.nufft.nufft_utils import nufft1_error
+        from pyir.nufft.nufft_utils import nufft1_error
         K = 84  # 128
         N = 64
         J = 4
@@ -232,7 +232,7 @@ def kernel_tests():
 
 
 def load_matlab_newfft(filename):
-#    data = scipy.io.loadmat('/media/Data1/src_repositories/my_git/pyrecon/PyIRT/nufft/mat_files/newwfft_test_3D_kb_beatty_sparse_complex.mat')
+#    data = scipy.io.loadmat('/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/mat_files/newwfft_test_3D_kb_beatty_sparse_complex.mat')
     data = scipy.io.loadmat(pjoin(data_dir, 'newwfft_test_2D_kb_beatty_table1_real.mat'))
 
     dd = data['data']['dd'][0, 0][0, 0]

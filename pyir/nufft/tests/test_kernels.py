@@ -3,7 +3,7 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 from numpy.testing import run_module_suite, assert_raises
 
-from PyIRT.nufft.nufft import NufftKernel
+from pyir.nufft.nufft import NufftKernel
 
 def test_kernel(show_figure=False):
     

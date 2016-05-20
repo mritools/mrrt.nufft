@@ -6,14 +6,14 @@ import functools
 
 import numpy as np
 
-from PyIRT.nufft.kaiser_bessel import kaiser_bessel
+from pyir.nufft.kaiser_bessel import kaiser_bessel
 
-from PyIRT.nufft.nufft_utils import (nufft_alpha_kb_fit,
+from pyir.nufft.nufft_utils import (nufft_alpha_kb_fit,
                                      nufft_best_alpha,
                                      nufft_diric,
                                      to_1d_int_array)
 
-from grl_utils import is_string_like
+from pyir.utils import is_string_like
 
 __all__ = ['NufftKernel', ]
 
@@ -253,7 +253,7 @@ class NufftKernel(object):
 
     def plot(self, axes=None):
         from matplotlib import pyplot as plt
-        from PyIRT.nufft.nufft import _nufft_table_make1
+        from pyir.nufft.nufft import _nufft_table_make1
         """plot the (separable) kernel for each axis."""
         title_text = 'type: {}'.format(self.kernel_type)
         if axes is None:

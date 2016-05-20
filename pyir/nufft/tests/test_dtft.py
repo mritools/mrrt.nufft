@@ -2,12 +2,12 @@
 
 # -*- coding: utf-8 -*-
 import numpy as np
-from PyIRT.nufft.dtft import dtft, dtft_adj
-from grl_utils import max_percent_diff
+from pyir.nufft.dtft import dtft, dtft_adj
+from pyir.utils import max_percent_diff
 
 from numpy.testing import assert_allclose
 
-# data_dir = '/media/Data1/src_repositories/my_git/pyrecon/PyIRT/nufft/test/data'
+# data_dir = '/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/test/data'
 
 __all__ = ['test_dtft_3d',
            'test_dtft_2d',
@@ -130,7 +130,7 @@ def test_dtft_adj_3d(verbose=False, test_Cython=False):
     
     if test_Cython:
         import time
-        from PyIRT.nufft.cy_dtft import dtft_adj as cy_dtft_adj
+        from pyir.nufft.cy_dtft import dtft_adj as cy_dtft_adj
         t_start=time.time()
         xc = cy_dtft_adj(X.ravel(order='F'), om, Nd, n_shift)
         print("duration (1 rep) = {}".format(time.time()-t_start))

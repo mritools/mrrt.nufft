@@ -7,9 +7,9 @@ import collections
 import numpy as np
 import scipy.sparse
 
-from PyIRT.nufft.kaiser_bessel import (kaiser_bessel, kaiser_bessel_ft,
+from pyir.nufft.kaiser_bessel import (kaiser_bessel, kaiser_bessel_ft,
                                        _kaiser_bessel_params)
-from grl_utils import is_string_like
+from pyir.utils import is_string_like
 
 # TODO: add linear and diric options as in newfft.m
 # newfft_scale_tri(Nd(id), Jd(id), Kd(id), st.Nmid)

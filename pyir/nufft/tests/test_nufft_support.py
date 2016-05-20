@@ -7,7 +7,7 @@ from numpy.testing import assert_array_almost_equal, assert_equal, assert_, asse
 
 # some tests load results from Fessler's Matlab implementation for comparison
 data_dir = os.path.dirname(os.path.realpath(__file__))
-#data_dir = '/media/Data1/src_repositories/my_git/pyrecon/PyIRT/nufft/test/data'
+#data_dir = '/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/test/data'
 
 __all__ = ['test_nufft_T',
            'test_nufft_r',
@@ -23,7 +23,7 @@ __all__ = ['test_nufft_T',
 
 def test_nufft_T(verbose=False):
     from numpy.linalg import cond
-    from PyIRT.nufft.nufft_utils import _nufft_T
+    from pyir.nufft.nufft_utils import _nufft_T
     
     expected_result = np.load(pjoin(data_dir, 'nufft_T.npy'))
     N = 128
@@ -41,8 +41,8 @@ def test_nufft_T(verbose=False):
 
 
 def test_nufft_r(verbose=False):  # TODO: Incomplete
-    from PyIRT.nufft.nufft_utils import nufft_alpha_kb_fit
-    from PyIRT.nufft.nufft import _nufft_r
+    from pyir.nufft.nufft_utils import nufft_alpha_kb_fit
+    from pyir.nufft.nufft import _nufft_r
 
     Jd = np.array([5, 6])
     Nd = np.array([60, 75])
@@ -64,7 +64,7 @@ def test_nufft_r(verbose=False):  # TODO: Incomplete
 
 def test_nufft_scale(verbose=False):
     """function nufft_scale_test"""
-    from PyIRT.nufft.nufft_utils import nufft_scale
+    from pyir.nufft.nufft_utils import nufft_scale
     N = 100
     K = 2 * N
     alpha = [1.0, -0.0, -0.2]
@@ -82,8 +82,8 @@ def test_nufft_scale(verbose=False):
 
 
 def test_nufft_gauss(verbose=False):
-    from PyIRT.nufft.nufft_utils import _nufft_interp_zn, nufft_gauss
-    from grl_utils import reale
+    from pyir.nufft.nufft_utils import _nufft_interp_zn, nufft_gauss
+    from pyir.utils import reale
 
     # help(mfilename)
     N = 256
@@ -120,7 +120,7 @@ def test_nufft_gauss(verbose=False):
 
 
 def test_nufft2_err_mm(verbose=False):
-    from PyIRT.nufft.nufft_utils import nufft2_err_mm
+    from pyir.nufft.nufft_utils import nufft2_err_mm
     # help(mfilename)
     N1 = 1
     K1 = 2 * N1
@@ -150,7 +150,7 @@ def test_nufft2_err_mm(verbose=False):
 
 
 def test_nufft1_err_mm(verbose=False):
-    from PyIRT.nufft.nufft_utils import nufft1_err_mm, nufft_best_alpha
+    from pyir.nufft.nufft_utils import nufft1_err_mm, nufft_best_alpha
 
     N = 100
     K = 2 * N
@@ -193,7 +193,7 @@ def test_nufft1_err_mm(verbose=False):
 
 
 def test_nufft_samples(verbose=False):
-    from PyIRT.nufft.nufft_utils import _nufft_samples
+    from pyir.nufft.nufft_utils import _nufft_samples
     om1d = _nufft_samples('epi', 32)
     assert_(len(om1d) == 32)
     om2d = _nufft_samples('epi', [32, 32])
@@ -209,7 +209,7 @@ def test_nufft_samples(verbose=False):
 
 
 def test_nufft_interp_zn(verbose=False):
-    from PyIRT.nufft.nufft_utils import _nufft_interp_zn
+    from pyir.nufft.nufft_utils import _nufft_interp_zn
     alist = np.arange(0, 20) / 20.
     N = 2 ** 7
     K = 2 * N
@@ -249,12 +249,12 @@ def test_nufft_diric(verbose=False):
         if scipy.__version__ >= '0.16':
             diric = scipy.special.diric
         else:
-            from grl_utils import diric
+            from pyir.utils import diric
     except:
-        from grl_utils import diric  # bugfix version of scipy.special's diric
+        from pyir.utils import diric  # bugfix version of scipy.special's diric
         
-    from PyIRT.nufft.nufft_utils import nufft_diric
-    from grl_utils import max_percent_diff
+    from pyir.nufft.nufft_utils import nufft_diric
+    from pyir.utils import max_percent_diff
     kmax = 2 * (10 + 1 * 4)
     kf = np.linspace(-kmax, kmax, 201)
     ki = np.arange(-kmax, kmax + 1)
@@ -291,7 +291,7 @@ def test_nufft_diric(verbose=False):
 
 
 def test_nufft1_error(verbose=False):
-    from PyIRT.nufft.nufft_utils import nufft1_error, nufft1_err_mm
+    from pyir.nufft.nufft_utils import nufft1_error, nufft1_err_mm
     N = 2 ** 7
     K = 2 * N
     gam = 2 * np.pi / K

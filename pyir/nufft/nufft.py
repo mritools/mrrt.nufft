@@ -9,7 +9,7 @@ import numpy as np
 
 from scipy.sparse import coo_matrix
 
-from PyIRT.nufft.nufft_utils import (_nufft_samples,
+from pyir.nufft.nufft_utils import (_nufft_samples,
                                      nufft_scale,
                                      _nufft_interp_zn,
                                      _nufft_coef,
@@ -19,16 +19,16 @@ from PyIRT.nufft.nufft_utils import (_nufft_samples,
                                      to_1d_int_array
                                      )
 
-from PyIRT.nufft.kaiser_bessel import kaiser_bessel_ft
+from pyir.nufft.kaiser_bessel import kaiser_bessel_ft
 
-from PyIRT.nufft.interp_table import (interp1_table,
+from pyir.nufft.interp_table import (interp1_table,
                                       interp2_table,
                                       interp3_table,
                                       interp1_table_adj,
                                       interp2_table_adj,
                                       interp3_table_adj)
 
-from grl_utils import fftn, ifftn, outer_sum, complexify, is_string_like
+from pyir.utils import fftn, ifftn, outer_sum, complexify, is_string_like
 
 from ._kernels import NufftKernel
 
