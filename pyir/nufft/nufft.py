@@ -10,23 +10,23 @@ import numpy as np
 from scipy.sparse import coo_matrix
 
 from pyir.nufft.nufft_utils import (_nufft_samples,
-                                     nufft_scale,
-                                     _nufft_interp_zn,
-                                     _nufft_coef,
-                                     _nufft_r,
-                                     _nufft_T,
-                                     _nufft_offset,
-                                     to_1d_int_array
-                                     )
+                                    nufft_scale,
+                                    _nufft_interp_zn,
+                                    _nufft_coef,
+                                    _nufft_r,
+                                    _nufft_T,
+                                    _nufft_offset,
+                                    to_1d_int_array
+                                    )
 
 from pyir.nufft.kaiser_bessel import kaiser_bessel_ft
 
 from pyir.nufft.interp_table import (interp1_table,
-                                      interp2_table,
-                                      interp3_table,
-                                      interp1_table_adj,
-                                      interp2_table_adj,
-                                      interp3_table_adj)
+                                     interp2_table,
+                                     interp3_table,
+                                     interp1_table_adj,
+                                     interp2_table_adj,
+                                     interp3_table_adj)
 
 from pyir.utils import fftn, ifftn, outer_sum, complexify, is_string_like
 
@@ -255,14 +255,15 @@ class NufftBase(object):
             elif sparse_format == 'COO':
                 self.p = self.p.tocoo()
             elif sparse_format == 'LIL':
-                self.p = self.p.tocoo()
+                self.p = self.p.tolil()
             elif sparse_format == 'DOK':
-                self.p = self.p.tocoo()
+                self.p = self.p.todok()
             else:
                 raise ValueError("unrecognized sparse format type")
         else:
-            raise ValueError("no sparse matrix exists.  cannot update sparse" +
-                             " format for mode: {}".format(self.mode))
+            raise ValueError(
+                "no sparse matrix exists.  cannot update sparse" +
+                " format for mode: {}".format(self.mode))
 
     @property
     def precision(self):
@@ -591,7 +592,7 @@ class NufftBase(object):
             koff = _nufft_offset(om[:, d], J, K)
 
             # [J,M]
-            kd[d] = np.mod(outer_sum(np.arange(1, J + 1), koff), K).T
+            kd[d] = np.mod(outer_sum(np.arange(1, J + 1), koff), K)
 
             if self.phasing == 'complex':
                 gam = 2 * np.pi / K
@@ -604,13 +605,12 @@ class NufftBase(object):
 
             ud[d] = phase * c      # [J?,M]
 
-
         tend1 = time()
         if self.verbose:
             print("Nd={}".format(self.Nd))
 
         """
-        build sparse matrix that is [M,*Kd]
+        build sparse matrix that is shape (M, *Kd)
         """
         M = self.om.shape[0]
         kk = kd[0]  # [J1,M]
@@ -624,7 +624,7 @@ class NufftBase(object):
             kk = kk.reshape(Jprod, M, order='F')
             uu = _block_outer_prod(uu, ud[d])  # outer product of coefficients
             uu = uu.reshape(Jprod, M, order='F')
-        # now kk and uu are [*Jd, M]
+        # now kk and uu are shape (*Jd, M)
 
         #
         # apply phase shift
@@ -647,9 +647,10 @@ class NufftBase(object):
         if self.ndim >= 3:  # TODO: move elsewhere
             RAM_GB = self.Jd.prod() * M * sparse_dtype.itemsize / 10 ** 9
             if self.verbose:
-                print('NUFFT sparse matrix storage will require %g GB' % (RAM_GB))
+                print('NUFFT sparse matrix storage will require ' +
+                      '%g GB' % (RAM_GB))
 
-        # [*Jd,M]
+        # shape (*Jd, M)
         mm = np.tile(np.arange(M), (np.product(self.Jd), 1))
 
         self.p = coo_matrix((uu.ravel(order='F'),
