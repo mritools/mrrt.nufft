@@ -139,17 +139,17 @@ def generate_cython():
         raise RuntimeError("Running cythonize failed!")
 
 
-def configuration(parent_package='', top_path=None):
-    from numpy.distutils.misc_util import Configuration
-    config = Configuration(None, parent_package, top_path)
-    config.set_options(ignore_setup_xxx_py=True,
-                       assume_default_configuration=True,
-                       delegate_options_to_subpackages=True,
-                       quiet=True)
+# def configuration(parent_package='', top_path=None):
+#     from numpy.distutils.misc_util import Configuration
+#     config = Configuration(None, parent_package, top_path)
+#     config.set_options(ignore_setup_xxx_py=True,
+#                        assume_default_configuration=True,
+#                        delegate_options_to_subpackages=True,
+#                        quiet=True)
 
-    config.add_subpackage('pyir.nufft')
-    config.get_version('pyir.nufft/version.py')
-    return config
+#     config.add_subpackage('pyir.nufft')
+#     config.get_version('pyir.nufft/version.py')
+#     return config
 
 def configuration(parent_package='', top_path=None):
     if os.path.exists('MANIFEST'):
@@ -160,7 +160,10 @@ def configuration(parent_package='', top_path=None):
 
     # main modules
     config.add_subpackage('pyir.nufft')
-    config.add_data_dir('pyir.nufft.tests')
+    config.add_subpackage('pyir.nufft.tests')
+    config.add_data_dir('pyir/nufft/tests/data')
+    config.add_data_dir('pyir/nufft/tests/data/mat_files')
+    config.get_version('pyir.nufft/version.py')
 
     return config
 

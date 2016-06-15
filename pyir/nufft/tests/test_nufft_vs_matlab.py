@@ -154,7 +154,7 @@ def kernel_tests():
             J = kt['kw_args']['Jd']
             if isinstance(J, (list, tuple, set, np.ndarray)):
                 J = J[0]
-            plt.plot(k.kernel[0](np.linspace(-J / 2., J / 2., 1000), J))
+            plt.plot(k.kernel[0](np.linspace(-J / 2., J / 2., 1000)))
             plt.title(k.kernel_type + ', ' + ', '.join(
                 ['{}:{}'.format(key, v) for key, v in list(
                     kt['kw_args'].items())]))
@@ -220,7 +220,7 @@ def kernel_tests():
                                      kt['kw_args']['Jd'][0] /
                                      2, kt['kw_args']['Jd'][0] /
                                      2 -
-                                     1, 1000), 2))
+                                     1, 1000)))  # , 2))
     plt.title('diric')
 
     plt.figure()
@@ -228,7 +228,7 @@ def kernel_tests():
         k = NufftKernel(kt['kernel_type'],
                         **kt['kw_args'])
         if k.kernel is not None:
-            plt.plot(k.kernel[0](np.linspace(-1, 1, 1000), 2))
+            plt.plot(k.kernel[0](np.linspace(-1, 1, 1000)))  # , 2))
 
 
 def load_matlab_newfft(filename):

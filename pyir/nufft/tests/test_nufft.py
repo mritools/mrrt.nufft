@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+import os
 from os.path import join as pjoin
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_equal, assert_, assert_allclose
 
-data_dir = '/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/test/data'
+# data_dir = '/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/test/data'
+import pyir.nufft
+pkg_dir = os.path.dirname(pyir.nufft.__file__)
+data_dir = pjoin(pkg_dir, 'data', 'mat_files')
 
 __all__ = ['test_nufft_init',
            'test_nufft',
@@ -17,19 +21,18 @@ def test_nufft_init(verbose=False):
     st = NufftBase(om='epi', Nd=Nd, Jd=[5, 5], Kd=2 * Nd)
     om = st.om
     if verbose:
-        from matplotlib import pyplot as plt    
+        from matplotlib import pyplot as plt
         plt.figure()
         plt.plot(om[:, 0], om[:, 1], 'o-')
         plt.axis([-np.pi, np.pi, -np.pi, np.pi])
         print(st)
 
 
-
 def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
     # from numpy.fft import fft2
     from pyir.nufft.nufft import NufftBase, nufft_forward
     from pyir.nufft.nufft_utils import nufft2_err_mm
-    from pyir.nufft.dtft import dtft
+    from pyir.nufft import dtft
     from pyir.utils import max_percent_diff
 
     if test3d:
@@ -64,8 +67,7 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
     if initialize_from_Matlab:
         import os
         from os.path import join as pjoin
-        # nufft_dir = os.path.dirname(nufft_forward.func_globals['__file__'])
-        nufft_dir = os.path.dirname(nufft_forward.__globals__['__file__'])
+        # nufft_dir = os.path.dirname(nufft_forward.__globals__['__file__'])
 
     # TODO: fix so don't have to convert to complex manually
     # x = np.asarray(x,dtype=np.complex64)  #TODO: Need to fix
@@ -95,7 +97,7 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
             if initialize_from_Matlab:
                 from scipy.io import loadmat
 
-                f = loadmat(pjoin(nufft_dir, 'nufft_test3D.mat'))
+                f = loadmat(pjoin(data_dir, 'nufft_test3D.mat'))
                 # get same random vector & om as generated in Matlab
                 x = f['x']
 
@@ -106,7 +108,7 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
             om1 = np.array(list(o1.ravel(order='F')) + [0, 7.2, 2.6, 3.3])
             om2 = np.array(list(o2.ravel(order='F')) + [0, 4.2, -1, 5.5])
             om = np.hstack((om1[:, np.newaxis],
-                            om2[:, np.newaxis]))            
+                            om2[:, np.newaxis]))
 
             # ignore x, om from above and load exact ones from Matlab for
             # comparison
@@ -114,7 +116,7 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
                 from scipy.io import loadmat
                 # f = loadmat('nufft.mat') #get same random vector & om as
                 # generated in Matlab
-                f = loadmat(pjoin(nufft_dir, 'nufft_test2D.mat'))
+                f = loadmat(pjoin(data_dir, 'nufft_test2D.mat'))
                 # get same random vector & om as generated in Matlab
                 x = f['x']
 
@@ -124,8 +126,8 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
 
     try:
         s['tab'] = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
-                               mode='table0', Ld=2 ** 12,
-                               kernel_type='minmax:kb')  # TODO:  'table' case
+                             mode='table0', Ld=2 ** 12,
+                             kernel_type='minmax:kb')  # TODO:  'table' case
         Y['tab'] = nufft_forward(s['tab'], x)
         print(
             'table0        max%%diff = %g' %
@@ -184,14 +186,14 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
     kernel_kwargs['alpha'] = alpha_user
     kernel_kwargs['beta'] = beta_user
     s['mm'] = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
-                          kernel_type='minmax:user',
-                          kernel_kwargs=kernel_kwargs)
+                        kernel_type='minmax:user',
+                        kernel_kwargs=kernel_kwargs)
     Y['mm'] = nufft_forward(s['mm'], x)
     print('minmax:user    max%%diff = %g' % max_percent_diff(Y['d'], Y['mm']))
 
     if make_fig:
+        from matplotlib import pyplot as plt
         plt.close('all')
-
         plt.figure(), plt.plot(np.abs(Y['d']))
         plt.figure(), plt.plot(np.abs(Y['mmkb']))
         plt.figure(), plt.plot(np.abs(Y['kb']))
@@ -229,7 +231,7 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
 
 def test_nufft_adj():
     """ test nufft_adj() """
-    from pyir.nufft.dtft import dtft_adj
+    from pyir.nufft import dtft_adj
     from pyir.nufft.nufft import NufftBase, nufft_adj
     # from pyir.utils import max_percent_diff
     from numpy.testing import assert_almost_equal
@@ -243,16 +245,16 @@ def test_nufft_adj():
     for mode in ['sparse', 'table1', 'table0']:
         for phasing in ['real', 'complex']:
             st = NufftBase(om=om, Nd=np.array([N1, N2]), Jd=[4, 6],
-                             Kd=2 * np.array([N1, N2]), n_shift=n_shift,
-                             kernel_type='minmax:tuned',
-                             # kernel_type='kb:beatty',
-                             phasing=phasing,
-                             mode=mode)
+                           Kd=2 * np.array([N1, N2]), n_shift=n_shift,
+                           kernel_type='minmax:tuned',
+                           # kernel_type='kb:beatty',
+                           phasing=phasing,
+                           mode=mode)
 
             X = np.arange(1, o1.size + 1).ravel() ** 2    # test spectrum
             xd = dtft_adj(X, om, Nd=[N1, N2], n_shift=n_shift)  # TODO...
             XXX = np.vstack((X, X, X)).T
-            xn = nufft_adj(XXX, st)
+            xn = nufft_adj(st, XXX)
             # print('nufft vs dtft max%%diff = %g' %
             # max_percent_diff(xd,xn[:,:,-1]))  #TODO
             try:
@@ -279,7 +281,7 @@ def test_nufft(verbose=False):
                 make_fig = True
                 print("\n\nRunning _nufft_test with " +
                       "test3d={}, Matlab_init={}: ".format(
-                      test3d,  initialize_from_Matlab))
+                          test3d,  initialize_from_Matlab))
             else:
                 make_fig = False
             _nufft_test(

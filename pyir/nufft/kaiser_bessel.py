@@ -3,7 +3,7 @@ from __future__ import division, print_function, absolute_import
 import warnings
 import numpy as np
 from scipy.special import iv, jv
-from pyir.utils import reale
+from pyir.utils import reale, is_string_like
 
 __all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
 
@@ -57,11 +57,11 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     if alpha is None:
         alpha = 2.34 * J
 
-    # if isinstance(alpha, str):
-    #     alpha, kb_m = _kaiser_bessel_params(alpha, J, K_N)
+    if is_string_like(alpha):
+        alpha, kb_m = _kaiser_bessel_params(alpha, J, K_N)
 
     """Warn about use of modified formula for negative kb_m"""
-    if (kb_m < 0) & ((abs(round(kb_m) - kb_m)) > np.finfo(float).eps):
+    if (kb_m < 0) and ((abs(round(kb_m) - kb_m)) > np.finfo(float).eps):
         wstr = 'Negative NonInt kb_m=%g\n' % (kb_m)
         wstr += '\t- using modified definition of KB function\n'
         warnings.warn(wstr)

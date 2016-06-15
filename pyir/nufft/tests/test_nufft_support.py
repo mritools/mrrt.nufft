@@ -6,7 +6,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_equal, assert_, assert_allclose
 
 # some tests load results from Fessler's Matlab implementation for comparison
-data_dir = os.path.dirname(os.path.realpath(__file__))
+data_dir = pjoin(os.path.dirname(os.path.realpath(__file__)), 'data')
 #data_dir = '/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/test/data'
 
 __all__ = ['test_nufft_T',
@@ -24,7 +24,7 @@ __all__ = ['test_nufft_T',
 def test_nufft_T(verbose=False):
     from numpy.linalg import cond
     from pyir.nufft.nufft_utils import _nufft_T
-    
+
     expected_result = np.load(pjoin(data_dir, 'nufft_T.npy'))
     N = 128
     K = 2 * N
@@ -137,7 +137,7 @@ def test_nufft2_err_mm(verbose=False):
     assert_allclose(f1, expected_results['f1'])
     assert_allclose(f2, expected_results['f2'])
     if verbose:
-        from matplotlib import pyplot as plt    
+        from matplotlib import pyplot as plt
         plt.figure()
         plt.plot(f1.T, err.T)
         plt.xlabel('$\omega_1 / \gamma$')
@@ -179,7 +179,7 @@ def test_nufft1_err_mm(verbose=False):
         assert_(np.max(errs - np.squeeze(expected_results['errs'])) < 1e-3)
 
     if verbose:
-        from matplotlib import pyplot as plt    
+        from matplotlib import pyplot as plt
         plt.figure()
         l1, l2, l3 = plt.semilogy(om /
                                   gam, errs, 'g-x', om /
@@ -199,7 +199,7 @@ def test_nufft_samples(verbose=False):
     om2d = _nufft_samples('epi', [32, 32])
     assert_equal(om2d.shape, (32 * 32, 2))
     if verbose:
-        from matplotlib import pyplot as plt      
+        from matplotlib import pyplot as plt
         plt.figure(), plt.plot(om1d, np.zeros((om1d.size, 1)), 'b-x')
         plt.title('1D EPI')
         plt.figure(), plt.plot(om2d[:, 0], om2d[:, 1], 'b-x'), plt.show()
@@ -221,9 +221,9 @@ def test_nufft_interp_zn(verbose=False):
     z = _nufft_interp_zn(alist, N, J, K, func)
     expected_results = np.load(pjoin(data_dir, 'nufft_interp_zn.npz'))
     assert_allclose(z, expected_results['z'])
-    
+
     if verbose:
-        from matplotlib import pyplot as plt    
+        from matplotlib import pyplot as plt
         #	plot interpolator
         k = np.linspace(-J / 2. - 1, J / 2. + 1, 101)
         plt.figure()
@@ -232,7 +232,7 @@ def test_nufft_interp_zn(verbose=False):
         plt.xlabel('k')
         plt.ylabel('F_0(k)')
         plt.axis('tight')
-    
+
         plt.subplot(132)
         plt.plot(np.arange(1, N + 1), z.real)
         plt.axis('tight')
@@ -252,7 +252,7 @@ def test_nufft_diric(verbose=False):
             from pyir.utils import diric
     except:
         from pyir.utils import diric  # bugfix version of scipy.special's diric
-        
+
     from pyir.nufft.nufft_utils import nufft_diric
     from pyir.utils import max_percent_diff
     kmax = 2 * (10 + 1 * 4)
@@ -273,7 +273,7 @@ def test_nufft_diric(verbose=False):
         max_diff = max_percent_diff(g, dm)
         assert_(max_diff < 1e-7)
         if verbose:
-            from matplotlib import pyplot as plt    
+            from matplotlib import pyplot as plt
             plt.figure()
             l1, l2, l3, l4 = plt.plot(
                 kf, g, 'y', kf, s, 'c-', kf, dm, 'r--', ki, gi, 'b.')
@@ -328,7 +328,7 @@ def test_nufft1_error(verbose=False):
         err['minmaxk'][ii] = np.max(nufft1_err_mm(om, N, J, K, 'qr', sn)[0])
 
     if verbose:
-        from matplotlib import pyplot as plt    
+        from matplotlib import pyplot as plt
         plt.figure()
         lines = plt.semilogy(Jlist, err['linear'], 'g-x',
                              Jlist, err['minmaxu'], 'c-+',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import functools
 import numpy as np
-from numpy.testing import dec
+from numpy.testing import dec, assert_array_equal
 
 
 #def _test_kaiser(compare_to_matlab=False):
@@ -26,12 +26,11 @@ def test_kaiser_bessel(verbose=False):
     for i, kb_m in enumerate(mlist):
         yy[:, i] = kaiser_bessel(x, J, alpha, kb_m)
         leg.append('m = %d' % kb_m)
-        func = functools.partial(kaiser_bessel, 0, alpha, kb_m)
+        func = functools.partial(kaiser_bessel, alpha=alpha, kb_m=kb_m)
         yf = func(x, J)
-        if (yf != yy[:, i]).any():
-            print('ERROR in %s:  bug' % __name__)
+        assert_array_equal(yf, yy[:, i])
 
-    yb = kaiser_bessel(x, J, 'best', [], 2)
+    yb = kaiser_bessel(x, J, alpha='best', kb_m=None, K_N=2)
     leg.append('best')
     if verbose:
         from matplotlib import pyplot as plt
@@ -178,5 +177,3 @@ def _kaiser_matlab_compare(show_figures=True):
     # ip=get_ipython()
     # pymat.load_ipython_extension(ip)
     return
-
-

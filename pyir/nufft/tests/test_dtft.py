@@ -2,7 +2,7 @@
 
 # -*- coding: utf-8 -*-
 import numpy as np
-from pyir.nufft.dtft import dtft, dtft_adj
+from pyir.nufft import dtft, dtft_adj
 from pyir.utils import max_percent_diff
 
 from numpy.testing import assert_allclose
@@ -33,14 +33,14 @@ def test_dtft_3d(verbose=False):
                     o2.reshape((-1, 1), order='F'),
                     o3.reshape((-1, 1), order='F')))
 
-    # DTFT result       
+    # DTFT result
     Xd = dtft(x, om, n_shift=n_shift, useloop=False)
-    
+
     # compare to FFT-based result
     Xf = np.fft.fftn(x)
     # phase shift
     Xf = Xf.ravel(order='F') * np.exp(1j * (np.dot(om, n_shift)))[:, 0]
-    
+
     assert_allclose(np.squeeze(Xd), Xf, atol=1e-7)
     if verbose:
         max_err = np.max(np.abs(np.squeeze(Xd)-np.squeeze(Xf)))
@@ -61,14 +61,14 @@ def test_dtft_2d(verbose=False):
     om = np.hstack((o1.reshape((-1, 1), order='F'),
                     o2.reshape((-1, 1), order='F')))
 
-    # DTFT result       
+    # DTFT result
     Xd = dtft(x, om, n_shift=n_shift, useloop=False)
-    
+
     # compare to FFT-based result
     Xf = np.fft.fftn(x)
     # phase shift
     Xf = Xf.ravel(order='F') * np.exp(1j * (np.dot(om, n_shift)))[:, 0]
-    
+
     assert_allclose(np.squeeze(Xd), Xf, atol=1e-7)
     if verbose:
         max_err = np.max(np.abs(np.squeeze(Xd)-np.squeeze(Xf)))
@@ -86,14 +86,14 @@ def test_dtft_1d(verbose=False):
     o1 = 2*pi*np.arange(0,Nd[0])/Nd[0]
     om = o1.reshape((-1, 1), order='F')
 
-    # DTFT result       
+    # DTFT result
     Xd = dtft(x, om, n_shift=n_shift, useloop=False)
-    
+
     # compare to FFT-based result
     Xf = np.fft.fftn(x)
     # phase shift
     Xf = Xf.ravel(order='F') * np.exp(1j * (np.dot(om, n_shift)))[:, 0]
-    
+
     assert_allclose(np.squeeze(Xd), Xf, atol=1e-7)
     if verbose:
         max_err = np.max(np.abs(np.squeeze(Xd)-np.squeeze(Xf)))
@@ -101,7 +101,7 @@ def test_dtft_1d(verbose=False):
 
 
 def test_dtft_adj_3d(verbose=False, test_Cython=False):
-    
+
     #Nd = [4, 6, 5];
     Nd = [32, 16, 2]
     n_shift = np.asarray([2, 1, 3]).reshape(3, 1)
@@ -115,11 +115,11 @@ def test_dtft_adj_3d(verbose=False, test_Cython=False):
     om=np.hstack((o1.reshape((-1, 1), order='F'),
                   o2.reshape((-1, 1), order='F'),
                   o3.reshape((-1, 1), order='F')))
-                  
+
     xd = dtft_adj(X, om, Nd, n_shift)
     xl = dtft_adj(X, om, Nd, n_shift, True)
     assert_allclose(xd, xl, atol=1e-7)
-    
+
     Xp = np.exp(-1j * np.dot(om, n_shift))
     Xp = X * Xp.reshape(X.shape, order='F')
     xf = np.fft.ifftn(Xp) * np.prod(Nd)
@@ -127,7 +127,7 @@ def test_dtft_adj_3d(verbose=False, test_Cython=False):
     if verbose:
         print('loop max %% difference = %g' % max_percent_diff(xl, xd))
         print('ifft max %% difference = %g' % max_percent_diff(xf,xd))
-    
+
     if test_Cython:
         import time
         from pyir.nufft.cy_dtft import dtft_adj as cy_dtft_adj
@@ -135,7 +135,7 @@ def test_dtft_adj_3d(verbose=False, test_Cython=False):
         xc = cy_dtft_adj(X.ravel(order='F'), om, Nd, n_shift)
         print("duration (1 rep) = {}".format(time.time()-t_start))
         print('ifft max %% difference = %g' % max_percent_diff(xf,xc))
-        
+
         X_16rep = np.tile(X.ravel(order='F')[:,None],(1,16))
         t_start=time.time()
         xc16 = cy_dtft_adj(X_16rep, om, Nd, n_shift)
@@ -154,7 +154,7 @@ def test_dtft_adj_2d(verbose=False):
     N1 = 4
     N2 = 6
     n_shift = np.asarray([2, 1]).reshape(2, 1)
-    
+
     # test with uniform frequency locations:
     o1 = 2*np.pi*np.arange(0, N1) / float(N1)
     o2 = 2*np.pi*np.arange(0, N2) / float(N2)
@@ -170,7 +170,7 @@ def test_dtft_adj_2d(verbose=False):
     Xp = np.exp(-1j * np.dot(om, n_shift))
     Xp = X * Xp.reshape(X.shape, order='F')
     xf = np.fft.ifftn(Xp) * N1 * N2
-    assert_allclose(xd, xf, atol=1e-7)       
+    assert_allclose(xd, xf, atol=1e-7)
     if verbose:
         print('ifft max %% difference = %g' % max_percent_diff(xf,xd))
     return
@@ -179,7 +179,7 @@ def test_dtft_adj_2d(verbose=False):
 def test_dtft_adj_1d(verbose=False):
     N1 = 16
     n_shift = np.asarray([2, ]).reshape(1, 1)
-    
+
     # test with uniform frequency locations:
     o1 = 2*np.pi*np.arange(0, N1) / float(N1)
     X = o1        # test spectrum
@@ -192,7 +192,7 @@ def test_dtft_adj_1d(verbose=False):
     Xp = np.exp(-1j * np.dot(om, n_shift))
     Xp = X * Xp.reshape(X.shape, order='F')
     xf = np.fft.ifftn(Xp) * N1
-    assert_allclose(xd, xf, atol=1e-7)       
+    assert_allclose(xd, xf, atol=1e-7)
     if verbose:
         print('ifft max %% difference = %g' % max_percent_diff(xf,xd))
     return
