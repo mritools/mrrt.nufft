@@ -1,2 +1,2 @@
 pip uninstall pyir.nufft -y
-pip install . -v
+pip install -e . -v

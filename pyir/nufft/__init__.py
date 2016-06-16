@@ -9,3 +9,7 @@ __all__ = ['dtft',
            'NufftBase',
            'kaiser_bessel',
            'kaiser_bessel_ft']
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

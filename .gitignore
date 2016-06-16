@@ -8,6 +8,7 @@
 .pydevproject
 .spyderproject
 .spyderworkspace
+.cache
 
 # binary data files
 
@@ -19,6 +20,9 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+# pip stuff
+*.egg-info
 
 # Installer logs
 pip-log.txt
