@@ -1,2 +1,3 @@
+#!/bin/bash
 pip uninstall pyir.nufft -y
-pip install -e . -v
+LDFLAGS="$LDFLAGS -Wl,-rpath,/Users/lee8rx/anaconda/lib" pip install -e . -v
