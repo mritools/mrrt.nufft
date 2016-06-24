@@ -1,21 +1,4 @@
 #!/usr/bin/env python
-'''
-Installation script for mr_io
-
-Note:
-To make a source distribution:
-python setup.py sdist
-
-To make an RPM distribution:
-python setup.py bdist_rpm
-
-To Install:
-python setup.py install --prefix=/usr/local
-
-See also:
-python setup.py bdist --help-formats
-'''
-
 import os
 import sys
 import subprocess
