@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import division, print_function, absolute_import
+import sys
 
 
 def configuration(parent_package='', top_path=None):
@@ -13,15 +14,19 @@ def configuration(parent_package='', top_path=None):
     headers = ["c/templating", "c/nufft_table"]
     header_templates = ["c/nufft_table", ]
 
+    extra_compile_args = ['-fopenmp', '-O3', ]
+    if sys.platform in ['linux', 'darwin']:
+        extra_compile_args += ['-ffast-math']
+
     config.add_extension(
         '_nufft_table',
         sources=["{0}.c".format(s) for s in ["_nufft_table"] + sources],
-        depends=(["{0}.template.c".format(s) for s in source_templates]
-                 + ["{0}.template.h".format(s) for s in header_templates]
-                 + ["{0}.h".format(s) for s in headers]
-                 + ["{0}.h".format(s) for s in sources]),
+        depends=(["{0}.template.c".format(s) for s in source_templates] +
+                 ["{0}.template.h".format(s) for s in header_templates] +
+                 ["{0}.h".format(s) for s in headers] +
+                 ["{0}.h".format(s) for s in sources]),
         include_dirs=["c", np.get_include()],
-        extra_compile_args=['-fopenmp', '-O3', ],
+        extra_compile_args=extra_compile_args,
         extra_link_args=['-fopenmp'],
         define_macros=[("PY_EXTENSION", None)],
     )
@@ -31,7 +36,7 @@ def configuration(parent_package='', top_path=None):
         sources=['_dtft.c'],
         depends=['c/_complexstuff.h'],
         include_dirs=[np.get_include(), ],
-        extra_compile_args=['-fopenmp', '-O3', ],
+        extra_compile_args=extra_compile_args,
         extra_link_args=['-fopenmp'],
         language='c'
     )
