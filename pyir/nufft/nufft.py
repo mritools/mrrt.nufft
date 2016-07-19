@@ -73,8 +73,6 @@ def _get_legend_text(ax):
         return [t.get_text() for t in l.get_texts()]
 
 
-
-
 # class NufftExact(Nufft):
 #     def __init__(self,**kwargs):
 #         super(NufftExact, self).__init__(**kwargs)
@@ -95,14 +93,15 @@ def _get_legend_text(ax):
 # change name of NufftBase to NFFT_Base
 # Note: must have object here to get a new-style class!
 # TODO: change default n_shift to Nd/2?
+
+
 class NufftBase(object):
 
     def __init__(self, Nd, om, Jd=6, Kd=None, p=None, sn=None, Ld=2048,
                  tol=1e-7, precision=None, kernel_type='kb:beatty',
                  n_shift=None, kernel_kwargs={}, phasing='real',
                  mode='table0', sparse_format='CSC', verbose=False,
-                 ortho=False,
-                 **kwargs):
+                 ortho=False, **kwargs):
 
         self.verbose = verbose
         if self.verbose:
@@ -220,7 +219,6 @@ class NufftBase(object):
         self.__init_complete = True  # TODO: currently unused
         if self.verbose:
             print("Exiting NufftBase init")
-        #super(NufftBase, self).__init__(**kwargs)
 
     def _nufft_forward(self, x):
         y = nufft_forward(self, x=x)
@@ -608,6 +606,7 @@ class NufftBase(object):
         tend1 = time()
         if self.verbose:
             print("Nd={}".format(self.Nd))
+            print("Sparse init stage 1 duration = {} s".format(tstart - tend1))
 
         """
         build sparse matrix that is shape (M, *Kd)
@@ -690,7 +689,8 @@ class NufftBase(object):
                 self.Ld = 2 ** 9
             else:
                 raise ValueError("Bad table mode")
-        if ndim != len(self.Jd) or ndim != len(self.Ld) or ndim != len(self.Kd):
+        if ndim != len(self.Jd) or ndim != len(self.Ld) or \
+                ndim != len(self.Kd):
             raise ValueError('inconsistent dimensions among ndim, Jd, Ld, Kd')
         if ndim != self.om.shape[1]:
             raise ValueError('omega needs %d columns' % (ndim))
@@ -739,7 +739,7 @@ class NufftBase(object):
     def plot_kernels(self, with_phasing=False):
         from matplotlib import pyplot as plt
         """Plots the NUFFT gridding kernel for each axis of the NUFFT."""
-        gridspec_kw=dict(hspace=0.1)
+        gridspec_kw = dict(hspace=0.1)
         fig, axes = plt.subplots(self.ndim, 1, sharex='col',
                                  gridspec_kw=gridspec_kw)
         for d in range(self.ndim):
@@ -768,7 +768,6 @@ class NufftBase(object):
         return fig, axes
 
 
-
 def _nufft_table_interp(st, Xk, om=None):
     """ table-based nufft
      in
@@ -777,7 +776,8 @@ def _nufft_table_interp(st, Xk, om=None):
         om	[M,1]		frequency locations, overriding st.om
      out
         X	[M,nc]		NUFFT values
-    Matlab version copyright 2004-3-30, Jeff Fessler and Yingying Zhang, University of Michigan
+    Matlab version copyright 2004-3-30, Jeff Fessler and Yingying Zhang,
+    University of Michigan
 
     Note: should not call this directly, but via nufft_forward()
     """
@@ -827,7 +827,8 @@ def _nufft_table_interp(st, Xk, om=None):
     if hasattr(st, 'phase_shift'):
         if isinstance(st.phase_shift, (np.ndarray, list)):
             if len(st.phase_shift) > 0:
-                ph = np.tile(st.phase_shift, (1, nc))  # TODO: change to broadcasting instead
+                # TODO: change to broadcasting instead
+                ph = np.tile(st.phase_shift, (1, nc))
                 ph.shape = X.shape  # ensure same size
                 X = X * ph  # for arrays, * is elementwise multiplication
     return X.astype(Xk.dtype)
@@ -841,9 +842,9 @@ def _nufft_table_adj(st, X, om=None):
         om [M,1]	optional (default st.om)
      out
         Xk [*Kd,nc]	DFT coefficients
-    Matlab version copyright 2004-3-30, Jeff Fessler and Yingying Zhang, University of Michigan
+    Matlab version copyright 2004-3-30, Jeff Fessler and Yingying Zhang,
+    University of Michigan
     """
-
     order = st.table_order
     if om is None:
         om = st.om
@@ -876,7 +877,6 @@ def _nufft_table_adj(st, X, om=None):
 
     arg = [st.Jd, st.Ld, tm, st.Kd[0:ndim], order]
 
-    # Xk = np.zeros((np.product(st.Kd), nc))
     if ndim == 1:
         Xk = interp1_table_adj(X, st.h[0], *arg)
     elif ndim == 2:
