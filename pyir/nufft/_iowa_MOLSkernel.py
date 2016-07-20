@@ -202,6 +202,12 @@ def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None):
         MOLS interpolator
     Kernel : TODO
     error1 : TODO
+
+    References
+    ----------
+    Z. Yang, M. Jacob, "Mean square optimal NUFFT approximation for non-Cartesian MRI reconstruction", J Magn Reson, vol. 242, pp. 126-135, 2014
+    M. Jacob,"Optimized least square non uniform fast Fourier transform (OLS-NUFFT)" , IEEE Transactions of Signal Processing, vol. 57, issue 6, pp. 2165-2177, 2009
+
     """
     if H is None:
         H = np.ones(N)
