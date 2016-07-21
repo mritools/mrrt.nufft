@@ -9,9 +9,9 @@ import numpy as np
 from pyir.nufft.kaiser_bessel import kaiser_bessel
 
 from pyir.nufft.nufft_utils import (nufft_alpha_kb_fit,
-                                     nufft_best_alpha,
-                                     nufft_diric,
-                                     to_1d_int_array)
+                                    nufft_best_alpha,
+                                    nufft_diric,
+                                    to_1d_int_array)
 
 from pyir.utils import is_string_like
 
@@ -107,6 +107,7 @@ class NufftKernel(object):
         # linear interpolator straw man
         if kernel_type == 'linear':
             kernel_type = 'inline'
+
             def kernel_linear(k, J):
                 return (1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
             self.kernel = []
@@ -127,8 +128,8 @@ class NufftKernel(object):
                 self.kernel.append(lambda k: (
                     N / K * nufft_diric(k, N, K, True)))
         elif kernel_type == 'kb:beatty':
-        # KB with Beatty et al parameters
-        # Beatty2005:  IEEETMI 24(6):799:808
+            # KB with Beatty et al parameters
+            # Beatty2005:  IEEETMI 24(6):799:808
             self.is_kaiser_scale = True
             if (Kd is None) or (Nd is None) or (Jd is None):
                 raise ValueError("kwargs must contain Kd, Nd, Jd for " +
@@ -151,8 +152,6 @@ class NufftKernel(object):
                                       J=Jd[d],
                                       alpha=params['kb_alf'][d],
                                       kb_m=params['kb_m'][d]))
-        
-        
 
         # KB with minmax-optimized parameters
         elif kernel_type == 'kb:minmax':
