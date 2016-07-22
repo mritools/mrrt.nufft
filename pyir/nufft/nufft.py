@@ -980,7 +980,7 @@ def nufft_forward(st, x, copy_x=True):
         x = x.copy()
 
     try:  # collapse all excess dimensions into just one
-        x = x.reshape(list(Nd) + [-1, ], )
+        x = x.reshape(list(Nd) + [-1, ], order='F')
     except:
         raise ValueError('input signal has wrong size')
 
@@ -993,7 +993,7 @@ def nufft_forward(st, x, copy_x=True):
     #
     # the usual case is where L=1, i.e., there is just one input signal.
     #
-    Xk = np.zeros((np.product(Kd), L), dtype=x.dtype)			# [*L,*Kd]
+    Xk = np.zeros((np.product(Kd), L), dtype=x.dtype)  # [*L,*Kd]
     for ll in range(L):
         xl = x[..., ll] * st.sn		# scaling factors
         # Fortran order to match Matlab's behavior
@@ -1004,24 +1004,27 @@ def nufft_forward(st, x, copy_x=True):
 
     if st.ortho:
         Xk /= st.scale_ortho
-    # interpolate using precomputed sparse matrix
-    # or with tabulated interpolator
+
     if 'table' in st.mode:
-        # Xk = Xk.astype(st.h[0].dtype)
+        # interpolate via tabulated interpolator
         X = st.interp_table(st, Xk)
     else:
-        X = st.p * Xk					# [M,*L]
+        # interpolate using precomputed sparse matrix
+        X = st.p * Xk  # [M,*L]
 
-    if x.ndim > ndim:
-        X = np.reshape(X, (st.M, L))
+    X = np.reshape(X, (st.M, L), order='F')
 
     if st.phase_after is not None:
         X *= st.phase_after[:, None]  # broadcast rather than np.tile
 
+    remove_singleton = True
+    if remove_singleton and L == 1:
+        X = X[..., 0]
+
     return X
 
 
-def nufft_adj(st, X, copy_X=True):
+def nufft_adj(st, X, copy_X=True, return_psf=False):
     """
     function x = nufft_adj(X, st)
      Apply adjoint of d-dimensional NUFFT to spectrum vector(s) X
@@ -1040,65 +1043,111 @@ def nufft_adj(st, X, copy_X=True):
     if dims[0] != st.M:
         raise ValueError('size mismatch')
 
+    X = complexify(X)  # force complex
+
     #
     # adjoint of interpolator using precomputed sparse matrix
     #
-    try:
-        not_1d = dims[1] > 1
-    except:
-        not_1d = False
-
     if copy_X:  # make sure original array isn't modified!
         X = X.copy()
 
-    if (len(dims) > 2) or (not_1d):
-        Lprod = np.product(dims[1:])
-        X.shape = (st.M, Lprod)  # [M,*L]
-        # X = reshape(X, (st.M, Lprod))	#
-    else:
-        X.shape = (st.M, 1)
+    if len(dims) == 1:
         Lprod = 1  # the usual case
+    else:
+        Lprod = np.product(dims[1:])
+    #X.shape = (st.M, Lprod)  # [M,*L]
+    X = np.reshape(X, (st.M, Lprod), order='F')  # [M,*L]
 
-    X = complexify(X)  # force complex
-
-    if st.phase_after is not None:
+    if st.phase_after is not None and not return_psf:
         # replaced np.tile() with broadcasting
         X *= st.phase_after.conj()[:, None]
 
     if 'table' in st.mode:
+        # interpolate via tabulated interpolator
         X = X.astype(np.result_type(st.h[0], X.dtype), copy=False)
         Xk_all = st.interp_table_adj(st, X)
     else:
+        # interpolate using precomputed sparse matrix
         Xk_all = (st.p.H * X)  # [*Kd,*L]
 
-    x = np.zeros((np.product(Kd), Lprod), dtype=X.dtype)  # [*Kd,*L]
+    x = np.zeros(tuple(Kd) + (Lprod,), dtype=X.dtype)  # [*Kd,*L]
 
     if Xk_all.ndim == 1:
         Xk_all = Xk_all[:, None]
 
     for ll in range(Lprod):
         Xk = np.reshape(Xk_all[:, ll], Kd, order='F')  # [(Kd)]
+        if return_psf:
+            return Xk
         if st.phase_before is not None:
             Xk *= st.phase_before.conj()
-        x[:, ll] = np.product(Kd) * ifftn(Xk).ravel(order='F')
+        x[..., ll] = np.product(Kd) * ifftn(Xk)
 
     if st.ortho:
         x *= st.scale_ortho
 
-    x = x.reshape(tuple(Kd) + (Lprod,), order='F')  # [(Kd),*L]
-
-    # eliminate zero padding from ends  fix: need generic method
-    if len(Nd) == 1:
-        x = x[0:Nd[0], :]  # [N1,*L]
-    elif len(Nd) == 2:
-        x = x[0:Nd[0], 0:Nd[1], :]  # [N2,N1,*L]
-    elif len(Nd) == 3:
-        x = x[0:Nd[0], 0:Nd[1], 0:Nd[2], :]
-    else:
-        raise ValueError('only up to 3D implemented currently')
+    # eliminate zero padding from ends
+    subset_slices = [slice(d) for d in Nd] + [slice(None), ]
+    x = x[subset_slices]
 
     # scaling factors
     x *= st.sn.conj()[..., None]
-    # x = np.squeeze(x) #remove singleton dimension(s)
+
+    remove_singleton = True
+    if remove_singleton and Lprod == 1:
+        x = x[..., 0]
 
     return x
+
+
+def nufft_adj_psf(st, X, copy_X=True):
+    return nufft_adj(st, X, copy_X=True, return_psf=True)
+
+if False:
+    import skimage.data
+    import bart_cy as bart
+    import numpy as np
+    from pyir.utils import complexify, embed
+    from pyir.operators_private import MRI_Operator
+    from pyir.operators import DiagonalOperator
+    from pyvolplot import volshow
+    from matplotlib import pyplot as plt
+    from pyir.nufft.nufft import nufft_adj_psf
+    from pyir.utils import fftn, ifftn
+    nread = 256
+    traj_rad = bart.traj(X=2*nread, Y=400, radial=True).real
+    traj_rad = traj_rad.reshape((3, -1), order='F')
+    kspace = traj_rad.transpose((1, 0))[:, :2] * 0.5
+    mask = np.ones((nread, nread), dtype=np.bool)
+    nufft_kwargs = dict(mode='table0',  # 'table1',
+                        use_CUDA=False,
+                        kernel='kb:beatty',
+                        phasing='real')
+    G = MRI_Operator(Nd=(nread, nread),
+                     Kd=(2*nread, 2*nread),
+                     Jd=(6, 6),
+                     fov=(1, 1),
+                     kspace=kspace,
+                     mask=mask,
+                     # weights=np.sqrt(np.linalg.norm(kspace, axis=1)),
+                     **nufft_kwargs)
+
+    weights = np.linalg.norm(kspace, axis=1)
+    weights = DiagonalOperator(weights, order='F')
+    # weights = 1
+
+    x = skimage.data.camera()[::2, ::2].astype(np.complex64)
+    tmp = G.Gnufft.H * weights * (G.Gnufft * x)
+    x3d = np.concatenate((x[..., None], x[..., None]), -1)
+    tmp3d = G.Gnufft.H * weights * (G.Gnufft * x3d)
+    volshow(embed(tmp, mask))
+    volshow(embed(tmp3d, mask))
+    psf = nufft_adj_psf(G.Gnufft, np.ones(kspace.shape[0]))
+    volshow(np.abs(psf)**0.25)
+
+    tmp0 = fftn(G.Gnufft.sn * x, G.Gnufft.Kd)
+    # if G.Gnufft.phase_after is not None:
+    if G.Gnufft.phase_before is not None:
+        tmp0 = tmp0 * G.Gnufft.phase_before
+        tmp0 = tmp0 * np.conj(G.Gnufft.phase_before)
+    tmp2 = np.conj(G.Gnufft.sn) * ifftn(psf * tmp0)[:nread, :nread]  # [128:-128,128:-128]
