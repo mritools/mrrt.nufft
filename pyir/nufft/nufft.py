@@ -1100,54 +1100,110 @@ def nufft_adj(st, X, copy_X=True, return_psf=False):
     return x
 
 
-def nufft_adj_psf(st, X, copy_X=True):
-    return nufft_adj(st, X, copy_X=True, return_psf=True)
+def compute_Q(G, Nd_os=2, Kd_os=1.25, J=5, use_CUDA=False,
+              **extra_nufft_kwargs):
+    """compute Q such that IFFT(Q*FFT(x)) = (G.H * G * x).
 
-if False:
+    Notes
+    -----
+    requires that G.Kd ~= 2*G.Nd for good accuracy.
+    can get away with Kd_os < substantially less than 2
+
+    Reference
+    ---------
+    Wajer FTAW, Pruessmann KP. Major Speedup of Reconstruction for
+    Sensitivity Encoding with Arbitrary Trajectories.
+    Proc. Intl. Soc. Mag. Reson. Med. 9 (2001), p.767.
+
+    also related:
+    Eggers H, Boernert P, Boesiger P.  Comparison of Gridding- and
+    Convolution-Based Iterative Reconstruction Algorithms For
+    Sensitivity-Encoded Non-Cartesian Acquisitions.
+    Proc. Intl. Soc. Mag. Reson. Med. 10 (2002)
+
+    Liu C, Moseley ME, Bammer R.  Fast SENSE Reconstruction Using Linear
+    System Transfer Function.
+    Proc. Intl. Soc. Mag. Reson. Med. 13 (2005), p.689.
+    """
+    from pyir.operators_private import MRI_Operator
+
+    Gnufft_op = G.Gnufft
+
+    # need reasonably accurate gridding onto a 2x oversampled grid
+    Nd = (Nd_os * Gnufft_op.Nd).astype(np.intp)
+    if np.any(G.Kd < 2*G.Nd):
+        warnings.warn("Q operator unlikely to be accurate.  Recommend using G "
+                      "with a grid oversampling factor of 2")
+
+    G2 = MRI_Operator(Nd=Nd,
+                      Kd=(Kd_os*Nd).astype(np.intp),
+                      Jd=(J, )*len(G.Nd),
+                      fov=G.fov,
+                      kspace=Nd/Gnufft_op.Nd*G.kspace,
+                      order=G.order,
+                      mask=np.ones(Nd, dtype=np.bool),
+                      kernel=Gnufft_op.kernel.kernel_type,
+                      mode=Gnufft_op.mode,
+                      use_CUDA=False,
+                      phasing='real',  # ONLY WORKS IF THIS IS REAL!
+                      **extra_nufft_kwargs)
+    psft = G2.H * np.ones(kspace.shape[0], Gnufft_op._cplx_dtype)
+    psft = np.fft.fftshift(psft.reshape(G2.Nd, order=G2.order))
+    return fftn(psft)
+
+
+def compute_Q_v2(G, copy_X=True):
+    """Alternative version of compute_Q.
+
+    experimental:  not recommended over compute_Q()
+    """
+    from pyir.nufft.nufft import nufft_adj
+    ones = np.ones(kspace.shape[0], G.Gnufft._cplx_dtype)
+    sf = np.sqrt(np.prod(G.Gnufft.Kd))
+    return sf * fftn(nufft_adj(G.Gnufft, ones, copy_X=True, return_psf=True))
+
+
+def example_compute_Q():
     import skimage.data
     import bart_cy as bart
     import numpy as np
-    from pyir.utils import complexify, embed
     from pyir.operators_private import MRI_Operator
     from pyir.operators import DiagonalOperator
     from pyvolplot import volshow
-    from matplotlib import pyplot as plt
-    from pyir.nufft.nufft import nufft_adj_psf
     from pyir.utils import fftn, ifftn
     nread = 256
-    traj_rad = bart.traj(X=2*nread, Y=400, radial=True).real
+    traj_rad = bart.traj(X=2*nread, Y=64, radial=True).real
     traj_rad = traj_rad.reshape((3, -1), order='F')
     kspace = traj_rad.transpose((1, 0))[:, :2] * 0.5
     mask = np.ones((nread, nread), dtype=np.bool)
     nufft_kwargs = dict(mode='table0',  # 'table1',
                         use_CUDA=False,
                         kernel='kb:beatty',
-                        phasing='real')
-    G = MRI_Operator(Nd=(nread, nread),
-                     Kd=(2*nread, 2*nread),
-                     Jd=(6, 6),
+                        phasing='complex')
+    Nd = np.asarray((nread, nread))
+    osf = 2
+    G = MRI_Operator(Nd=Nd,
+                     Kd=(osf*Nd).astype(np.intp),
+                     Jd=(4, 4),
                      fov=(1, 1),
                      kspace=kspace,
-                     mask=mask,
+                     mask=np.ones(Nd, dtype=np.bool),
                      # weights=np.sqrt(np.linalg.norm(kspace, axis=1)),
                      **nufft_kwargs)
 
     weights = np.linalg.norm(kspace, axis=1)
     weights = DiagonalOperator(weights, order='F')
-    # weights = 1
-
     x = skimage.data.camera()[::2, ::2].astype(np.complex64)
-    tmp = G.Gnufft.H * weights * (G.Gnufft * x)
-    x3d = np.concatenate((x[..., None], x[..., None]), -1)
-    tmp3d = G.Gnufft.H * weights * (G.Gnufft * x3d)
-    volshow(embed(tmp, mask))
-    volshow(embed(tmp3d, mask))
-    psf = nufft_adj_psf(G.Gnufft, np.ones(kspace.shape[0]))
-    volshow(np.abs(psf)**0.25)
+    tmp0 = embed(G.Gnufft.H * (G.Gnufft * x), mask)
+    tmp = embed(G.Gnufft.H * weights * (G.Gnufft * x), mask)
 
-    tmp0 = fftn(G.Gnufft.sn * x, G.Gnufft.Kd)
-    # if G.Gnufft.phase_after is not None:
-    if G.Gnufft.phase_before is not None:
-        tmp0 = tmp0 * G.Gnufft.phase_before
-        tmp0 = tmp0 * np.conj(G.Gnufft.phase_before)
-    tmp2 = np.conj(G.Gnufft.sn) * ifftn(psf * tmp0)[:nread, :nread]  # [128:-128,128:-128]
+    volshow(tmp)
+
+    # psf = nufft_adj_psf(G.Gnufft, np.ones(kspace.shape[0]))
+    # volshow(np.abs(psf)**0.25)
+    # PSF = fftn(psf)
+
+
+    Q = compute_Q(G)
+    tmp0_approx = ifftn(Q * fftn(x, G.Gnufft.Kd))[:nread, :nread]
+    volshow([tmp0, tmp0_approx, tmp0-tmp0_approx], vmax=np.abs(tmp0).max())
