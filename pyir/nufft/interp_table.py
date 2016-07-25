@@ -16,6 +16,7 @@ def interp1_table(ck, h1, J1, L1, tm, order=0):
         h1 = h1[:, None]
 
     if (h1.shape[0] != J1 * L1 + 1) | (h1.shape[1] != 1):
+        print("J=%d, L=%d, tablelength=%d" % (J1, L1, h1.shape[0]))
         raise ValueError("h1 size problem")
 
     if tm.ndim == 1:
@@ -37,7 +38,7 @@ def interp1_table_adj(fm, h1, J1, L1, tm, K1, order=None):
         h1 = h1[:, None]
 
     if (h1.shape[0] != J1 * L1 + 1) | (h1.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % J1, L1, h1.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (J1, L1, h1.shape[0]))
         raise ValueError("h size problem")
 
     if tm.ndim == 1:
@@ -72,11 +73,11 @@ def interp2_table(ck, h1, h2, Jd, Ld, tm, order=0):
         print("Error:  J, K and L must all be length 2")
 
     if (h1.shape[0] != Jd[0] * Ld[0] + 1) | (h1.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[0], Ld[0], h1.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[0], Ld[0], h1.shape[0]))
         raise ValueError("h1 size problem")
 
     if (h2.shape[0] != Jd[1] * Ld[1] + 1) | (h2.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[1], Ld[1], h2.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[1], Ld[1], h2.shape[0]))
         raise ValueError("h2 size problem")
 
     if not tm.shape == (M, 2):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
@@ -102,11 +103,11 @@ def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd, order=None):
         raise ValueError("Error:  J, K and L must all be length 2")
 
     if (h1.shape[0] != Jd[0] * Ld[0] + 1) | (h1.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[0], Ld[0], h1.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[0], Ld[0], h1.shape[0]))
         raise ValueError("h1 size problem")
 
     if (h2.shape[0] != Jd[1] * Ld[1] + 1) | (h2.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[1], Ld[1], h2.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[1], Ld[1], h2.shape[0]))
         raise ValueError("h2 size problem")
 
     if not tm.shape == (M, 2):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
@@ -138,15 +139,15 @@ def interp3_table(ck, h1, h2, h3, Jd, Ld, tm, order=0):
         print("Error:  J, K and L must all be length 3")
 
     if (h1.shape[0] != Jd[0] * Ld[0] + 1) | (h1.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[0], Ld[0], h1.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[0], Ld[0], h1.shape[0]))
         raise ValueError("h1 size problem")
 
     if (h2.shape[0] != Jd[1] * Ld[1] + 1) | (h2.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[1], Ld[1], h2.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[1], Ld[1], h2.shape[0]))
         raise ValueError("h2 size problem")
 
     if (h3.shape[0] != Jd[2] * Ld[2] + 1) | (h3.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[2], Ld[2], h3.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[2], Ld[2], h3.shape[0]))
         raise ValueError("h3 size problem")
 
     if not tm.shape == (M, 3):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
@@ -174,15 +175,15 @@ def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd, order=None):
         raise ValueError("Error:  J, K and L must all be length 3")
 
     if (h1.shape[0] != Jd[0] * Ld[0] + 1) | (h1.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[0], Ld[0], h1.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[0], Ld[0], h1.shape[0]))
         raise ValueError("h1 size problem")
 
     if (h2.shape[0] != Jd[1] * Ld[1] + 1) | (h2.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[1], Ld[1], h2.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[1], Ld[1], h2.shape[0]))
         raise ValueError("h2 size problem")
 
     if (h3.shape[0] != Jd[2] * Ld[2] + 1) | (h3.shape[1] != 1):
-        print(("J = %d, L=%d, tablelength=%d" % Jd[2], Ld[2], h3.shape[0]))
+        print("J=%d, L=%d, tablelength=%d" % (Jd[2], Ld[2], h3.shape[0]))
         raise ValueError("h3 size problem")
 
     if not tm.shape == (M, 3):  # (M != tm.shape[0]) | (2 != tm.shape[1]):

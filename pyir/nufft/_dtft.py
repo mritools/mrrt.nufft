@@ -1,9 +1,11 @@
+"""
+Slow, brute force n-dimensional DTFT routines.  These can be used to
+validate the NUFFT on small problem sizes.
+"""
+
 from __future__ import division, print_function, absolute_import
 
 import numpy as np
-
-""" Slow, brute force DTFT routines.  These can be used to validate the NUFFT
-on small problem sizes. """
 
 __all__ = ['dtft', 'dtft_adj']
 

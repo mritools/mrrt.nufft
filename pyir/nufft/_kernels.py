@@ -105,6 +105,7 @@ class NufftKernel(object):
         beta = params.get('beta', None)  # beta for minmax:* cases
 
         # linear interpolator straw man
+        kernel_type = kernel_type.lower()
         if kernel_type == 'linear':
             kernel_type = 'inline'
 
@@ -236,6 +237,8 @@ class NufftKernel(object):
             for d in range(ndim):
                 params['alpha'].append(1.)
                 params['beta'].append(0.)
+        elif 'mols' in kernel_type:
+            pass
         else:
             raise ValueError('unknown kernel type')
 

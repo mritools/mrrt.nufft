@@ -109,23 +109,22 @@ def _nufft_interp_zn(alist, N, J, K, func, Nmid=None):
     # n0 = (N-1)/2.;
     # nlist0 = np.arange(0,N) - n0;		# include effect of phase shift!
     n0 = np.arange(0, N) - Nmid
-    nn0, jj = np.mgrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
-    # )*(1 + 1j) #NOTE:  must initialize zn as complex
+    
+    #nn0, jj = np.mgrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
+    nn0, jj = np.ogrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
+        
+    # must initialize zn as complex
     zn = np.zeros((N, len(alist)), dtype=np.complex64)
 
     for ia, alf in enumerate(alist):
         jarg = alf - jj			# [N,J]
         e = np.exp(1j * gam * jarg * nn0)		# [N,J]
-
         #TODO: remove need for this try/except
         try:
             F = func(jarg, J)			# [N,J]
         except:
             F = func(jarg)           # [N,J]
-
-        # zn must be complex or result will be forced to real!
-        zn[:, ia] = np.sum(F * e, 1)
-
+        zn[:, ia] = np.sum(F * e, axis=1)
     return zn
 
 

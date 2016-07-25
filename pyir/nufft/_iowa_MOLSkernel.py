@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import scipy.linalg
 import scipy.sparse
@@ -55,44 +57,67 @@ def calcKernelDiscretemod_fm(DFTMtx, fn, K, N, Ofactor, Order, H):
     calcweight = H2/Den  # rowF
 
     calcweight[subset_idx] = 0
-    CentralIndex = (Ofactor-1)//2*K  # TODO: requires odd Ofactor?
+    CentralIndex = (Ofactor-1)/2*K
+    if CentralIndex % 2 != 0:
+        raise ValueError("expected an integer")
+    else:
+        CentralIndex = int(CentralIndex)
     calcweight = np.tile(calcweight, Ofactor)
     calcweight[CentralIndex:CentralIndex+K] = 0
     return (Kernel, calcweight, error)
 
 
 def giveOptStepDiscrete_fm(DFTMtx, fn, K, N, Ofactor, Olderror, Oldfn, a,
-                           Order, H):
+                           Order, H, tol=None):
     steps = 0.5**(np.arange(31))
     steps = np.concatenate((steps, np.array([0, ])))
+    # if tol is None:
+    #     tol = 100 * np.finfo(fn.dtype).eps
     for step in steps:
         fn = step*a + (1 - step)*Oldfn
         Kernel, calcweight, error = calcKernelDiscretemod_fm(
             DFTMtx, fn, K, N, Ofactor, Order, H)
+        # if (error - Olderror) < tol:
         if (Olderror - error) > 0:
             break
     return (Kernel, calcweight, error, fn, step)
 
 
 def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
-    x = np.linspace(0, np.ceil(J/2), np.ceil(J/2)*Ofactor+1)
-    assert_almost_equal(x[2] - x[1], 1/Ofactor)
-    x = x[np.where(x <= J/2)]
-    centreindex = len(x)
-    x = np.concatenate((-x[1:][::-1], x))
+    if False:
+        # direct matlab translation
+        x = np.linspace(0, np.ceil(J/2), np.ceil(J/2)*Ofactor+1)
+        assert_almost_equal(x[2] - x[1], 1/Ofactor)
+        x = x[np.where(x <= J/2)]
+        centreindex = len(x)
+        x = np.concatenate((-x[1:][::-1], x))
+    else:
+        # differs from the Matlab translation above slightly when J=odd
+        
+        x = np.arange(-J * Ofactor / 2., J * Ofactor / 2. + 1) / Ofactor
+        if x.size % 2 == 1:
+            centreindex = int(np.ceil(x.size/2))
+        else:
+            centreindex = None
+
 
     # K samples: ranges from -2*pi*(Ofactor-1)/2 to 2*pi*(Ofactor-1)/2
     Nsamples = Ofactor*K
     k = np.arange(-Nsamples/2, Nsamples/2)
-    DFTMtx = np.exp(-1j*2*np.pi*k[:, np.newaxis]*x[np.newaxis, :]/K)
+    DFTMtx = -1j*2*np.pi*np.dot(k[:, np.newaxis]/K, x[np.newaxis, :])
+    DFTMtx = np.exp(DFTMtx, out=DFTMtx)
+    
     vector = np.concatenate((np.arange(K*Ofactor/2),
                              np.arange(-K*Ofactor/2, 0)))
     abeta = K*Ofactor*ifftnc(bspline(vector, 3))
     Weight = scipy.sparse.diags(abeta)
     B = np.dot(np.conj(DFTMtx.T), np.asarray(Weight * np.asmatrix(DFTMtx)))
-    fn = bspline(x[centreindex-1:], degree)
-    fn2 = fn[1:][::-1]
-    fn = np.concatenate((fn2, fn))
+    if centreindex is not None:
+        fn = bspline(x[centreindex-1:], degree)
+        fn2 = fn[1:][::-1]
+        fn = np.concatenate((fn2, fn))
+    else:
+        fn = bspline(x, degree)
     Kernel, current_weight, error = calcKernelDiscretemod_fm(
         DFTMtx, fn, K, N, Ofactor, Order, H)
     oldfn = fn
@@ -101,7 +126,7 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
 
     # Start of iteration
     for itr in range(100):
-        print("itr = {}".format(itr))
+        print("itr = {}, error={}".format(itr, error))
         weight = current_weight
         Weight = scipy.sparse.diags(weight)
         A = np.dot(np.conj(DFTMtx.T), np.asarray(Weight * np.asmatrix(DFTMtx)))
@@ -128,15 +153,22 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
 
 def givePrefilterNew_fm(fn, J, K, Ofactor, Order):
     # x values over the range of the interpolation coefficients
-    x = np.linspace(0, np.ceil(J/2), np.ceil(J/2)*Ofactor+1)
-    assert_almost_equal(x[2] - x[1], 1/Ofactor)
-    x = x[np.where(x <= J/2)]
-    x = np.concatenate((-x[1:][::-1], x))
+    if False:
+        # direct matlab translation
+        x = np.linspace(0, np.ceil(J/2), np.ceil(J/2)*Ofactor+1)
+        assert_almost_equal(x[2] - x[1], 1/Ofactor)
+        x = x[np.where(x <= J/2)]
+        x = np.concatenate((-x[1:][::-1], x))
+    else:
+        # differs from the Matlab translation above slightly when J=odd
+        x = np.arange(-J * Ofactor / 2., J * Ofactor / 2. + 1) / Ofactor
+
     Nsamples = Ofactor*K
 
     # K samples: ranges from -2*pi*(Ofactor-1)/2 to 2*pi*(Ofactor-1)/2
     k = np.arange(-Nsamples/2, Nsamples/2)
-    DFTMtx = np.exp(-1j*2*np.pi*colF(k)*rowF(x)/K)
+    DFTMtx = -1j*2*np.pi*np.dot(colF(k)/K, rowF(x))
+    DFTMtx = np.exp(DFTMtx, out=DFTMtx)
 
     # DFT of the interpolation coefficients
     FN = np.dot(DFTMtx, fn)
@@ -175,8 +207,29 @@ if False:
     H = np.ones(N)
     degree = J - 1
 
+    import numpy as np
+    from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
+    from matplotlib import pyplot as plt
+    J = 4
+    N = 64
+    K = 96
+    Ofactor = 151
+    Order = 2
+    H = np.ones(N)
+    degree = J - 1
+    pre, fnn1, kernel, error1 = PreNUFFT_fm(J, N, Ofactor, K, Order=Order, H=H, degree=degree)
+    plt.figure()
+    plt.plot(np.arange(fnn1.size), fnn1.real,
+             np.arange(fnn1.size), fnn1.imag)
+#    kernel = NufftKernel('kb:beatty',
+#                         ndim=1,
+#                         Nd=[64, ],
+#                         Jd=6,
+#                         Kd=[96, ],
+#                         Nmid=[32, ])    
 
-def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None):
+def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
+                compute_prefilter=True):
     """Function to computer MOL interpolators and scale factors for MOLS
 
     Parameters
@@ -213,7 +266,31 @@ def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None):
         H = np.ones(N)
     if degree is None:
         degree = J - 1
+    if Ofactor % 2 != 1:
+        # TODO: does K*Ofactor need to be even ?
+        Ofactor += 1
+        warnings.warn("increasing Ofactor by 1:  (the current implementation "
+                      "seems to require an odd Ofactor)")
+    
+    if (N % 2 != 0) or (K % 2 != 0):
+        raise ValueError("odd N or K unsupported")
+
+    if (K*Ofactor) % 2 != 0:
+        warnings.warn("odd K*Ofactor untested")
+
     (fnn1, Kernel, error1) = giveSymmetricDiscrete2_fm(
         J, K, N, Ofactor, Order, H, degree)
-    prefilter_fm = givePrefilterNew_fm(fnn1, J, K, Ofactor, Order)
+    if compute_prefilter:
+        prefilter_fm = givePrefilterNew_fm(fnn1, J, K, Ofactor, Order)
+
+        # keep central size N block
+        pre_nborder = (K - N) / 2
+        if pre_nborder % 2 != 0:
+            raise ValueError("uneven prefilter shape")
+        else:
+            pre_nborder = int(pre_nborder)
+        prefilter_fm = prefilter_fm[slice(pre_nborder, -pre_nborder)]    
+    else:
+        prefilter_fm = None
+
     return (prefilter_fm, fnn1, Kernel, error1)

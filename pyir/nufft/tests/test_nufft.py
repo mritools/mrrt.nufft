@@ -28,13 +28,9 @@ def test_nufft_init(verbose=False):
         print(st)
 
 
-def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
-    # from numpy.fft import fft2
-    from pyir.nufft.nufft import NufftBase, nufft_forward
+def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
+                    random_seed=0):
     from pyir.nufft.nufft_utils import nufft2_err_mm
-    from pyir.nufft import dtft
-    from pyir.utils import max_percent_diff
-
     if test3d:
         Jd = np.array([5, 4, 4])
         Nd = np.array([23, 15, 19])
@@ -42,7 +38,8 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
         beta_user = [0.5, 0.5, 0.5]
     else:
         Jd = np.array([5, 6])
-        Nd = np.array([60, 75])
+        #Nd = np.array([60, 75])
+        Nd = np.array([60, 76])
         alpha_user = [1, 1]
         beta_user = [0.5, 0.5]
 
@@ -50,6 +47,7 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
     gam = 2 * np.pi / Kd
     n_shift = np.zeros(Nd.shape)
 
+    
     if True:
         print('err alf1 %g best %g' % (nufft2_err_mm('all', Nd[0], Nd[1],
                                                      Jd[0], Jd[1], Kd[0],
@@ -58,82 +56,89 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False):
                                                      Jd[0], Jd[1], Kd[0],
                                                      Kd[1], 'best')[0].max()))
 
-    s = {}
-    Y = {}
-    np.random.seed(0)
-    # x = randn(Nd)
-    x = np.random.standard_normal(tuple(Nd))  # randn with tuple() input
-
     if initialize_from_Matlab:
         import os
         from os.path import join as pjoin
+    else:
+        rstate = np.random.RandomState(random_seed)
+        x = rstate.standard_normal(tuple(Nd))
         # nufft_dir = os.path.dirname(nufft_forward.__globals__['__file__'])
 
     # TODO: fix so don't have to convert to complex manually
     # x = np.asarray(x,dtype=np.complex64)  #TODO: Need to fix
 
-    if False:    # test with uniform frequency locations
-        o1 = 2 * np.pi * np.arange(0, Nd[0]).T / float(Nd[0])
-        o2 = 2 * np.pi * np.arange(0, Nd[1]).T / float(Nd[1])
-        [o1, o2] = np.meshgrid(o1, o2)  # ndgrid(o1, o2)
-        Xf = np.fft.fft2(x)
+    if len(Nd) == 3:    # nonuniform frequencies
+        [o1, o2, o3] = np.meshgrid(np.linspace(0, gam[0], 11),
+                                   np.linspace(0, gam[1], 13),
+                                   np.linspace(0, gam[2], 5),
+                                   indexing='ij')
+
+        om1 = np.array(list(o1.ravel(order='F')) + [0, 7.2, 2.6, 3.3])
+        om2 = np.array(list(o2.ravel(order='F')) + [0, 4.2, -1, 5.5])
+        om3 = np.array(list(o3.ravel(order='F')) + [0, 1.1, -2, 3.4])
+
+        om = np.hstack((om1[:, np.newaxis],
+                        om2[:, np.newaxis],
+                        om3[:, np.newaxis]))
+
+        # ignore x, om from above and load exact ones from Matlab for
+        # comparison
+        if initialize_from_Matlab:
+            from scipy.io import loadmat
+
+            f = loadmat(pjoin(data_dir, 'nufft_test3D.mat'))
+            # get same random vector & om as generated in Matlab
+            x = f['x']
+
     else:
-        if len(Nd) == 3:    # nonuniform frequencies
-            [o1, o2, o3] = np.meshgrid(np.linspace(0, gam[0], 11),
-                                       np.linspace(0, gam[1], 13),
-                                       np.linspace(0, gam[2], 5),
-                                       indexing='ij')
+        o1 = np.linspace(-3 * gam[0], 3 * gam[0], 41)
+        o2 = np.linspace(-2 * gam[1], gam[1], 31)
+        [o1, o2] = np.meshgrid(o1, o2, indexing='ij')
+        om1 = np.array(list(o1.ravel(order='F')) + [0, 7.2, 2.6, 3.3])
+        om2 = np.array(list(o2.ravel(order='F')) + [0, 4.2, -1, 5.5])
+        om = np.hstack((om1[:, np.newaxis],
+                        om2[:, np.newaxis]))
 
-            om1 = np.array(list(o1.ravel(order='F')) + [0, 7.2, 2.6, 3.3])
-            om2 = np.array(list(o2.ravel(order='F')) + [0, 4.2, -1, 5.5])
-            om3 = np.array(list(o3.ravel(order='F')) + [0, 1.1, -2, 3.4])
+        # ignore x, om from above and load exact ones from Matlab for
+        # comparison
+        if initialize_from_Matlab:
+            from scipy.io import loadmat
+            # f = loadmat('nufft.mat') #get same random vector & om as
+            # generated in Matlab
+            f = loadmat(pjoin(data_dir, 'nufft_test2D.mat'))
+            # get same random vector & om as generated in Matlab
+            x = f['x']
+    return om, x, Nd, Jd, Kd, n_shift
 
-            om = np.hstack((om1[:, np.newaxis],
-                            om2[:, np.newaxis],
-                            om3[:, np.newaxis]))
+    
+def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False,
+                random_seed=0):
+    # from numpy.fft import fft2
+    from pyir.nufft.nufft import NufftBase, nufft_forward
+    
+    from pyir.nufft import dtft
+    from pyir.utils import max_percent_diff
 
-            # ignore x, om from above and load exact ones from Matlab for
-            # comparison
-            if initialize_from_Matlab:
-                from scipy.io import loadmat
 
-                f = loadmat(pjoin(data_dir, 'nufft_test3D.mat'))
-                # get same random vector & om as generated in Matlab
-                x = f['x']
+    s = {}
+    Y = {}
+    # x = randn(Nd)
+    
 
-        else:
-            o1 = np.linspace(-3 * gam[0], 3 * gam[0], 41)
-            o2 = np.linspace(-2 * gam[1], gam[1], 31)
-            [o1, o2] = np.meshgrid(o1, o2, indexing='ij')
-            om1 = np.array(list(o1.ravel(order='F')) + [0, 7.2, 2.6, 3.3])
-            om2 = np.array(list(o2.ravel(order='F')) + [0, 4.2, -1, 5.5])
-            om = np.hstack((om1[:, np.newaxis],
-                            om2[:, np.newaxis]))
+    om, x, Nd, Jd, Kd, n_shift = _nufft_testdata(
+        test3d=test3d,
+        initialize_from_Matlab=initialize_from_Matlab,
+        random_seed=random_seed)
 
-            # ignore x, om from above and load exact ones from Matlab for
-            # comparison
-            if initialize_from_Matlab:
-                from scipy.io import loadmat
-                # f = loadmat('nufft.mat') #get same random vector & om as
-                # generated in Matlab
-                f = loadmat(pjoin(data_dir, 'nufft_test2D.mat'))
-                # get same random vector & om as generated in Matlab
-                x = f['x']
-
-        Y['d'] = dtft(x, om, n_shift)
-
-        #plt.figure(), plt.plot(np.abs(Y['d']))
+    Y['d'] = dtft(x, om, n_shift=n_shift)
 
     try:
         s['tab'] = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
-                             mode='table0', Ld=2 ** 12,
+                             mode='table1', Ld=2 ** 12,
                              kernel_type='minmax:kb')  # TODO:  'table' case
         Y['tab'] = nufft_forward(s['tab'], x)
-        print(
-            'table0        max%%diff = %g' %
-            max_percent_diff(
-                Y['d'],
-                Y['tab']))
+        print('table0        max%%diff = %g' %
+            max_percent_diff(Y['d'], Y['tab']))
     except:
         #warnings.warn('table-based NUFFT failed')
         raise ValueError('table-based NUFFT failed')

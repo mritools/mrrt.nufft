@@ -5,6 +5,7 @@ import warnings
 
 from time import time
 import numpy as np
+from numpy.testing import assert_
 
 
 from scipy.sparse import coo_matrix
@@ -28,7 +29,12 @@ from pyir.nufft.interp_table import (interp1_table,
                                      interp2_table_adj,
                                      interp3_table_adj)
 
-from pyir.utils import fftn, ifftn, outer_sum, complexify, is_string_like
+from pyir.utils import (fftn,
+                        ifftn,
+                        outer_sum,
+                        complexify,
+                        is_string_like,
+                        reale)
 
 from ._kernels import NufftKernel
 
@@ -52,7 +58,9 @@ def _scale_tri(N, J, K, Nmid):
     # TODO: test this one
     nc = np.arange(N, dtype=np.float64) - Nmid
 
-    def fun(x): J * np.sinc(J * x / K) ** 2
+    def fun(x): 
+        return J * np.sinc(J * x / K) ** 2
+
     cent = fun(nc)
     sn = 1 / cent
 
@@ -157,6 +165,13 @@ class NufftBase(object):
         self._adj = None
         self._init = None
         self.mode = mode  # {'table', 'sparse', 'exact'}
+        if 'MOLS' in kernel_type:
+            if 'table' not in self.mode:
+                raise ValueError(
+                    'MOLS NUFFT kernel, requires a table-based mode')
+            if self.phasing != 'complex':
+                raise ValueError(
+                    'MOLS NUFFT kernel, requires a complex phasing')
         # [M, *Kd]	sparse interpolation matrix (or empty if table-based)
         self.p = None
         self.Jd = Jd
@@ -167,7 +182,7 @@ class NufftBase(object):
                                   Kd=self.Kd,
                                   Nmid=self.Nmid,
                                   **kernel_kwargs)
-        self._calc_scaling()  # [(Nd)]		scaling factors
+        self._calc_scaling()  # [(Nd)]  scaling factors
         self.tol = tol
         self.M = 0
         if self.om is not None:
@@ -198,7 +213,7 @@ class NufftBase(object):
             self.Ld = to_1d_int_array(Ld, nelem=self.ndim)
             if self.mode == 'table0':
                 self.table_order = 0  # just order in newfft
-            elif self.mode == 'table1':
+            elif self.mode == 'table1' or self.mode == 'table':
                 self.table_order = 1  # just order in newfft
             else:
                 raise ValueError("Invalid NUFFT mode: {}".format(self.mode))
@@ -426,31 +441,35 @@ class NufftBase(object):
         # update the data types of other members
         # TODO: warn if losing precision during conversion?
         if isinstance(self.__om, np.ndarray):
-            self.__om = self.__om.astype(self._real_dtype)
+            if self.__om.dtype != self._real_dtype:
+                self.__om = self.__om.astype(self._real_dtype)
         if isinstance(self.__n_shift, np.ndarray):
-            self.__n_shift = self.__n_shift.astype(self._real_dtype)
+            if self.__n_shift.dtype != self._real_dtype:
+                self.__n_shift = self.__n_shift.astype(self._real_dtype)
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_before = self.phase_before.astype(self._cplx_dtype)
+            if self.phase_before.dtype != self._cplx_dtype:
+                self.phase_before = self.phase_before.astype(self._cplx_dtype)
         if isinstance(self.phase_after, np.ndarray):
-            self.phase_after = self.phase_after.astype(self._cplx_dtype)
+            if self.phase_after.dtype != self._cplx_dtype:
+                self.phase_after = self.phase_after.astype(self._cplx_dtype)
         if hasattr(self, 'sn') and isinstance(self.sn, np.ndarray):
-            if np.iscomplexobj(self.sn):
+            if np.iscomplexobj(self.sn) and self.sn.dtype != self._cplx_dtype:
                 self.sn = self.sn.astype(self._cplx_dtype)
-            else:
+            elif self.sn.dtype != self._real_dtype:
                 self.sn = self.sn.astype(self._real_dtype)
+        if self.phasing == 'complex':
+            phasing_dtype = self._cplx_dtype
+        else:
+            phasing_dtype = self._real_dtype
         if self.mode == 'sparse':
             if hasattr(self, 'p') and self.p is not None:
-                if self.phasing == 'complex':
-                    self.p = self.p.astype(self._cplx_dtype)
-                else:
-                    self.p = self.p.astype(self._real_dtype)
+                if self.p.dtype != phasing_dtype:
+                    self.p = self.p.astype(phasing_dtype)
         elif 'table' in self.mode:
             if hasattr(self, 'h') and self.h is not None:
                 for idx, h in enumerate(self.h):
-                    if self.phasing == 'complex':
-                        self.h[idx] = h.astype(self._cplx_dtype)
-                    else:
-                        self.h[idx] = h.astype(self._real_dtype)
+                    if h.dtype != phasing_dtype:
+                        self.h[idx] = h.astype(phasing_dtype)
 
     def _make_arrays_contiguous(self, order='F'):
         if order == 'F':
@@ -478,7 +497,8 @@ class NufftBase(object):
                     h = contig_func(h)
 
     def _set_phase_funcs(self):
-        if self.phasing == 'real':
+        if self.phasing == 'real': 
+            # TODO: or 'mols' in self.kernel.kernel_type
             self.phase_before = self._phase_before(self.Kd, self.Nmid)
             self.phase_after = self._phase_after(self.om,
                                                  self.Nmid,
@@ -512,12 +532,15 @@ class NufftBase(object):
         Nd = self.Nd
         Kd = self.Kd
         Jd = self.Jd
-        ktype = kernel.kernel_type
+        ktype = kernel.kernel_type.lower()
         if ktype == 'diric':
             self.sn = np.ones(Nd)
         elif 'minmax:' in ktype:
             self.sn = nufft_scale(Nd, Kd, kernel.alpha,
                                   kernel.beta, self.Nmid)
+        elif 'mols' in ktype:
+            self.sn = None
+            # will get set later during _init_table()
         else:
             self.sn = np.array([1.])
             for d in range(self.ndim):
@@ -532,20 +555,18 @@ class NufftBase(object):
                                                kernel.kernel[d],
                                                self.Nmid[d])
                 elif ktype == 'linear':
-                    #raise ValueError("Not Implemented")
+                    ## TODO: untested
                     tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.Nmid[d])
-#                elif 'minmax:' in ktype:
-#                    tmp = nufft_scale(Nd[d], Kd[d], kernel.alpha[d],
-#                                      kernel.beta[d], self.Nmid[d])
                 else:
                     raise ValueError("Unsupported ktype: {}".format(ktype))
                 # tmp = reale(tmp)  #TODO: reale?
                 # TODO: replace outer with broadcasting?
                 self.sn = np.outer(self.sn.ravel(), tmp.conj())
-        if len(Nd) > 1:
-            self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
-        else:
-            self.sn = self.sn.ravel()  # [(Nd)]
+        if 'mols' not in ktype:
+            if len(Nd) > 1:
+                self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
+            else:
+                self.sn = self.sn.ravel()  # [(Nd)]
 
     def _init_sparsemat(self):
         """  [J?,M] interpolation coefficient vectors.  will need kron of these
@@ -705,16 +726,51 @@ class NufftBase(object):
                 kernel_kwargs['kb_alf'] = [self.kernel.params['kb_alf'][d], ]
                 kernel_kwargs['kb_m'] = [self.kernel.params['kb_m'][d], ]
 
-            h, t0 = _nufft_table_make1(how=how, N=self.Nd[d], J=self.Jd[d],
-                                       K=self.Kd[d], L=self.Ld[d],
-                                       phasing=self.phasing,
-                                       kernel_type=self.kernel.kernel_type,
-                                       kernel_kwargs=kernel_kwargs)
+            if 'MOLS' in self.kernel.kernel_type:
+
+                #TODO: test this IOWA case
+                from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
+                if self.Ld[d] % 2 == 0:
+                    raise ValueError("MOLS requires odd Ld")
+                pre, h, junk1, err1 = PreNUFFT_fm(
+                    J=self.Jd[d], N=self.Nd[d], Ofactor=self.Ld[d],
+                    K=self.Kd[d], Order=2, H=np.ones(self.Nd[d]),
+                    degree=self.Jd[d]-1)
+                if len(h) != (self.Jd[d] * self.Ld[d] + 1):
+                    raise ValueError("unexpected kernel size")
+                # scale factor computation
+                if d == 0:
+                    self.sn = 1
+                pre_shape = np.ones(self.ndim, dtype=np.intp)
+                pre_shape[d] = len(pre)
+                # if negligable imaginary component, keep only the real part
+                try:
+                    pre = reale(pre)
+                except ValueError:
+                    pass
+                self.sn = self.sn * pre.reshape(pre_shape, order='F')
+#                self.sn = np.outer(self.sn.ravel(), pre.conj())
+#                if d == ndim - 1:
+#                    if len(Nd) > 1:
+#                        self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
+#                    else:
+#                        self.sn = self.sn.ravel()  # [(Nd)]
+
+            else:
+                h, t0 = _nufft_table_make1(how=how, N=self.Nd[d], J=self.Jd[d],
+                                           K=self.Kd[d], L=self.Ld[d],
+                                           phasing=self.phasing,
+                                           kernel_type=self.kernel.kernel_type,
+                                           kernel_kwargs=kernel_kwargs)
+
             if self.phasing == 'complex':
                 if np.isrealobj(h):
                     warnings.warn("Real NUFFT kernel?")
+                h = complexify(h)
             elif self.phasing in ['real', None]:
-                if not np.isrealobj(h):
+                try:
+                    h = reale(h)
+                except ValueError:
                     raise ValueError("expected real NUFFT kernel")
             self.h.append(h)
 
@@ -898,6 +954,7 @@ def _nufft_table_make1(
                       phasing=phasing,
                       sparse_format='csc')
     t0 = np.arange(-J * L / 2., J * L / 2. + 1) / L  # [J*L+1]
+    assert_(t0.size == (J*L + 1))
     pi = np.pi
     # This is a slow and inefficient (but simple) way to get the table
     # because it builds a huge sparse matrix but only uses 1 column!
