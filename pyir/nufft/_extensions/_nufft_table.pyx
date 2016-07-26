@@ -36,11 +36,10 @@ def _interp1_table_per(
         doublefunc_real = double_interp1_table0_real_per
         floatfunc_real = float_interp1_table0_real_per
     elif order == 1:
-        raise ValueError("order=1 unimplemented for 1D case")
-        # floatfunc_cplx = float_interp1_table1_complex_per
-        # doublefunc_cplx = double_interp1_table1_complex_per
-        # doublefunc_real = double_interp1_table1_real_per
-        # floatfunc_real = float_interp1_table1_real_per
+        floatfunc_cplx = float_interp1_table1_complex_per
+        doublefunc_cplx = double_interp1_table1_complex_per
+        doublefunc_real = double_interp1_table1_real_per
+        floatfunc_real = float_interp1_table1_real_per
     else:
         raise ValueError("unimplemented order")
 
@@ -135,11 +134,10 @@ def _interp1_table_adj(
         doublefunc_real = double_interp1_table0_real_per_adj
         floatfunc_real = float_interp1_table0_real_per_adj
     elif order == 1:
-        raise ValueError("order=1 unimplemented for 1D case")
-        # floatfunc_cplx = float_interp1_table1_complex_per_adj
-        # doublefunc_cplx = double_interp1_table1_complex_per_adj
-        # doublefunc_real = double_interp1_table1_real_per_adj
-        # floatfunc_real = float_interp1_table1_real_per_adj
+        floatfunc_cplx = float_interp1_table1_complex_per_adj
+        doublefunc_cplx = double_interp1_table1_complex_per_adj
+        doublefunc_real = double_interp1_table1_real_per_adj
+        floatfunc_real = float_interp1_table1_real_per_adj
     else:
         raise ValueError("unimplemented order")
 

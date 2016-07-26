@@ -36,6 +36,23 @@ void CAT(TYPE, _interp1_table0_complex_per)(
     TYPE *i_fm);
 
 /*
+* interp1_table1_complex_per()
+* 1D, 1st order, complex, periodic
+*/
+void CAT(TYPE, _interp1_table1_complex_per)(
+    const TYPE *r_ck, /* [K1,1] in */
+    const TYPE *i_ck,
+    const int K1,
+    const TYPE *r_h1, /* [J1*L1+1,1] in */
+    const TYPE *i_h1, /* imaginary part of complex interpolator */
+    const int J1,
+    const int L1,
+    const TYPE *p_tm, /* [M,1] in */
+    const int M,
+    TYPE *r_fm,       /* [M,1] out */
+    TYPE *i_fm);
+
+/*
 * interp1_table0_complex_per()
 * 1D, 0th order, real, periodic
 */
@@ -67,11 +84,10 @@ void CAT(TYPE, _interp1_table1_real_per)(
     TYPE *r_fm,       /* [M,1] out */
     TYPE *i_fm);
 
-// TODO: _interp1_table1_complex_per is missing
 
 /*
 * interp1_table0_complex_per_adj()
-* 2D, 0th order, complex, periodic
+* 1D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp1_table0_complex_per_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
@@ -89,8 +105,27 @@ void CAT(TYPE, _interp1_table0_complex_per_adj)(
 
 
 /*
+* interp1_table1_complex_per_adj()
+* 1D, 1st order, complex, periodic
+*/
+void CAT(TYPE, _interp1_table1_complex_per_adj)(
+    TYPE *r_ck,   /* [K1,K2] in */
+    TYPE *i_ck,
+    const int K1,
+    const TYPE *r_h1, /* [J1*L1+1,1] in */
+    const TYPE *i_h1,
+    const int J1,
+    const int L1,
+    const TYPE *p_tm, /* [M,2] in */
+    const int M,
+    const TYPE *r_fm,     /* [M,1] out */
+    const TYPE *i_fm,
+    const int N);
+
+
+/*
 * interp1_table0_real_per_adj()
-* 2D, 0th order, complex, periodic
+* 1D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp1_table0_real_per_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
@@ -108,7 +143,7 @@ void CAT(TYPE, _interp1_table0_real_per_adj)(
 
 /*
 * interp1_table1_real_per_adj()
-* 2D, 0th order, complex, periodic
+* 1D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp1_table1_real_per_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
@@ -171,7 +206,7 @@ void CAT(TYPE, _interp2_table0_real_per_adj)(
 
 /*
 * interp2_table1_real_per_adj()
-* 2D, 0th order, complex, periodic
+* 2D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp2_table1_real_per_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
@@ -193,7 +228,7 @@ void CAT(TYPE, _interp2_table1_real_per_adj)(
 
 /*
 * interp2_table1_complex_per_adj()
-* 2D, 0th order, complex, periodic
+* 2D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp2_table1_complex_per_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
@@ -215,6 +250,10 @@ void CAT(TYPE, _interp2_table1_complex_per_adj)(
     const int N);
 
 
+/*
+* interp2_table0_complex_per()
+* 2D, 0th order, complex, periodic
+*/
 void CAT(TYPE, _interp2_table0_complex_per)(
     const TYPE *r_ck, /* [K1,K2] in */
     const TYPE *i_ck,

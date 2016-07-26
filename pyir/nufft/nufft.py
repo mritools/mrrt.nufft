@@ -58,7 +58,7 @@ def _scale_tri(N, J, K, Nmid):
     # TODO: test this one
     nc = np.arange(N, dtype=np.float64) - Nmid
 
-    def fun(x): 
+    def fun(x):
         return J * np.sinc(J * x / K) ** 2
 
     cent = fun(nc)
@@ -497,7 +497,7 @@ class NufftBase(object):
                     h = contig_func(h)
 
     def _set_phase_funcs(self):
-        if self.phasing == 'real': 
+        if self.phasing == 'real':
             # TODO: or 'mols' in self.kernel.kernel_type
             self.phase_before = self._phase_before(self.Kd, self.Nmid)
             self.phase_after = self._phase_after(self.om,
@@ -1047,17 +1047,26 @@ def nufft_forward(st, x, copy_x=True):
     L = x.shape[-1]
     # x=np.squeeze(x)
 
+
     #
     # the usual case is where L=1, i.e., there is just one input signal.
     #
-    Xk = np.zeros((np.product(Kd), L), dtype=x.dtype)  # [*L,*Kd]
-    for ll in range(L):
-        xl = x[..., ll] * st.sn		# scaling factors
-        # Fortran order to match Matlab's behavior
-        Xk[:, ll] = fftn(xl, Kd).ravel(order='F')
+    if False:
+        Xk = np.zeros((np.product(Kd), L), dtype=x.dtype)  # [*L,*Kd]
+        for ll in range(L):
+            # Fortran order to match Matlab's behavior
+            if st.sn is not None:
+                x[..., ll] = x[..., ll] * st.sn
+            Xk[:, ll] = fftn(x[..., ll], Kd).ravel(order='F')
+            if st.phase_before is not None:
+                Xk[:, ll] *= st.phase_before.ravel(order='F')
+    else:
+        if st.sn is not None:
+            x *= st.sn[..., np.newaxis]		# scaling factors
+        Xk = fftn(x, Kd, axes=range(x.ndim-1))
         if st.phase_before is not None:
-            # TODO: store already raveled?
-            Xk[:, ll] *= st.phase_before.ravel(order='F')
+            Xk *= st.phase_before[..., np.newaxis]
+        Xk = Xk.reshape((np.product(Kd), L), order='F')
 
     if st.ortho:
         Xk /= st.scale_ortho
@@ -1132,23 +1141,34 @@ def nufft_adj(st, X, copy_X=True, return_psf=False):
     if Xk_all.ndim == 1:
         Xk_all = Xk_all[:, None]
 
-    for ll in range(Lprod):
-        Xk = np.reshape(Xk_all[:, ll], Kd, order='F')  # [(Kd)]
+    if False:
+        for ll in range(Lprod):
+            Xk = np.reshape(Xk_all[:, ll], Kd, order='F')  # [(Kd)]
+            if return_psf:
+                return Xk
+            if st.phase_before is not None:
+                Xk *= st.phase_before.conj()
+            x[..., ll] = np.product(Kd) * ifftn(Xk)
+    else:
+        Xk_all = Xk_all.reshape(tuple(Kd) + (Lprod, ), order='F')
         if return_psf:
-            return Xk
+            return Xk_all[..., 0]
         if st.phase_before is not None:
-            Xk *= st.phase_before.conj()
-        x[..., ll] = np.product(Kd) * ifftn(Xk)
-
-    if st.ortho:
-        x *= st.scale_ortho
-
+            Xk_all *= st.phase_before.conj()[..., np.newaxis]
+        x = ifftn(Xk_all, axes=range(Xk_all.ndim-1))
+        
     # eliminate zero padding from ends
     subset_slices = [slice(d) for d in Nd] + [slice(None), ]
     x = x[subset_slices]
 
+    if st.ortho:
+        x *= (st.scale_ortho * np.product(Kd))  # TODO: even if st.ortho?
+    else:
+        x *= np.product(Kd)  # TODO: even if st.ortho?
+
     # scaling factors
-    x *= st.sn.conj()[..., None]
+    if st.sn is not None:
+        x *= np.conj(st.sn)[..., np.newaxis]
 
     remove_singleton = True
     if remove_singleton and Lprod == 1:
