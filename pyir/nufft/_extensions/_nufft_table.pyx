@@ -24,7 +24,7 @@ def _interp1_table_per(
         double_interp1_per_real_t doublefunc_real
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
-    fm = np.asfortranarray(np.zeros((M, N), dtype=cplx_dtype))
+    fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
     ck = np.asarray(ck, dtype=cplx_dtype)
     tm = tm.astype(h1.real.dtype)
     if ck.ndim == 2:
@@ -44,8 +44,8 @@ def _interp1_table_per(
         raise ValueError("unimplemented order")
 
     tm = np.asfortranarray(tm)
-    r_fm = np.asfortranarray(fm.real)
-    i_fm = np.asfortranarray(fm.imag)
+    r_fm = np.asfortranarray(fm[:, 0].real)
+    i_fm = np.asfortranarray(fm[:, 0].imag)
 
     r_h1 = np.asfortranarray(h1.real)
     if cplx_kernel:
@@ -108,7 +108,8 @@ def _interp1_table_per(
 
         else:
             raise ValueError("invalid algorithm specified")
-        fm[:, nn] = np.asfortranarray(r_fm[:, 0] + 1j*i_fm[:, 0])
+        fm[:, nn].real = r_fm
+        fm[:, nn].imag = i_fm
     return fm
 
 
@@ -125,7 +126,7 @@ def _interp1_table_adj(
         fm = fm[..., np.newaxis]
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
-    ck = np.asfortranarray(np.zeros((K1, N), dtype=cplx_dtype))
+    ck = np.zeros((K1, N), dtype=cplx_dtype, order='F')
     tm = tm.astype(h1.real.dtype)
 
     if order == 0:
@@ -146,8 +147,8 @@ def _interp1_table_adj(
     r_fm = np.asfortranarray(fm.real)
     i_fm = np.asfortranarray(fm.imag)
 
-    r_ck = np.asfortranarray(np.zeros_like(ck.real))
-    i_ck = np.asfortranarray(np.zeros_like(ck.imag))
+    r_ck = np.zeros(ck.shape, dtype=ck.real.dtype, order='F')
+    i_ck = np.zeros(ck.shape, dtype=ck.real.dtype, order='F')
 
     r_h1 = np.asfortranarray(h1.real)
     if cplx_kernel:
@@ -230,7 +231,7 @@ def _interp2_table_per(
         double_interp2_per_real_t doublefunc_real
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
-    fm = np.asfortranarray(np.zeros((M, N), dtype=cplx_dtype))
+    fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
     ck = np.asarray(ck, dtype=cplx_dtype)
     tm = tm.astype(h1.real.dtype)
     if ck.ndim == 2:
@@ -250,8 +251,8 @@ def _interp2_table_per(
         raise ValueError("unimplemented order")
 
     tm = np.asfortranarray(tm)
-    r_fm = np.asfortranarray(fm.real)
-    i_fm = np.asfortranarray(fm.imag)
+    r_fm = np.asfortranarray(fm[:, 0].real)
+    i_fm = np.asfortranarray(fm[:, 0].imag)
 
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
@@ -334,7 +335,8 @@ def _interp2_table_per(
 
         else:
             raise ValueError("invalid algorithm specified")
-        fm[:, nn] = np.asfortranarray(r_fm[:, 0] + 1j*i_fm[:, 0])
+        fm[:, nn].real = r_fm
+        fm[:, nn].imag = i_fm
 
     return fm
 
@@ -359,7 +361,7 @@ def _interp2_table_adj(
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
 
-    ck = np.asfortranarray(np.zeros((np.prod(Kd), N), dtype=cplx_dtype))
+    ck = np.zeros((np.prod(Kd), N), dtype=cplx_dtype, order='F')
     tm = tm.astype(h1.real.dtype)
 
     if order == 0:
@@ -380,8 +382,8 @@ def _interp2_table_adj(
     r_fm = np.asfortranarray(fm.real)
     i_fm = np.asfortranarray(fm.imag)
 
-    r_ck = np.asfortranarray(np.zeros_like(ck.real))
-    i_ck = np.asfortranarray(np.zeros_like(ck.imag))
+    r_ck = np.zeros(ck.shape, dtype=ck.real.dtype, order='F')
+    i_ck = np.zeros(ck.shape, dtype=ck.real.dtype, order='F')
 
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
@@ -487,7 +489,7 @@ def _interp3_table_per(
         double_interp3_per_real_t doublefunc_real
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
-    fm = np.asfortranarray(np.zeros((M, N), dtype=cplx_dtype))
+    fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
     ck = np.asarray(ck, dtype=cplx_dtype)
     tm = tm.astype(h1.real.dtype)
     if ck.ndim == 2:
@@ -507,8 +509,8 @@ def _interp3_table_per(
         raise ValueError("unimplemented order")
 
     tm = np.asfortranarray(tm)
-    r_fm = np.asfortranarray(fm.real)
-    i_fm = np.asfortranarray(fm.imag)
+    r_fm = np.asfortranarray(fm[:, 0].real)
+    i_fm = np.asfortranarray(fm[:, 0].imag)
 
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
@@ -611,7 +613,8 @@ def _interp3_table_per(
 
         else:
             raise ValueError("invalid algorithm specified")
-        fm[:, nn] = np.asfortranarray(r_fm[:, 0] + 1j*i_fm[:, 0])
+        fm[:, nn].real = r_fm
+        fm[:, nn].imag = i_fm
     return fm
 
 
@@ -637,7 +640,7 @@ def _interp3_table_adj(
         fm = fm[..., np.newaxis]
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
-    ck = np.asfortranarray(np.zeros((np.prod(Kd), N), dtype=cplx_dtype))
+    ck = np.zeros((np.prod(Kd), N), dtype=cplx_dtype, order='F')
     tm = tm.astype(h1.real.dtype)
 
     if order == 0:
@@ -658,8 +661,8 @@ def _interp3_table_adj(
     r_fm = np.asfortranarray(fm.real)
     i_fm = np.asfortranarray(fm.imag)
 
-    r_ck = np.asfortranarray(np.zeros_like(ck.real))
-    i_ck = np.asfortranarray(np.zeros_like(ck.imag))
+    r_ck = np.zeros(ck.shape, dtype=ck.real.dtype, order='F')
+    i_ck = np.zeros(ck.shape, dtype=ck.real.dtype, order='F')
 
     r_h1 = np.asfortranarray(h1.real)
     r_h2 = np.asfortranarray(h2.real)
@@ -765,4 +768,3 @@ def _interp3_table_adj(
     ck.real = np.asfortranarray(r_ck)
     ck.imag = np.asfortranarray(i_ck)
     return ck
-
