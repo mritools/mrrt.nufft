@@ -93,7 +93,7 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
         x = np.concatenate((-x[1:][::-1], x))
     else:
         # differs from the Matlab translation above slightly when J=odd
-        
+
         x = np.arange(-J * Ofactor / 2., J * Ofactor / 2. + 1) / Ofactor
         if x.size % 2 == 1:
             centreindex = int(np.ceil(x.size/2))
@@ -106,7 +106,7 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
     k = np.arange(-Nsamples/2, Nsamples/2)
     DFTMtx = -1j*2*np.pi*np.dot(k[:, np.newaxis]/K, x[np.newaxis, :])
     DFTMtx = np.exp(DFTMtx, out=DFTMtx)
-    
+
     vector = np.concatenate((np.arange(K*Ofactor/2),
                              np.arange(-K*Ofactor/2, 0)))
     abeta = K*Ofactor*ifftnc(bspline(vector, 3))
@@ -226,7 +226,8 @@ if False:
 #                         Nd=[64, ],
 #                         Jd=6,
 #                         Kd=[96, ],
-#                         Nmid=[32, ])    
+#                         Nmid=[32, ])
+
 
 def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
                 compute_prefilter=True):
@@ -271,7 +272,7 @@ def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
         Ofactor += 1
         warnings.warn("increasing Ofactor by 1:  (the current implementation "
                       "seems to require an odd Ofactor)")
-    
+
     if (N % 2 != 0) or (K % 2 != 0):
         raise ValueError("odd N or K unsupported")
 
@@ -289,7 +290,7 @@ def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
             raise ValueError("uneven prefilter shape")
         else:
             pre_nborder = int(pre_nborder)
-        prefilter_fm = prefilter_fm[slice(pre_nborder, -pre_nborder)]    
+        prefilter_fm = prefilter_fm[slice(pre_nborder, -pre_nborder)]
     else:
         prefilter_fm = None
 

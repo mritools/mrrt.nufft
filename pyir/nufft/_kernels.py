@@ -253,7 +253,7 @@ class NufftKernel(object):
 
         self.params = params
 
-    def plot(self, axes=None):
+    def plot(self, real_imag=False, axes=None):
         from matplotlib import pyplot as plt
         from pyir.nufft.nufft import _nufft_table_make1
         """plot the (separable) kernel for each axis."""
@@ -276,7 +276,11 @@ class NufftKernel(object):
                                        phasing='real')[0]
             else:
                 y = self.kernel[d](x)
-            axes[d].plot(x, np.abs(y), 'k-', label='magnitude')
+            if real_imag:
+                axes[d].plot(x, y.real, 'k-', label='real')
+                axes[d].plot(x, y.imag, 'r--', label='imaginary')
+            else:
+                axes[d].plot(x, np.abs(y), 'k-', label='magnitude')
             if d == self.ndim - 1:
                 axes[d].xaxis.set_ticks([-J/2, J/2])
                 axes[d].xaxis.set_ticklabels(['-J/2', 'J/2'])
