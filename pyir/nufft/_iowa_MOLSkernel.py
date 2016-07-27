@@ -199,6 +199,10 @@ def givePrefilterNew_fm(fn, J, K, Ofactor, Order):
 
 
 if False:
+    import numpy as np
+    from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
+    from matplotlib import pyplot as plt
+
     J = 6
     N = 128
     K = 130
@@ -207,9 +211,6 @@ if False:
     H = np.ones(N)
     degree = J - 1
 
-    import numpy as np
-    from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
-    from matplotlib import pyplot as plt
     J = 4
     N = 64
     K = 96
@@ -221,12 +222,7 @@ if False:
     plt.figure()
     plt.plot(np.arange(fnn1.size), fnn1.real,
              np.arange(fnn1.size), fnn1.imag)
-#    kernel = NufftKernel('kb:beatty',
-#                         ndim=1,
-#                         Nd=[64, ],
-#                         Jd=6,
-#                         Kd=[96, ],
-#                         Nmid=[32, ])
+
 
 
 def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,

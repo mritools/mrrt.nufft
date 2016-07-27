@@ -47,7 +47,7 @@ def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
     gam = 2 * np.pi / Kd
     n_shift = np.zeros(Nd.shape)
 
-    
+
     if True:
         print('err alf1 %g best %g' % (nufft2_err_mm('all', Nd[0], Nd[1],
                                                      Jd[0], Jd[1], Kd[0],
@@ -110,12 +110,12 @@ def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
             x = f['x']
     return om, x, Nd, Jd, Kd, n_shift
 
-    
+
 def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False,
                 random_seed=0):
     # from numpy.fft import fft2
     from pyir.nufft.nufft import NufftBase, nufft_forward
-    
+
     from pyir.nufft import dtft
     from pyir.utils import max_percent_diff
 
@@ -123,7 +123,6 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False,
     s = {}
     Y = {}
     # x = randn(Nd)
-    
 
     om, x, Nd, Jd, Kd, n_shift = _nufft_testdata(
         test3d=test3d,
@@ -138,9 +137,9 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False,
                              kernel_type='minmax:kb')  # TODO:  'table' case
         Y['tab'] = nufft_forward(s['tab'], x)
         print('table0        max%%diff = %g' %
-            max_percent_diff(Y['d'], Y['tab']))
+              max_percent_diff(Y['d'], Y['tab']))
     except:
-        #warnings.warn('table-based NUFFT failed')
+        # warnings.warn('table-based NUFFT failed')
         raise ValueError('table-based NUFFT failed')
 
     s['mmkb'] = NufftBase(
