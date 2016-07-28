@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import functools
 import numpy as np
-from numpy.testing import dec, assert_array_equal
+from numpy.testing import dec, assert_array_equal, run_module_suite
 
 
 #def _test_kaiser(compare_to_matlab=False):
@@ -177,3 +177,7 @@ def _kaiser_matlab_compare(show_figures=True):
     # ip=get_ipython()
     # pymat.load_ipython_extension(ip)
     return
+
+
+if __name__ == "__main__":
+    run_module_suite()

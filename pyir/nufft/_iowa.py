@@ -30,7 +30,7 @@ def giveLSInterpolator(N, K, Ofactor, J):
     l_full = np.arange(-m, m+1, dtype=np.float64)
     D = np.diag(pre)
     q = []
-    interpolator = np.zeros((int(J*Ofactor), ))  # , dtype=np.complex64)
+    interpolator = np.zeros((int(np.ceil(J*Ofactor)), ))
     for j in range(len(Samples)):
 
         q = Samples[j] + l_full
@@ -55,7 +55,6 @@ def giveLSInterpolator(N, K, Ofactor, J):
         bb = np.dot(bb, E.T)
         interpolator[np.round((q+m)*Ofactor).astype(np.intp)] = bb.real.ravel()
 
-    interpolator = interpolator.real
     if np.mod(m*2, 2) == 0:
         interpolator = interpolator[1:]
 
@@ -66,7 +65,7 @@ def giveLSInterpolator(N, K, Ofactor, J):
     scalefactor = np.zeros(K)
     scalefactor[minindex:maxindex] = pre
 
-    iindex = np.ceil(m*Ofactor).astype(np.intp)
+    iindex = np.ceil(m*Ofactor).astype(np.intp) - 1
     scalefactor *= interpolator[iindex]
     interpolator /= interpolator[iindex]
     return (scalefactor, interpolator)

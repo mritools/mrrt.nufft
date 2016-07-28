@@ -11,6 +11,7 @@ from pyir.utils import fftnc, ifftnc  # centered FFT
 
 
 def sinc_new(x):
+    # TODO: necessary? can probably just use np.sinc
     indicator = np.abs(x) < 1e-6
     x = x + indicator
     out = np.sin(x) / x
@@ -83,7 +84,7 @@ def giveOptStepDiscrete_fm(DFTMtx, fn, K, N, Ofactor, Olderror, Oldfn, a,
     return (Kernel, calcweight, error, fn, step)
 
 
-def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
+def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree, realkernel=False):
     if False:
         # direct matlab translation
         x = np.linspace(0, np.ceil(J/2), np.ceil(J/2)*Ofactor+1)
@@ -92,24 +93,27 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
         centreindex = len(x)
         x = np.concatenate((-x[1:][::-1], x))
     else:
-        # differs from the Matlab translation above slightly when J=odd
-
+        # exactly matches t0 in _nufft_table_make1
+        # differs from the Matlab code slightly when J=odd
         x = np.arange(-J * Ofactor / 2., J * Ofactor / 2. + 1) / Ofactor
         if x.size % 2 == 1:
             centreindex = int(np.ceil(x.size/2))
         else:
             centreindex = None
 
-
     # K samples: ranges from -2*pi*(Ofactor-1)/2 to 2*pi*(Ofactor-1)/2
     Nsamples = Ofactor*K
     k = np.arange(-Nsamples/2, Nsamples/2)
-    DFTMtx = -1j*2*np.pi*np.dot(k[:, np.newaxis]/K, x[np.newaxis, :])
+
+    # potential stability issue here... do not change order of operations in
+    # the DFTMTx line
+    DFTMtx = np.dot(-1j*2*np.pi*k[:, np.newaxis], x[np.newaxis, :])/K
     DFTMtx = np.exp(DFTMtx, out=DFTMtx)
 
     vector = np.concatenate((np.arange(K*Ofactor/2),
                              np.arange(-K*Ofactor/2, 0)))
-    abeta = K*Ofactor*ifftnc(bspline(vector, 3))
+    abeta = K*Ofactor*np.conj(ifftnc(bspline(vector, 3)))
+    abeta = K*Ofactor*ifftnc(bspline(vector, 3)).real
     Weight = scipy.sparse.diags(abeta)
     B = np.dot(np.conj(DFTMtx.T), np.asarray(Weight * np.asmatrix(DFTMtx)))
     if centreindex is not None:
@@ -120,6 +124,8 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
         fn = bspline(x, degree)
     Kernel, current_weight, error = calcKernelDiscretemod_fm(
         DFTMtx, fn, K, N, Ofactor, Order, H)
+    if realkernel:
+        fn = np.abs(fn)
     oldfn = fn
     olderror = error
     e = error
@@ -132,6 +138,8 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
         A = np.dot(np.conj(DFTMtx.T), np.asarray(Weight * np.asmatrix(DFTMtx)))
         evals, evecs = scipy.linalg.eig(A, B)
         newfn = evecs[:, np.argmin(np.abs(evals))]
+        if realkernel:
+            newfn = np.abs(newfn)
         newfn = newfn/np.sum(newfn)
         if len(oldfn) == 0:
             fn = newfn
@@ -142,6 +150,8 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree):
         else:
             Kernel, current_weight, error, fn, step = giveOptStepDiscrete_fm(
                 DFTMtx, fn, K, N, Ofactor, olderror, oldfn, newfn, Order, H)
+            if realkernel:
+                fn = np.abs(fn)
             oldfn = fn
         e = error
         olderror = error
@@ -160,14 +170,17 @@ def givePrefilterNew_fm(fn, J, K, Ofactor, Order):
         x = x[np.where(x <= J/2)]
         x = np.concatenate((-x[1:][::-1], x))
     else:
-        # differs from the Matlab translation above slightly when J=odd
+        # exactly matches t0 in _nufft_table_make1
+        # differs from the Matlab code slightly when J=odd
         x = np.arange(-J * Ofactor / 2., J * Ofactor / 2. + 1) / Ofactor
 
     Nsamples = Ofactor*K
 
     # K samples: ranges from -2*pi*(Ofactor-1)/2 to 2*pi*(Ofactor-1)/2
     k = np.arange(-Nsamples/2, Nsamples/2)
-    DFTMtx = -1j*2*np.pi*np.dot(colF(k)/K, rowF(x))
+    # potential stability issue here... do not change order of operations in
+    # the DFTMTx line
+    DFTMtx = np.dot(-1j*2*np.pi*colF(k), rowF(x))/K
     DFTMtx = np.exp(DFTMtx, out=DFTMtx)
 
     # DFT of the interpolation coefficients
@@ -212,21 +225,37 @@ if False:
     degree = J - 1
 
     J = 4
-    N = 64
-    K = 96
+    N = 256
+    K = 320
     Ofactor = 151
     Order = 2
     H = np.ones(N)
     degree = J - 1
-    pre, fnn1, kernel, error1 = PreNUFFT_fm(J, N, Ofactor, K, Order=Order, H=H, degree=degree)
+    (prefilter_fm3, fn_z3, junk, error) = PreNUFFT_fm(J, N, Ofactor, K, Order=Order, H=H, degree=degree, realkernel=True)
+    print(np.argmax(fn_z3))
     plt.figure()
-    plt.plot(np.arange(fnn1.size), fnn1.real,
-             np.arange(fnn1.size), fnn1.imag)
+    plt.plot(np.arange(fn_z3.size), fn_z3.real,
+             np.arange(fn_z3.size), fn_z3.imag)
+
+
+    J = 4
+    N = 256
+    K = 268
+    Ofactor = 151
+    Order = 2
+    H = np.ones(N)
+    degree = J - 1
+    (prefilter_fm3_cplx, fn_z3_cplx, junk_cplx, error_cplx) = PreNUFFT_fm(J, N, Ofactor, K, Order=Order, H=H, degree=degree, realkernel=False)
+    (prefilter_fm3, fn_z3, junk, error) = PreNUFFT_fm(J, N, Ofactor, K, Order=Order, H=H, degree=degree, realkernel=True)
+    print(np.argmax(fn_z3))
+    plt.figure()
+    plt.plot(np.arange(fn_z3.size), fn_z3.real,
+             np.arange(fn_z3.size), fn_z3.imag)
 
 
 
 def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
-                compute_prefilter=True):
+                compute_prefilter=True, realkernel=False):
     """Function to computer MOL interpolators and scale factors for MOLS
 
     Parameters
@@ -276,7 +305,9 @@ def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
         warnings.warn("odd K*Ofactor untested")
 
     (fnn1, Kernel, error1) = giveSymmetricDiscrete2_fm(
-        J, K, N, Ofactor, Order, H, degree)
+        J, K, N, Ofactor, Order, H, degree, realkernel=realkernel)
+    fnn1 /= np.abs(fnn1).max()  # normalization as in Fessler's IRT
+                                # differs from the original author's code
     if compute_prefilter:
         prefilter_fm = givePrefilterNew_fm(fnn1, J, K, Ofactor, Order)
 

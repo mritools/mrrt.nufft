@@ -5,7 +5,7 @@ import numpy as np
 from pyir.nufft import dtft, dtft_adj
 from pyir.utils import max_percent_diff
 
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, run_module_suite
 
 
 __all__ = ['test_dtft_3d',
@@ -187,3 +187,7 @@ def test_dtft_adj_1d(verbose=False):
     if verbose:
         print('ifft max %% difference = %g' % max_percent_diff(xf, xd))
     return
+
+
+if __name__ == "__main__":
+    run_module_suite()

@@ -3,9 +3,8 @@ import os
 from os.path import join as pjoin
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal, assert_equal, assert_, assert_allclose
+from numpy.testing import (run_module_suite)
 
-# data_dir = '/media/Data1/src_repositories/my_git/pyrecon/pyir.nufft/test/data'
 import pyir.nufft
 pkg_dir = os.path.dirname(pyir.nufft.__file__)
 data_dir = pjoin(pkg_dir, 'data', 'mat_files')
@@ -292,3 +291,7 @@ def test_nufft(verbose=False):
                 test3d=test3d,
                 initialize_from_Matlab=initialize_from_Matlab,
                 make_fig=make_fig)
+
+
+if __name__ == "__main__":
+    run_module_suite()

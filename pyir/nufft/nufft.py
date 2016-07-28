@@ -11,14 +11,15 @@ from numpy.testing import assert_
 from scipy.sparse import coo_matrix
 
 from pyir.nufft.nufft_utils import (_nufft_samples,
-                                    nufft_scale,
                                     _nufft_interp_zn,
                                     _nufft_coef,
-                                    _nufft_r,
-                                    _nufft_T,
                                     _nufft_offset,
                                     to_1d_int_array
                                     )
+
+from pyir.nufft._minmax import (_nufft_r,
+                                _nufft_T,
+                                nufft_scale)
 
 from pyir.nufft.kaiser_bessel import kaiser_bessel_ft
 
@@ -28,6 +29,8 @@ from pyir.nufft.interp_table import (interp1_table,
                                      interp1_table_adj,
                                      interp2_table_adj,
                                      interp3_table_adj)
+
+from pyir.nufft.simple_kernels import _scale_tri
 
 from pyir.utils import (fftn,
                         ifftn,
@@ -48,29 +51,6 @@ __all__ = ['NufftBase']
 
 supported_real_types = [np.float32, np.float64]
 supported_cplx_types = [np.complex64, np.float128]
-
-
-def _scale_tri(N, J, K, Nmid):
-    """
-    scale factors when kernel is 'linear'
-    tri(u/J) <-> J sinc^2(J x)
-    """
-    # TODO: test this one
-    nc = np.arange(N, dtype=np.float64) - Nmid
-
-    def fun(x):
-        return J * np.sinc(J * x / K) ** 2
-
-    cent = fun(nc)
-    sn = 1 / cent
-
-    # try the optimal formula
-    tmp = 0
-    LL = 3
-    for ll in range(-LL, LL + 1):
-        tmp += np.abs(fun(nc - ll * K)) ** 2
-    sn = cent / tmp
-    return sn
 
 
 def _get_legend_text(ax):
@@ -98,7 +78,7 @@ def _get_legend_text(ax):
 # Nufft.Kd.fset(self, Kd)
 
 
-# change name of NufftBase to NFFT_Base
+# TODO: change name of NufftBase to NFFT_Base
 # Note: must have object here to get a new-style class!
 # TODO: change default n_shift to Nd/2?
 
@@ -170,9 +150,9 @@ class NufftBase(object):
             if 'table' not in self.mode:
                 raise ValueError(
                     'MOLS NUFFT kernel, requires a table-based mode')
-            if self.phasing != 'complex':
+            if self.phasing != 'real':
                 raise ValueError(
-                    'MOLS NUFFT kernel, requires a complex phasing')
+                    'MOLS NUFFT kernel, requires a real phasing')
         # [M, *Kd]	sparse interpolation matrix (or empty if table-based)
         self.p = None
         self.Jd = Jd
@@ -325,8 +305,6 @@ class NufftBase(object):
                 om = om[:, np.newaxis]
             if om.shape[1] != self.ndim:
                 raise ValueError("number of cols must match NUFFT dimension")
-            if om.ndim == 1:
-                om = om[:, np.newaxis]
             if om.dtype not in supported_real_types:
                 raise ValueError("om must be one of the following types: "
                                  "{}".format(supported_real_types))
@@ -427,14 +405,12 @@ class NufftBase(object):
 
     def _set_Nmid(self):
         # midpoint of scaling factors
-        if self.__phasing == 'real' or ('MOLS' in self.kernel_type):
-            # TODO: fix 'MOLS' case
+        if self.__phasing == 'real':
             self.Nmid = np.floor(self.Nd / 2.)
         else:
             self.Nmid = (self.Nd - 1) / 2.
-        if (self.phasing == 'real' or 'MOLS' in self.kernel_type) and \
+        if self.phasing == 'real'and \
                 (not self._lowmem) and (self.__om is not None):
-            # TODO: fix 'MOLS' case
             self.phase_after = self._phase_after(self.__om,
                                                  self.Nmid, self.__n_shift)
         if self.__init_complete:
@@ -500,7 +476,7 @@ class NufftBase(object):
                     h = contig_func(h)
 
     def _set_phase_funcs(self):
-        if self.phasing == 'real' or ('MOLS' in self.kernel.kernel_type):
+        if self.phasing == 'real':
             # TODO: fix 'MOLS' kernel in complex case to incorporate this?
             self.phase_before = self._phase_before(self.Kd, self.Nmid)
             self.phase_after = self._phase_after(self.om,
@@ -539,8 +515,7 @@ class NufftBase(object):
         if ktype == 'diric':
             self.sn = np.ones(Nd)
         elif 'minmax:' in ktype:
-            self.sn = nufft_scale(Nd, Kd, kernel.alpha,
-                                  kernel.beta, self.Nmid)
+            self.sn = nufft_scale(Nd, Kd, kernel.alpha, kernel.beta, self.Nmid)
         elif 'mols' in ktype:
             self.sn = None
             # will get set later during _init_table()
@@ -554,11 +529,14 @@ class NufftBase(object):
                                                kernel.kb_alf[d],
                                                kernel.kb_m[d], 1)
                 elif ktype == 'inline':
+                    if self.phasing == 'real':
+                        warnings.warn("not sure if this is correct for real "
+                                      "phasing case (Nmid is set differently)")
                     tmp = 1 / _nufft_interp_zn(0, Nd[d], Jd[d], Kd[d],
                                                kernel.kernel[d],
                                                self.Nmid[d])
                 elif ktype == 'linear':
-                    ## TODO: untested
+                    # TODO: untested
                     tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.Nmid[d])
                 else:
                     raise ValueError("Unsupported ktype: {}".format(ktype))
@@ -582,9 +560,8 @@ class NufftBase(object):
         if om.ndim == 1:
             om = om[:, np.newaxis]
 
-        if self.phasing == 'real' or ('MOLS' in self.kernel.kernel_type):
-            # TODO: fix 'MOLS' case
-            # recall just to be safe in case Kd, Nmid, etc changed?
+        if self.phasing == 'real':
+            # call again just to be safe in case Kd, Nmid, etc changed?
             self._set_phase_funcs()
 
         for d in range(self.ndim):
@@ -617,8 +594,7 @@ class NufftBase(object):
             # [J,M]
             kd[d] = np.mod(outer_sum(np.arange(1, J + 1), koff), K)
 
-            if self.phasing == 'complex' and ('MOLS' not in self.kernel.kernel_type):
-                # TODO: fix 'MOLS' case
+            if self.phasing == 'complex':
                 gam = 2 * np.pi / K
                 phase_scale = 1j * gam * (N - 1) / 2.
                 phase = np.exp(phase_scale * arg)   # [J,M] linear phase
@@ -659,8 +635,7 @@ class NufftBase(object):
         if np.iscomplexobj(uu):
             uu = uu.conj()
 
-        if self.phasing == 'complex' and ('MOLS' not in self.kernel.kernel_type):
-            # TODO: fix 'MOLS' case
+        if self.phasing == 'complex':
             if np.any(self.n_shift != 0):
                 phase = np.exp(1j * np.dot(om, self.n_shift.ravel()))			# [1,M]
                 phase = phase.reshape((1, -1), order='F')
@@ -735,15 +710,29 @@ class NufftBase(object):
                 kernel_kwargs['kb_m'] = [self.kernel.params['kb_m'][d], ]
 
             if 'MOLS' in self.kernel.kernel_type:
+                if d == 0:
+                    # dict to cache previously generated kernels
+                    MOLS_generated = {}
 
                 #TODO: test this IOWA case
                 from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
                 if self.Ld[d] % 2 == 0:
                     raise ValueError("MOLS requires odd Ld")
-                pre, h, junk1, err1 = PreNUFFT_fm(
-                    J=self.Jd[d], N=self.Nd[d], Ofactor=self.Ld[d],
-                    K=self.Kd[d], Order=2, H=np.ones(self.Nd[d]),
-                    degree=self.Jd[d]-1)
+                key = (self.Jd[d], self.Nd[d], self.Ld[d], self.Kd[d])
+
+                if key in MOLS_generated:
+                    pre, h = MOLS_generated[key]
+                else:
+                    pre, h, junk1, err1 = PreNUFFT_fm(
+                        J=self.Jd[d], N=self.Nd[d], Ofactor=self.Ld[d],
+                        K=self.Kd[d], Order=2, H=np.ones(self.Nd[d]),
+                        degree=self.Jd[d]-1, realkernel=True)
+                    # store for reuse in case other dimensions are the same
+                    MOLS_generated[key] = (pre, h)
+
+                if d == ndim - 1:
+                    del MOLS_generated
+
                 if len(h) != (self.Jd[d] * self.Ld[d] + 1):
                     raise ValueError("unexpected kernel size")
                 # scale factor computation
@@ -757,6 +746,9 @@ class NufftBase(object):
                 except ValueError:
                     pass
                 self.sn = self.sn * pre.reshape(pre_shape, order='F')
+                h = np.abs(h)  # TODO: take abs here?
+                # h /= h.max() # can't renormalize unless prefilter also scaled
+
 #                self.sn = np.outer(self.sn.ravel(), pre.conj())
 #                if d == ndim - 1:
 #                    if len(Nd) > 1:
@@ -771,19 +763,16 @@ class NufftBase(object):
                                            kernel_type=self.kernel.kernel_type,
                                            kernel_kwargs=kernel_kwargs)
 
-            if self.phasing == 'complex' and ('MOLS' not in self.kernel.kernel_type):
-                # TODO: fix MOLS case
+            if self.phasing == 'complex':
                 if np.isrealobj(h):
                     warnings.warn("Real NUFFT kernel?")
                 h = complexify(h)
             # elif self.phasing in ['real', None]:
             else:
-                if ('MOLS' not in self.kernel.kernel_type):
-                    # TODO: fix MOLS case
-                    try:
-                        h = reale(h)
-                    except ValueError:
-                        raise ValueError("expected real NUFFT kernel")
+                try:
+                    h = reale(h)
+                except ValueError:
+                    raise ValueError("expected real NUFFT kernel")
             self.h.append(h)
 
     def __str__(self):
@@ -998,7 +987,7 @@ def _nufft_table_make1(
             s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
         # [J*L+1] assuming symmetric
         h = np.concatenate((h, np.asarray([h[0], ])), axis=0)
-        if phasing == 'complex' and ('MOLS' not in self.kernel.kernel_type):
+        if phasing == 'complex':
             # TODO: fix 'MOLS' case
             h = h * np.exp(1j * pi * t0 * (1 / K - 1 / Kfake))  # fix phase
     else:
@@ -1266,46 +1255,77 @@ def example_MOLS():
     traj_rad = traj_rad.reshape((3, -1), order='F')
     kspace = traj_rad.transpose((1, 0))[:, :2] * 0.5
     mask = np.ones((nread, nread), dtype=np.bool)
-    nufft_kwargs = dict(mode='table0',  # 'table1',
+    nufft_kwargs = dict(mode='table1',
                         use_CUDA=False,
                         kernel_type='kb:beatty',
                         phasing='real',
-                        Ld=1024)
+                        Ld=151)
     Nd = np.asarray((nread, nread))
-    osf = 1.25
+    J = 4
+    osf = 1.05
     G = MRI_Operator(Nd=Nd,
-                     Kd=(osf*Nd).astype(np.intp),
-                     Jd=(4, 4),
+                     Kd=(4*((osf*Nd)//4)).astype(np.intp),
+                     Jd=(J, J),
                      fov=(1, 1),
                      kspace=kspace,
                      mask=np.ones(Nd, dtype=np.bool),
                      # weights=np.sqrt(np.linalg.norm(kspace, axis=1)),
                      **nufft_kwargs)
 
+    G_ref = MRI_Operator(Nd=Nd,
+                         Kd=(2*Nd).astype(np.intp),
+                         Jd=(6, 6),
+                         fov=(1, 1),
+                         kspace=kspace,
+                         mask=np.ones(Nd, dtype=np.bool),
+                         # weights=np.sqrt(np.linalg.norm(kspace, axis=1)),
+                         **nufft_kwargs)
+
+    if False:
+        from pyir.nufft import NufftBase
+        from pyir.nufft.nufft_utils import _nufft_coef
+        K = G.Gnufft.Kd[0]
+        L = G.Gnufft.Ld[0]
+        N = G.Gnufft.Nd[0]
+        J = G.Gnufft.Jd[0]
+        t1 = J / 2. - 1 + np.arange(L) / L  # [L]
+        om1 = t1 * 2 * pi / K       # * gam
+        s1 = NufftBase(om=om1, Nd=N, Kd=K, **nufft_args)
+        h = np.asarray(
+            s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
+        h = np.concatenate((h, np.asarray([h[0], ])), axis=0)  # [J*L+1,]
+        [c, arg] = _nufft_coef(om1, J, K, G.Gnufft.kernel.kernel[0])
     nufft_kwargs['kernel_type'] = 'MOLS'
-    nufft_kwargs['Ld'] = 151
     G_MOLS = MRI_Operator(Nd=Nd,
-                 Kd=(osf*Nd).astype(np.intp),
-                 Jd=(4, 4),
-                 fov=(1, 1),
-                 kspace=kspace,
-                 mask=np.ones(Nd, dtype=np.bool),
-                 # weights=np.sqrt(np.linalg.norm(kspace, axis=1)),
-                 **nufft_kwargs)
+                          Kd=(4*((osf*Nd)//4)).astype(np.intp),
+                          Jd=(J, J),
+                          fov=(1, 1),
+                          kspace=kspace,
+                          mask=np.ones(Nd, dtype=np.bool),
+                          # weights=np.sqrt(np.linalg.norm(kspace, axis=1)),
+                          **nufft_kwargs)
 
     weights = np.linalg.norm(kspace, axis=1)
     weights = DiagonalOperator(weights, order='F')
     x = skimage.data.camera()[::2, ::2].astype(np.complex64)
     tmp0 = embed(G.Gnufft.H * (G.Gnufft * x), mask)
     tmp = embed(G.Gnufft.H * weights * (G.Gnufft * x), mask)
+    tmp_ref = embed(G_ref.Gnufft.H * weights * (G_ref.Gnufft * x), mask)
     volshow(tmp)
     from matplotlib import pyplot as plt
 
     plt.figure(); plt.plot(G.Gnufft.h[0].real); plt.plot(G.Gnufft.h[0].imag)
-    plt.figure(); plt.plot(G_MOLS.Gnufft.h[0].real); plt.plot(G_MOLS.Gnufft.h[0].imag)
+    plt.plot(G_MOLS.Gnufft.h[0].real/G_MOLS.Gnufft.h[0].real.max()); plt.plot(G_MOLS.Gnufft.h[0].imag)
 
     tmp_MOLS = embed(G_MOLS.Gnufft.H * weights * (G_MOLS.Gnufft * x), mask)
-    volshow(tmp_MOLS)
+    volshow([tmp, tmp_MOLS])
+
+    #tmp_MOLS = np.abs(tmp_MOLS)/np.linalg.norm(tmp_MOLS)*np.linalg.norm(x)
+    #tmp = np.abs(tmp)/np.linalg.norm(tmp)*np.linalg.norm(x)
+    from skimage.measure import compare_nrmse
+    print("NRMSE (kb:beatty): = {}".format(compare_nrmse(np.abs(tmp_ref), np.abs(tmp))))
+    print("NRMSE (MOLS-U): = {}".format(compare_nrmse(np.abs(tmp_ref), np.abs(tmp_MOLS))))
+    volshow([np.abs(tmp_ref-tmp), np.abs(tmp_ref-tmp_MOLS)], vmax=np.max(np.abs(tmp_ref-tmp)))
 
     tmp_hybrid = embed(G_MOLS.Gnufft.H * weights * (G.Gnufft * x), mask)
     volshow(tmp_hybrid)

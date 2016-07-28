@@ -8,10 +8,12 @@ import numpy as np
 
 from pyir.nufft.kaiser_bessel import kaiser_bessel
 
-from pyir.nufft.nufft_utils import (nufft_alpha_kb_fit,
-                                    nufft_best_alpha,
-                                    nufft_diric,
-                                    to_1d_int_array)
+from pyir.nufft.nufft_utils import to_1d_int_array
+
+from pyir.nufft._minmax import (nufft_alpha_kb_fit,
+                                nufft_best_alpha)
+
+from pyir.nufft.simple_kernels import nufft_diric
 
 from pyir.utils import is_string_like
 
@@ -30,7 +32,7 @@ kernel_types = ['minmax:kb',
 class NufftKernel(object):
     """ Interpolation kernel for use in the gridding stage of the NUFFT. """
 
-    def __init__(self, kernel_type='minmax:kb', **kwargs):
+    def __init__(self, kernel_type='kb:beatty', **kwargs):
         self.kernel = None
         self.is_kaiser_scale = False
         self.params = kwargs.copy()
@@ -178,7 +180,7 @@ class NufftKernel(object):
                 params['kb_alf'].append(alf)
                 params['kb_m'].append(0)
 
-        elif kernel_type == 'kb:user':  # KB with Beatty et al parameters
+        elif kernel_type == 'kb:user':
             self.is_kaiser_scale = True
 
             if (Jd is None) or (kb_m is None) or (kb_alf is None):
