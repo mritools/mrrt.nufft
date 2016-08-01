@@ -10,6 +10,8 @@ from numpy.testing import assert_almost_equal
 from pyir.utils import fftnc, ifftnc  # centered FFT
 
 
+__all__ = ['PreNUFFT_fm']
+
 def sinc_new(x):
     # TODO: necessary? can probably just use np.sinc
     indicator = np.abs(x) < 1e-6
@@ -19,7 +21,7 @@ def sinc_new(x):
     return out
 
 
-def calcKernelDiscretemod_fm(DFTMtx, fn, K, N, Ofactor, Order, H):
+def _calcKernelDiscretemod_fm(DFTMtx, fn, K, N, Ofactor, Order, H):
     # in Matlab:  fn & H are column vectors.  DFTMtx is a 2D matrix
     vector = np.arange(-K*Ofactor/2, K*Ofactor/2)
     abeta = fftnc(bspline(vector, 2*(Order)-1))
@@ -68,15 +70,15 @@ def calcKernelDiscretemod_fm(DFTMtx, fn, K, N, Ofactor, Order, H):
     return (Kernel, calcweight, error)
 
 
-def giveOptStepDiscrete_fm(DFTMtx, fn, K, N, Ofactor, Olderror, Oldfn, a,
-                           Order, H, tol=None):
+def _giveOptStepDiscrete_fm(DFTMtx, fn, K, N, Ofactor, Olderror, Oldfn, a,
+                            Order, H, tol=None):
     steps = 0.5**(np.arange(31))
     steps = np.concatenate((steps, np.array([0, ])))
     # if tol is None:
     #     tol = 100 * np.finfo(fn.dtype).eps
     for step in steps:
         fn = step*a + (1 - step)*Oldfn
-        Kernel, calcweight, error = calcKernelDiscretemod_fm(
+        Kernel, calcweight, error = _calcKernelDiscretemod_fm(
             DFTMtx, fn, K, N, Ofactor, Order, H)
         # if (error - Olderror) < tol:
         if (Olderror - error) > 0:
@@ -84,7 +86,8 @@ def giveOptStepDiscrete_fm(DFTMtx, fn, K, N, Ofactor, Olderror, Oldfn, a,
     return (Kernel, calcweight, error, fn, step)
 
 
-def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree, realkernel=False):
+def _giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree,
+                              realkernel=False):
     if False:
         # direct matlab translation
         x = np.linspace(0, np.ceil(J/2), np.ceil(J/2)*Ofactor+1)
@@ -122,7 +125,7 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree, realkernel=Fal
         fn = np.concatenate((fn2, fn))
     else:
         fn = bspline(x, degree)
-    Kernel, current_weight, error = calcKernelDiscretemod_fm(
+    Kernel, current_weight, error = _calcKernelDiscretemod_fm(
         DFTMtx, fn, K, N, Ofactor, Order, H)
     if realkernel:
         fn = np.abs(fn)
@@ -144,11 +147,11 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree, realkernel=Fal
         if len(oldfn) == 0:
             fn = newfn
             oldfn = fn
-            Kernel, current_weight, error = calcKernelDiscretemod_fm(
+            Kernel, current_weight, error = _calcKernelDiscretemod_fm(
                 DFTMtx, fn, K, N, Ofactor, Order, H)
             step = 1
         else:
-            Kernel, current_weight, error, fn, step = giveOptStepDiscrete_fm(
+            Kernel, current_weight, error, fn, step = _giveOptStepDiscrete_fm(
                 DFTMtx, fn, K, N, Ofactor, olderror, oldfn, newfn, Order, H)
             if realkernel:
                 fn = np.abs(fn)
@@ -161,7 +164,7 @@ def giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree, realkernel=Fal
     return (fn, Kernel, e)
 
 
-def givePrefilterNew_fm(fn, J, K, Ofactor, Order):
+def _givePrefilterNew_fm(fn, J, K, Ofactor, Order):
     # x values over the range of the interpolation coefficients
     if False:
         # direct matlab translation
@@ -226,20 +229,6 @@ if False:
 
     J = 4
     N = 256
-    K = 320
-    Ofactor = 151
-    Order = 2
-    H = np.ones(N)
-    degree = J - 1
-    (prefilter_fm3, fn_z3, junk, error) = PreNUFFT_fm(J, N, Ofactor, K, Order=Order, H=H, degree=degree, realkernel=True)
-    print(np.argmax(fn_z3))
-    plt.figure()
-    plt.plot(np.arange(fn_z3.size), fn_z3.real,
-             np.arange(fn_z3.size), fn_z3.imag)
-
-
-    J = 4
-    N = 256
     K = 268
     Ofactor = 151
     Order = 2
@@ -251,7 +240,6 @@ if False:
     plt.figure()
     plt.plot(np.arange(fn_z3.size), fn_z3.real,
              np.arange(fn_z3.size), fn_z3.imag)
-
 
 
 def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
@@ -284,9 +272,12 @@ def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
 
     References
     ----------
-    Z. Yang, M. Jacob, "Mean square optimal NUFFT approximation for non-Cartesian MRI reconstruction", J Magn Reson, vol. 242, pp. 126-135, 2014
-    M. Jacob,"Optimized least square non uniform fast Fourier transform (OLS-NUFFT)" , IEEE Transactions of Signal Processing, vol. 57, issue 6, pp. 2165-2177, 2009
-
+    .. [1] Z. Yang, M. Jacob, "Mean square optimal NUFFT approximation for
+    non-Cartesian MRI reconstruction", J Magn Reson, vol. 242, pp. 126-135,
+    2014
+    .. [2] M. Jacob,"Optimized least square non uniform fast Fourier transform
+    (OLS-NUFFT)" , IEEE Transactions of Signal Processing, vol. 57, issue 6,
+    pp. 2165-2177, 2009
     """
     if H is None:
         H = np.ones(N)
@@ -304,12 +295,13 @@ def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
     if (K*Ofactor) % 2 != 0:
         warnings.warn("odd K*Ofactor untested")
 
-    (fnn1, Kernel, error1) = giveSymmetricDiscrete2_fm(
+    (fnn1, Kernel, error1) = _giveSymmetricDiscrete2_fm(
         J, K, N, Ofactor, Order, H, degree, realkernel=realkernel)
-    fnn1 /= np.abs(fnn1).max()  # normalization as in Fessler's IRT
-                                # differs from the original author's code
+    # normalization as in Fessler's IRT
+    # (This differs from the normalization in the original author's code)
+    fnn1 /= np.abs(fnn1).max()
     if compute_prefilter:
-        prefilter_fm = givePrefilterNew_fm(fnn1, J, K, Ofactor, Order)
+        prefilter_fm = _givePrefilterNew_fm(fnn1, J, K, Ofactor, Order)
 
         # keep central size N block
         pre_nborder = (K - N) / 2

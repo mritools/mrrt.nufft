@@ -93,7 +93,6 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
         X = np.outer(omega[:, 0], nng[0].ravel(order='F'))
         for d in range(1, dd):
             X += np.outer(omega[:, d], nng[d].ravel(order='F'))
-        # X = np.asmatrix(np.exp(-1j*X)) * np.asmatrix(x).T
         X = np.dot(np.exp(-1j*X), x)
 
     return X

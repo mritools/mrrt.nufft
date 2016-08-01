@@ -6,8 +6,7 @@ import warnings
 import numpy as np
 import scipy.sparse
 
-from pyir.nufft.kaiser_bessel import (kaiser_bessel_ft,
-                                      _kaiser_bessel_params)
+from pyir.nufft.kaiser_bessel import kaiser_bessel_ft
 
 from pyir.nufft.nufft_utils import _nufft_offset
 
@@ -267,6 +266,51 @@ def nufft_best_alpha(J, L=2, K_N=2):
 
     alpha = np.squeeze(alpha)
     return alpha, beta, ok
+
+
+def _kaiser_bessel_params(alpha='best', J=6, K_N=2):
+    """ optimized shape and order parameters"""
+    if alpha == 'best':
+        if K_N == 2:
+            kb_m = 0  # hardwired, because it was nearly the best!
+
+            # manually replicate the file private/kaiser,m=0.mat
+            Jlist = np.arange(2, 17)
+            abest = np.array([2.5,
+                              2.27,
+                              2.31,
+                              2.34,
+                              2.32,
+                              2.32,
+                              2.35,
+                              2.34,
+                              2.34,
+                              2.35,
+                              2.34,
+                              2.35,
+                              2.35,
+                              2.35,
+                              2.33])
+
+            ii = (J == Jlist)  # .nonzero()
+            if(np.sum(ii) == 0):
+                ii = np.abs(J - Jlist).argmin()
+                warnings.warn(
+                    'J=%d not found, using %d' % (J, int(Jlist[ii])))
+            alpha = J * abest[ii]
+        else:
+            wstr = ('kaiser_bessel optimized only for K/N=2!\n'
+                    'using good defaults: m=0 and alpha = 2.34*J')
+            warnings.warn(wstr)
+            kb_m = 0
+            alpha = 2.34 * J
+    elif alpha == 'beatty':
+        # Eq. 5 of Beatty2005:  IEEE TMI 24(6):799:808, kb_m = 0
+        alpha = np.pi * np.sqrt(J**2/K_N**2 * (K_N - 0.5)**2 - 0.8)
+        kb_m = 0
+    else:
+        raise ValueError('unknown alpha mode')
+    return alpha, kb_m
 
 
 def nufft_alpha_kb_fit(N, J, K, L=None, beta=1, Nmid=None, verbose=False):

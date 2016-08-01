@@ -2,6 +2,8 @@ import numpy as np
 from scipy.special import i0
 from pyir.utils import rowF, colF
 
+__all__ = ['giveLSInterpolator', ]
+
 if False:
     N = 128
     K = 130
@@ -10,15 +12,29 @@ if False:
 
 
 def giveLSInterpolator(N, K, Ofactor, J):
-    """
-    % function to compute LS-KB scalefactor(prefilter) and interpolator
-    % interpolator---LS-KB interpolators
-    % scalefactor---scale factors
-    % J---interpolator size
-    % N---size of image
-    % K---oversampled size of image
-    % Ofactor--oversampling factor of interpolator
-    % H---energy distribution of the image
+    """Compute LS-KB scalefactor(prefilter) and interpolator.
+
+    Parameters
+    ----------
+    N : int
+        size of image
+    K : int
+        oversampled size of image
+    Ofactor : int
+        oversampling factor of interpolator
+    J : int
+        kernel extent
+
+    Returns
+    -------
+    scalefactor : array
+        LS prefilter (scale factors)
+    interpolator : array
+        LS interpolation kernel
+
+    References
+    ----------
+
     """
     m = J/2
     Samples = np.linspace(0, 1, Ofactor + 1)

@@ -4,11 +4,6 @@ import warnings
 
 import numpy as np
 
-
-# TODO: add linear and diric options as in newfft.m
-# newfft_scale_tri(Nd(id), Jd(id), Kd(id), st.Nmid)
-
-
 __all__ = ['_nufft_samples',
            '_nufft_interp_zn',
            '_nufft_offset',
