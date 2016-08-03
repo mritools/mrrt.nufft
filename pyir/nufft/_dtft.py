@@ -1,6 +1,9 @@
 """
 Slow, brute force n-dimensional DTFT routines.  These can be used to
 validate the NUFFT on small problem sizes.
+
+These are heavily modified (for n-dimensional support) from Matlab code
+originally developed by Jeff Fessler and his students.
 """
 
 from __future__ import division, print_function, absolute_import

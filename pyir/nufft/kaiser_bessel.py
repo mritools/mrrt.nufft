@@ -1,3 +1,17 @@
+"""
+The code in this module is a based on Matlab routines originally created by
+Jeff Fessler and his students at the University of Michigan.  The original
+license for the Matlab code is reproduced below.
+
+ License
+
+    You may freely use and distribute this software as long as you retain the
+    author's name (myself and/or my students) with the software.
+    It would also be courteous for you to cite the toolbox and any related
+    publications in any papers that present results based on this software.
+    UM and the authors make all the usual disclaimers about liability etc.
+
+"""
 from __future__ import division, print_function, absolute_import
 
 import warnings

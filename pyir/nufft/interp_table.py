@@ -1,3 +1,14 @@
+"""
+The underlying C code for these routines are adapted from C code originally
+developed by Jeff Fessler and his students at the University of Michigan.
+
+OpenMP support and the Cython wrappers were created by Gregory R. Lee
+(Cincinnati Childrens Hospital Medical Center).
+
+Note:  For simplicity the adjoint NUFFT is only parallelized across multiple
+coils and/or repetitions.  This was done for simplicity to avoid any potential
+thread conflicts.
+"""
 import numpy as np
 
 from ._extensions._nufft_table import (_interp1_table_per,

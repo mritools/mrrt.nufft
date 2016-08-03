@@ -1,9 +1,9 @@
-# -*-cython-*-
+"""
+This code originated in the BSD-licensed scipy.special
+"""
 #
 # Common functions required when doing complex arithmetic with Cython.
 #
-#GRL: copied from scipy.special
-
 cimport numpy as np
 cimport libc.math
 

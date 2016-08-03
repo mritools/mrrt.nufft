@@ -1,1 +1,0 @@
-gcc-4.9 -Wall -O3 -shared -fPIC ./nufft_table.c -o nufft_table.so -fopenmp -v

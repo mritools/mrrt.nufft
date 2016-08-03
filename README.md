@@ -3,6 +3,11 @@ NUFFT
 High performance NUFFT based on a port of Jeff Fessler's Matlab NUFFT code
 from his [image reconstruction toolbox](https://web.eecs.umich.edu/~fessler/code/).
 
+Much of the code in this module is a based on Matlab routines originally
+created by Jeff Fessler and his students at the University of Michigan.  See
+COPYING for more license info.
+
+"""
 
 Basic Usage
 ===========

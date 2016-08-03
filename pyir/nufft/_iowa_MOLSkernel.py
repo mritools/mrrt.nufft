@@ -1,3 +1,19 @@
+"""
+MOLS-U code based on the following publications.  The implementation here is a
+port of open-source Matlab code originally developed by Zhili Yang
+(University of Rochester) and Mathews Jacob (University of Iowa).
+
+.. [1] Z. Yang, M. Jacob, "Mean square optimal NUFFT approximation for
+non-Cartesian MRI reconstruction", JMR, in press
+
+.. [2] M. Jacob,"Optimized least square non uniform fast Fourier transform
+(OLS-NUFFT)" , IEEE Transactions of Signal Processing, vol. 57, issue 6,
+pp. 2165-2177, Feb 2009
+
+.. [3] Z. Yang, M. Jacob, "Efficient NUFFT algorithm for non-Cartesian MRI
+reconstruction",, IEEE international symposium on biomedical imaging, 2009
+
+"""
 import warnings
 
 import numpy as np
