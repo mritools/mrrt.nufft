@@ -1241,7 +1241,7 @@ def compute_Q(G, Nd_os=2, Kd_os=1.25, J=5, use_CUDA=False,
                       use_CUDA=False,
                       phasing='real',  # ONLY WORKS IF THIS IS REAL!
                       **extra_nufft_kwargs)
-    psft = G2.H * np.ones(kspace.shape[0], Gnufft_op._cplx_dtype)
+    psft = G2.H * np.ones(G2.kspace.shape[0], Gnufft_op._cplx_dtype)
     psft = np.fft.fftshift(psft.reshape(G2.Nd, order=G2.order))
     return fftn(psft)
 
@@ -1353,7 +1353,8 @@ def example_compute_Q():
     from pyir.operators_private import MRI_Operator
     from pyir.operators import DiagonalOperator
     from pyvolplot import volshow
-    from pyir.utils import fftn, ifftn
+    from pyir.utils import fftn, ifftn, embed
+    from pyir.nufft.nufft import compute_Q
     nread = 256
     traj_rad = bart.traj(X=2*nread, Y=64, radial=True).real
     traj_rad = traj_rad.reshape((3, -1), order='F')
@@ -1385,7 +1386,6 @@ def example_compute_Q():
     # psf = nufft_adj_psf(G.Gnufft, np.ones(kspace.shape[0]))
     # volshow(np.abs(psf)**0.25)
     # PSF = fftn(psf)
-
 
     Q = compute_Q(G)
     tmp0_approx = ifftn(Q * fftn(x, G.Gnufft.Kd))[:nread, :nread]

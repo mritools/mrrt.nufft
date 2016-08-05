@@ -1,4 +1,4 @@
-"""
+/*
 The underlying C code for these routines are adapted from C code originally
 developed by Jeff Fessler and his students at the University of Michigan.
 
@@ -11,7 +11,7 @@ thread conflicts.
 
 The C templating used here is based on the implementation by Kai Wohlfahrt as
 developed for the BSD-licensed PyWavelets project.
-"""
+*/
 #include "nufft_table.h"
 
 #ifdef TYPE

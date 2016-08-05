@@ -241,6 +241,15 @@ def recompose(src):
 
 
 def _pruned_fft_demo():
+    """
+    References
+    ----------
+    ..[1] Ong F, Uecker M, Jiang W, Lustig M.
+    Fast Non-Cartesian Reconstruction with Pruned Fast Fourier Transform.
+    Annual Meeting ISMRM, Toronto 2015, In: Proc Intl Soc Mag Reson Med 23;
+    3639.
+
+    """
     import time
 
     img = skimage.data.camera().astype(np.complex64)

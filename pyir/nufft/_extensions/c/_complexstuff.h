@@ -1,6 +1,6 @@
-"""
+/*
 This code originated in the BSD-licensed scipy.special
-"""
+*/
 #ifdef __cplusplus
 extern "C" {
 #endif
