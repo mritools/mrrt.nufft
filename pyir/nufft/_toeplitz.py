@@ -402,6 +402,7 @@ def _pruned_fft_demo():
                 if isinstance(Q_pruned, np.ndarray):
                     tmp *= Q_pruned[sl]
                 else:
+                    # list or tuple of already sliced Q_pruned
                     tmp *= Q_pruned[d]
             tmp = ifftn(tmp)
             linph_conj = tuple([np.conj(l/sf_per_axis) for l in linph])
@@ -502,7 +503,8 @@ def test_psf(show_figures=False):
     assert_almost_equal(psf[Nd//2+1].real, 0, decimal=2)
     if show_figures:
         from matplotlib import pyplot as plt
-        plt.figure(); plt.plot(np.abs(psf))
+        plt.figure()
+        plt.plot(np.abs(psf))
 
     # double matrix size & FOV, but keep the same number of k-space samples
     psf2 = compute_psf(kspace*2, Nd*2, fov*2, weights, **nufft_kwargs)
@@ -512,10 +514,13 @@ def test_psf(show_figures=False):
     assert_almost_equal(psf2[3*Nd//2].real, Nd, decimal=2)
     if show_figures:
         from matplotlib import pyplot as plt
-        plt.figure(); plt.plot(np.abs(psf2))
+        plt.figure()
+        plt.plot(np.abs(psf2))
 
 
 def compute_psf(kspace, Nd, fov, weights, Kd=None, Jd=None, **nufft_kwargs):
+    from pyir.operators_private import MRI_Operator
+
     if np.isscalar(Nd):
         Nd = [Nd, ]
     if np.isscalar(fov):
