@@ -49,6 +49,7 @@ from pyir.nufft.simple_kernels import _scale_tri
 
 from pyir.utils import (fftn,
                         ifftn,
+                        fast_fft_shape,
                         outer_sum,
                         complexify,
                         is_string_like,
@@ -1219,29 +1220,53 @@ def compute_Q(G, Nd_os=2, Kd_os=1.25, J=5, use_CUDA=False,
     System Transfer Function.
     Proc. Intl. Soc. Mag. Reson. Med. 13 (2005), p.689.
     """
-    from pyir.operators_private import MRI_Operator
+    from pyir.operators_private import MRI_Operator, NUFFT_Operator
 
-    Gnufft_op = G.Gnufft
+    if isinstance(G, NUFFT_Operator):
+        Gnufft_op = G
+    elif isinstance(G, MRI_Operator):
+        Gnufft_op = G.Gnufft
+    else:
+        raise ValueError("G must be an NUFFT_Operator or MRI_Operator")
 
     # need reasonably accurate gridding onto a 2x oversampled grid
     Nd = (Nd_os * Gnufft_op.Nd).astype(np.intp)
+    Kd = fast_fft_shape((Kd_os*Nd).astype(np.intp))
     if np.any(G.Kd < 2*G.Nd):
         warnings.warn("Q operator unlikely to be accurate.  Recommend using G "
                       "with a grid oversampling factor of 2")
 
-    G2 = MRI_Operator(Nd=Nd,
-                      Kd=(Kd_os*Nd).astype(np.intp),
-                      Jd=(J, )*len(G.Nd),
-                      fov=G.fov,
-                      kspace=Nd/Gnufft_op.Nd*G.kspace,
-                      order=G.order,
-                      mask=np.ones(Nd, dtype=np.bool),
-                      kernel=Gnufft_op.kernel.kernel_type,
-                      mode=Gnufft_op.mode,
-                      use_CUDA=False,
-                      phasing='real',  # ONLY WORKS IF THIS IS REAL!
-                      **extra_nufft_kwargs)
-    psft = G2.H * np.ones(G2.kspace.shape[0], Gnufft_op._cplx_dtype)
+    # if isinstance(G, MRI_Operator):
+    #     # TODO: support weights in MRI_Operator
+    #     G2 = MRI_Operator(Nd=Nd,
+    #                       Kd=Kd,
+    #                       Jd=(J, )*len(G.Nd),
+    #                       Ld=Gnufft_op.Ld,
+    #                       fov=G.fov,
+    #                       kspace=Nd/Gnufft_op.Nd*G.kspace,
+    #                       order=G.order,
+    #                       mask=np.ones(Nd, dtype=np.bool),
+    #                       kernel=Gnufft_op.kernel.kernel_type,
+    #                       mode=Gnufft_op.mode,
+    #                       use_CUDA=use_CUDA,
+    #                       phasing='real',  # ONLY WORKS IF THIS IS REAL!
+    #                       **extra_nufft_kwargs)
+    # elif isinstance(G, NUFFT_Operator):
+    G2 = NUFFT_Operator(om=Gnufft_op.om,
+                        Nd=Nd,
+                        Kd=Kd,
+                        Jd=(J, )*len(Nd),
+                        Ld=Gnufft_op.Ld,
+                        n_shift=Nd/2,
+                        kernel=Gnufft_op.kernel.kernel_type,
+                        mode=Gnufft_op.mode,
+                        use_CUDA=use_CUDA,
+                        phasing='real',  # ONLY WORKS IF THIS IS REAL!
+                        **extra_nufft_kwargs)
+
+    # psft = G2.H * np.ones(G2.kspace.shape[0], Gnufft_op._cplx_dtype)
+    psft = G2.H * np.ones(Gnufft_op.om.shape[0], Gnufft_op._cplx_dtype)
+    # TODO: allow DiagOperator too for weights
     psft = np.fft.fftshift(psft.reshape(G2.Nd, order=G2.order))
     return fftn(psft)
 
