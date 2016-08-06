@@ -6,12 +6,51 @@ import numpy as np
 from numpy.testing import (run_module_suite)
 
 import pyir.nufft
+from pyir.tests.test_dtft import _uniform_freqs
 pkg_dir = os.path.dirname(pyir.nufft.__file__)
 data_dir = pjoin(pkg_dir, 'data', 'mat_files')
 
 __all__ = ['test_nufft_init',
            'test_nufft',
            'test_nufft_adj']
+
+
+def _perturbed_gridpoints(Nd, rel_std=0.5, seed=1234):
+    """Generate a uniform cartesian frequency grid of shape Nd and then
+    perturb each point's position by an amount between [0, rel_std) of the
+    grid spacing along each axis.
+
+    (for testing NUFFT routines vs. the DTFT)
+    """
+    rstate = np.random.RandomState(seed)
+    Nd = np.asarray(Nd)
+    if np.any(Nd < 2):
+        raise ValueError("must be at least size 2 on all dimensions")
+    omega = _uniform_freqs(Nd)  # [npoints, ndim]
+    df = 2*np.pi/Nd
+    npoints = omega.shape[0]
+    for d in range(len(Nd)):
+        # don't randomize edge points so values will still fall within
+        # a 2*pi range
+        omega[:, d] += df[d] * rel_std * rstate.rand(npoints)
+        # rescale to keep values within a 2*pi range
+        omega[:, d] += np.min(omega[:, d])
+        omega[:, d] *= (2*np.pi)/np.max(omega[:, d])
+
+    return omega
+
+
+def _randomized_gridpoints(Nd, rel_std=0.5, seed=1234):
+    """Generate a uniform cartesian frequency grid of shape Nd and then
+    perturb each point's position by an amount between [0, rel_std) of the
+    grid spacing along each axis.
+
+    (for testing NUFFT routines vs. the DTFT)
+    """
+    rstate = np.random.RandomState(seed)
+    ndim = len(Nd)
+    omegas = rstate.uniform(size=(tuple(Nd) + (ndim, )), low=0, high=2*np.pi)
+    return omegas.reshape((-1, ndim), order='F')
 
 
 def test_nufft_init(verbose=False):
