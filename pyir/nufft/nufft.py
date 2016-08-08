@@ -1117,28 +1117,27 @@ def nufft_adj(st, X, copy_X=True, return_psf=False):
     # extract attributes from structure
     Nd = st.Nd
     Kd = st.Kd
-    dims = X.shape
-    if dims[0] != st.M:
-        raise ValueError('size mismatch')
 
-    X = complexify(X)  # force complex
+    Xc = complexify(X)  # force complex
 
     #
     # adjoint of interpolator using precomputed sparse matrix
     #
-    if copy_X:  # make sure original array isn't modified!
-        X = X.copy()
-
-    if len(dims) == 1:
-        Lprod = 1  # the usual case
+    if copy_X and Xc is X:
+        # make sure the original array isn't modified!
+        X = Xc.copy()
     else:
-        Lprod = np.product(dims[1:])
-    #X.shape = (st.M, Lprod)  # [M,*L]
-    X = np.reshape(X, (st.M, Lprod), order='F')  # [M,*L]
+        X = Xc
+    
+    if X.size % st.M != 0:
+        raise ValueError("invalid size")
+
+    X = np.reshape(X, (st.M, -1), order='F')  # [M,*L]
+    Lprod = X.shape[-1]
 
     if st.phase_after is not None and not return_psf:
         # replaced np.tile() with broadcasting
-        X *= st.phase_after.conj()[:, None]
+        X *= st.phase_after.conj()[:, np.newaxis]
 
     if 'table' in st.mode:
         # interpolate via tabulated interpolator

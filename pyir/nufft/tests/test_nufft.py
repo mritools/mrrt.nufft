@@ -420,6 +420,7 @@ def test_nufft_2d():
                         assert_allclose(y, y2, rtol=1e-3)
 
 # TODO: test other nshift, odd shape, odd Kd, etc
+# TODO: test order='F'/'C'
 
 
 def test_nufft_dtypes():
