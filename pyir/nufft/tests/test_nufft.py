@@ -3,8 +3,12 @@ import os
 from os.path import join as pjoin
 
 import numpy as np
-from numpy.testing import (run_module_suite, assert_almost_equal, dec)
-
+from numpy.testing import (run_module_suite,
+                           assert_almost_equal,
+                           assert_array_almost_equal,
+                           assert_allclose,
+                           assert_equal,
+                           dec)
 
 import pyir.nufft
 from pyir.nufft import dtft, dtft_adj
@@ -27,6 +31,8 @@ def _perturbed_gridpoints(Nd, rel_std=0.5, seed=1234):
     (for testing NUFFT routines vs. the DTFT)
     """
     rstate = np.random.RandomState(seed)
+    if np.isscalar(Nd):
+        Nd = (Nd, )
     Nd = np.asarray(Nd)
     if np.any(Nd < 2):
         raise ValueError("must be at least size 2 on all dimensions")
@@ -321,6 +327,154 @@ def test_nufft(verbose=False):
                 test3d=test3d,
                 initialize_from_Matlab=initialize_from_Matlab,
                 make_fig=make_fig)
+
+
+def test_nufft_1d():
+    Nd = 64
+    Kd = 128
+    Jd = 6
+    Ld = 4096
+    n_shift = Nd // 2
+    om = _perturbed_gridpoints(Nd)
+    rstate = np.random.RandomState(1234)
+
+    for kernel_type in ['kb:beatty', ]:
+        for mode in ['table1', 'table0', 'sparse']:
+            for precision in ['single', 'double']:
+                for phasing in ['real', 'complex']:
+                    A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
+                                  mode=mode, Ld=Ld,
+                                  kernel_type=kernel_type,
+                                  precision=precision,
+                                  phasing=phasing)  # TODO:  'table' case
+
+                    x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
+                    y = A._nufft_forward(x)
+                    y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+                    # max_percent_diff(y, y2[:, 0])
+
+                    if mode == 'table0':
+                        assert_allclose(y, y2, rtol=1e-2)
+                    else:
+                        assert_allclose(y, y2, rtol=4e-3)
+
+
+# def test_nufft_1d_adj():
+#     Nd = 64
+#     Kd = 128
+#     Jd = 6
+#     Ld = 4096
+#     n_shift = Nd // 2
+#     om = _perturbed_gridpoints(Nd)
+#     rstate = np.random.RandomState(1234)
+
+#     for kernel_type in ['kb:beatty', ]:
+#         for mode in ['table1', 'table0', 'sparse']:
+#             for precision in ['single', 'double']:
+#                 for phasing in ['real', 'complex']:
+#                     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
+#                                   mode=mode, Ld=Ld,
+#                                   kernel_type=kernel_type,
+#                                   precision=precision,
+#                                   phasing=phasing)  # TODO:  'table' case
+
+#                     x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
+#                     y = A._nufft_adj(x)
+#                     y2 = dtft_adj(x, omega=om, Nd=Nd, n_shift=n_shift)
+#                     # max_percent_diff(y, y2[:, 0])
+
+#                     if mode == 'table0':
+#                         assert_allclose(y, y2, rtol=1e-2)
+#                     else:
+#                         assert_allclose(y, y2, rtol=4e-3)
+
+
+def test_nufft_2d():
+    ndim = 2
+    Nd = [16, ] * ndim
+    Kd = [32, ] * ndim
+    Jd = [6, ] * ndim
+    Ld = 4096
+    n_shift = np.asarray(Nd) / 2
+    om = _perturbed_gridpoints(Nd)
+    rstate = np.random.RandomState(1234)
+
+    for kernel_type in ['kb:beatty', ]:
+        for mode in ['table1', 'table0', 'sparse']:
+            for precision in ['single', 'double']:
+                for phasing in ['real', 'complex']:  # 'complex']:
+                    A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
+                                  mode=mode, Ld=Ld,
+                                  kernel_type=kernel_type,
+                                  precision=precision,
+                                  phasing=phasing)  # TODO:  'table' case
+
+                    x = rstate.standard_normal(Nd)
+                    x = x + 1j * rstate.standard_normal(Nd)
+                    y = A._nufft_forward(x)
+                    y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+                    # max_percent_diff(y, y2[:, 0])
+                    if mode == 'table0':
+                        assert_allclose(y, y2, rtol=1e-2)
+                    else:
+                        assert_allclose(y, y2, rtol=1e-3)
+
+# TODO: test other nshift, odd shape, odd Kd, etc
+
+
+def test_nufft_dtypes():
+    Nd = 64
+    Kd = 128
+    Jd = 6
+    Ld = 4096
+    n_shift = Nd // 2
+    om = _perturbed_gridpoints(Nd)
+
+    kernel_type = 'kb:beatty'
+    mode = 'table1'
+    for precision in ['single', 'double']:
+        A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
+                      mode=mode, Ld=Ld,
+                      kernel_type=kernel_type,
+                      precision=precision)  # TODO:  'table' case
+
+        if precision == 'single':
+            assert_equal(A._cplx_dtype, np.complex64)
+            assert_equal(A._real_dtype, np.float32)
+        else:
+            assert_equal(A._cplx_dtype, np.complex128)
+            assert_equal(A._real_dtype, np.float64)
+
+        # set based on precision of om rather than the dtype argument
+        A2 = NufftBase(om=om.astype(A._real_dtype),
+                       Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
+                       mode=mode, Ld=Ld,
+                       kernel_type=kernel_type)  # TODO:  'table' case
+
+        if precision == 'single':
+            assert_equal(A2._cplx_dtype, np.complex64)
+            assert_equal(A2._real_dtype, np.float32)
+        else:
+            assert_equal(A2._cplx_dtype, np.complex128)
+            assert_equal(A2._real_dtype, np.float64)
+
+    x = np.random.randn(Nd) + 1j * np.random.randn(Nd)
+    x = x.astype(np.complex64)
+    y = A._nufft_forward(x)
+    # single-precision input, but double-precision operator
+    # output matches input dtype
+    assert_equal(y.dtype, np.complex64)
+
+    A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
+                  mode=mode, Ld=Ld, kernel_type=kernel_type,
+                  precision='single')
+    y = A._nufft_forward(x)
+    assert_equal(y.dtype, np.complex64)
+
+    y = A._nufft_forward(x.astype(np.complex128))
+    # if input is double, output will be double even when operator
+    # is single
+    assert_equal(y.dtype, np.complex128)
 
 
 if __name__ == "__main__":

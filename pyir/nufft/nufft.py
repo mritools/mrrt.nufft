@@ -127,11 +127,6 @@ class NufftBase(object):
         self.__om = None  # will be set later below
         self._set_Nmid()
         self.ndim = len(self.Nd)  # number of dimensions
-        if self.ndim == 1:
-            # TODO: only double precision routines in 1D case
-            if precision is not None and precision == 'single':
-                warnings.warn("Forcing double precision for 1D case")
-            precision = 'double'
         self._Jd = to_1d_int_array(Jd, nelem=self.ndim)
 
         if Kd is None:
@@ -614,7 +609,6 @@ class NufftBase(object):
                 gam = 2 * np.pi / K
                 phase_scale = 1j * gam * (N - 1) / 2.
                 phase = np.exp(phase_scale * arg)   # [J,M] linear phase
-            #elif self.phasing in ['real', None]:
             else:
                 phase = 1.
             # else:
@@ -697,7 +691,7 @@ class NufftBase(object):
         # how = 'ratio'  #currently a bug in ratio case for non-integer K/N
         #     else:
         how = 'fast'
-        if False:  # self.phasing == 'complex':
+        if self.phasing == 'complex':
             self.phase_shift = np.exp(
                 1j * np.dot(self.om, self.n_shift.ravel()))  # [M 1]
         else:

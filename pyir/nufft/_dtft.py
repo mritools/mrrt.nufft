@@ -98,6 +98,9 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
             X += np.outer(omega[:, d], nng[d].ravel(order='F'))
         X = np.dot(np.exp(-1j*X), x)
 
+    if X.shape[-1] == 1:
+        X.shape = X.shape[:-1]
+
     return X
 
 
@@ -176,4 +179,7 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
             x += np.outer(nn[d].ravel(order='F'), omega[:, d])
         x = np.dot(np.exp(1j*x[:, np.newaxis]), X)  # [(*Nd),L]
         x = np.reshape(x, Nd, order='F')  # [(Nd),L]
+
+    if x.shape[-1] == 1:
+        x.shape = x.shape[:-1]
     return x

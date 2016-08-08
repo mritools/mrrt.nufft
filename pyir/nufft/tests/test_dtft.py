@@ -22,6 +22,8 @@ def _uniform_freqs(Nd):
     (for testing DTFT routines vs. a standard Cartesian FFT)
     """
     # TODO: simplify via np.indices?
+    if np.isscalar(Nd):
+        Nd = (Nd, )
     ndim = len(Nd)
     fs = [2 * np.pi * np.arange(Nd[d])/Nd[d] for d in range(ndim)]
     fs = np.meshgrid(*fs, indexing='ij')
