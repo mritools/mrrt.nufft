@@ -3,10 +3,14 @@ import os
 from os.path import join as pjoin
 
 import numpy as np
-from numpy.testing import (run_module_suite)
+from numpy.testing import (run_module_suite, assert_almost_equal, dec)
+
 
 import pyir.nufft
-from pyir.tests.test_dtft import _uniform_freqs
+from pyir.nufft import dtft, dtft_adj
+from pyir.nufft.nufft import NufftBase, nufft_forward, nufft_adj
+from pyir.nufft.tests.test_dtft import _uniform_freqs
+from pyir.utils import max_percent_diff
 pkg_dir = os.path.dirname(pyir.nufft.__file__)
 data_dir = pjoin(pkg_dir, 'data', 'mat_files')
 
@@ -54,7 +58,6 @@ def _randomized_gridpoints(Nd, rel_std=0.5, seed=1234):
 
 
 def test_nufft_init(verbose=False):
-    from pyir.nufft.nufft import NufftBase
     Nd = np.array([20, 10])
     st = NufftBase(om='epi', Nd=Nd, Jd=[5, 5], Kd=2 * Nd)
     om = st.om
@@ -68,7 +71,7 @@ def test_nufft_init(verbose=False):
 
 def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
                     random_seed=0):
-    from pyir.nufft.nufft_utils import nufft2_err_mm
+    from pyir.nufft._minmax import nufft2_err_mm
     if test3d:
         Jd = np.array([5, 4, 4])
         Nd = np.array([23, 15, 19])
@@ -76,7 +79,7 @@ def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
         beta_user = [0.5, 0.5, 0.5]
     else:
         Jd = np.array([5, 6])
-        #Nd = np.array([60, 75])
+        # Nd = np.array([60, 75])
         Nd = np.array([60, 76])
         alpha_user = [1, 1]
         beta_user = [0.5, 0.5]
@@ -84,7 +87,6 @@ def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
     Kd = 2 * Nd
     gam = 2 * np.pi / Kd
     n_shift = np.zeros(Nd.shape)
-
 
     if True:
         print('err alf1 %g best %g' % (nufft2_err_mm('all', Nd[0], Nd[1],
@@ -95,7 +97,6 @@ def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
                                                      Kd[1], 'best')[0].max()))
 
     if initialize_from_Matlab:
-        import os
         from os.path import join as pjoin
     else:
         rstate = np.random.RandomState(random_seed)
@@ -152,12 +153,6 @@ def _nufft_testdata(test3d=False, initialize_from_Matlab=False,
 def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False,
                 random_seed=0):
     # from numpy.fft import fft2
-    from pyir.nufft.nufft import NufftBase, nufft_forward
-
-    from pyir.nufft import dtft
-    from pyir.utils import max_percent_diff
-
-
     s = {}
     Y = {}
     # x = randn(Nd)
@@ -273,11 +268,6 @@ def _nufft_test(test3d=False, initialize_from_Matlab=False, make_fig=False,
 
 def test_nufft_adj():
     """ test nufft_adj() """
-    from pyir.nufft import dtft_adj
-    from pyir.nufft.nufft import NufftBase, nufft_adj
-    # from pyir.utils import max_percent_diff
-    from numpy.testing import assert_almost_equal
-
     N1 = 4
     N2 = 8
     n_shift = [2.7, 3.1]    # random shifts to stress it
@@ -316,6 +306,7 @@ def test_nufft_adj():
     return
 
 
+@dec.skipif(True)  # test data not available
 def test_nufft(verbose=False):
     for test3d in [False, True]:
         for initialize_from_Matlab in [True, ]:  # False,]:

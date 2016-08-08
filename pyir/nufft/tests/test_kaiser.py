@@ -1,22 +1,14 @@
 # -*- coding: utf-8 -*-
 import functools
+
 import numpy as np
+from numpy.fft import fftshift, fft
 from numpy.testing import dec, assert_array_equal, run_module_suite
 
-
-#def _test_kaiser(compare_to_matlab=False):
-#    print("\n\nRunning _kaiser_bessel_test: ")
-#    _kaiser_bessel_test()
-#    print("\n\nRunning _kaiser_bessel_ft_test: ")
-#    _kaiser_bessel_ft_test()
-#    if compare_to_matlab:
-#        print("\n\nRunning _kaiser_matlab_compare: ")
-#        _kaiser_matlab_compare()
-#
+from pyir.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
 
 
 def test_kaiser_bessel(verbose=False):
-    from pyir.nufft.kaiser_bessel import kaiser_bessel
     J = 8
     alpha = 2.34 * J
     x = np.linspace(-(J + 1) / 2.0, (J + 1) / 2.0, 1001)
@@ -49,8 +41,6 @@ def test_kaiser_bessel(verbose=False):
 
 
 def test_kaiser_bessel_ft(verbose=False):
-    from numpy.fft import fftshift, fft
-    from pyir.nufft.kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
     J = 5
     alpha = 6.8
     N = 2 ** 10
@@ -111,7 +101,6 @@ def test_kaiser_bessel_ft(verbose=False):
 @dec.skipif(True)  # skip this as it requires Matlab
 def _kaiser_matlab_compare(show_figures=True):
     from pymatbridge import Matlab
-    from pyir.nufft.kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
     if show_figures:
         from matplotlib import pyplot as plt
 

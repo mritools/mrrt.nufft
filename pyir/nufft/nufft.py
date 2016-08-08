@@ -36,7 +36,7 @@ from pyir.nufft._minmax import (_nufft_r,
                                 _nufft_T,
                                 nufft_scale)
 
-from pyir.nufft.kaiser_bessel import kaiser_bessel_ft
+from pyir.nufft._kaiser_bessel import kaiser_bessel_ft
 
 from pyir.nufft.interp_table import (interp1_table,
                                      interp2_table,

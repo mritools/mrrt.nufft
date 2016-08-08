@@ -18,7 +18,7 @@ import functools
 
 import numpy as np
 
-from pyir.nufft.kaiser_bessel import kaiser_bessel
+from pyir.nufft._kaiser_bessel import kaiser_bessel
 
 from pyir.nufft.nufft_utils import to_1d_int_array
 
