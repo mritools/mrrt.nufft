@@ -34,8 +34,9 @@ __all__ = ['NufftKernel', ]
 kernel_types = ['minmax:kb',
                 'linear',
                 'diric',
-                'kb:beatty'
-                'kb:minmax'
+                'kb:beatty',
+                'kb:minmax',
+                'kb:user',
                 'minmax:unif',
                 'minmax:tuned',
                 ]
@@ -118,6 +119,14 @@ class NufftKernel(object):
         alpha = params.get('alpha', None)  # alpha for minmax:* cases
         beta = params.get('beta', None)  # beta for minmax:* cases
 
+        # warn if user specified specific alpha, m
+        if kernel_type in ['kb:beatty', 'kb:minmax'] and \
+                ((kb_m is not None) or (kb_alf is not None)):
+            # warnings.warn(
+            #     '%s: user supplied kb_alf and kb_m ignored' % kernel_type)
+            raise ValueError(
+                '%s: user supplied kb_alf and kb_m ignored' % kernel_type)
+
         # linear interpolator straw man
         kernel_type = kernel_type.lower()
         if kernel_type == 'linear':
@@ -150,11 +159,6 @@ class NufftKernel(object):
                 raise ValueError("kwargs must contain Kd, Nd, Jd for " +
                                  "{} case".format(kernel_type))
 
-            # warn if user specified specific alpha, m
-            if (kb_m is not None) or (kb_alf is not None):
-                warnings.warn(
-                    'kb:beatty:  user supplied kb_alf and kb_m ignored')
-
             K_N = Kd / Nd
             # Eq. 5 for alpha
             params['kb_alf'] = \
@@ -175,10 +179,6 @@ class NufftKernel(object):
             if (Jd is None):
                 raise ValueError("kwargs must contain Jd for " +
                                  "{} case".format(kernel_type))
-
-            # warn if user specified specific alpha, m
-            if (kb_m is not None) or (kb_alf is not None):
-                warnings.warn('user supplied kb_alf and kb_m ignored')
 
             self.kernel = []
             params['kb_alf'] = []

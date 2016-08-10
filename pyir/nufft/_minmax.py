@@ -460,7 +460,12 @@ def nufft1_err_mm(om, N1, J1, K1, stype='sinc', alpha=[
         S = scipy.sparse.spdiags(sn, diags=0, m=sn.size, n=sn.size)
         C = np.asmatrix(C)  # probably unnecessary
         A = S.H * C
-        Q, R = np.linalg.qr(A, 'full')  # [N,J] compact QR decomposition #TODO
+        try:
+            # [N,J] compact QR decomposition
+            Q, R = np.linalg.qr(A, 'reduced')
+        except ValueError:
+            # numpy 1.7 or older
+            Q, R = np.linalg.qr(A, 'full')
 
         do = (om - gam1 * _nufft_offset(om, J1, K1)).ravel()
         n = np.asmatrix(n)
@@ -779,10 +784,10 @@ def nufft_scale(Nd, Kd, alpha, beta, Nmid=None, verbose=False):
     if dd != len(Nmid):
         raise ValueError("length of Nd and Nmid must match")
 
-    if (dd == 1) and (len(alpha) == 1):  # 1D case  #TODO: may be incorrect
-        sn = _nufft_scale1(Nd, Kd, alpha, beta, Nmid)
+    if (dd == 1) and (len(alpha) == 1):  # 1D case  # TODO: may be incorrect
+        sn = _nufft_scale1(Nd[0], Kd, alpha, beta, Nmid)
     elif dd == 1:
-        sn = _nufft_scale1(Nd, Kd, alpha, beta, Nmid)
+        sn = _nufft_scale1(Nd[0], Kd, alpha, beta, Nmid)
     else:  # dd > 1
         # scaling factors: "outer product" of 1D vectors
         sn = np.array([1, ])

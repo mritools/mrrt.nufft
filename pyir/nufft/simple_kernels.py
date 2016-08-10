@@ -128,11 +128,14 @@ def nufft_best_gauss(J, K_N=2, sn_type='ft'):
     if np.sum(J == Jgauss2) != 1:
         print("user specified J = {}".format(J))
         raise ValueError('only J in the range [2-15] available')
+    else:
+        Jidx = np.where(J == Jgauss2)[0][0]
 
+    sn_type = sn_type.lower()
     if sn_type == 'ft':
-        sig = Sgauss2['ft'][(J == Jgauss2).nonzero()[0]]
+        sig = Sgauss2['ft'][Jidx]
     elif sn_type == 'zn':
-        sig = Sgauss2['zn'][(J == Jgauss2).nonzero()[0]]
+        sig = Sgauss2['zn'][Jidx]
     else:
         raise ValueError('bad sn_type {}'.format(sn_type))
 

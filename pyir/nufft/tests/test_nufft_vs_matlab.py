@@ -71,7 +71,7 @@ def NufftBase_tests():
     assert_equal(p.Kd, p.Nd * (np.asarray(Kd) / np.asarray(Nd)))
 
 
-def kernel_tests():
+def kernel_tests(show_figures=False):
     from matplotlib import pyplot as plt
     from pyir.nufft.nufft_utils import _nufft_coef
 
@@ -149,7 +149,7 @@ def kernel_tests():
     for kt in ktype_tests:
         k = NufftKernel(kt['kernel_type'],
                         **kt['kw_args'])
-        if k.kernel is not None:
+        if show_figures and k.kernel is not None:
             plt.figure()
             J = kt['kw_args']['Jd']
             if isinstance(J, (list, tuple, set, np.ndarray)):
@@ -213,22 +213,19 @@ def kernel_tests():
           }
     k = NufftKernel(kt['kernel_type'],
                     **kt['kw_args'])
-    plt.figure()
-#    plt.plot(k.kernel[0](np.linspace(-64,64,1000),2))
-    # plt.plot(k.kernel[0](np.linspace(-1,1,1000),2))
-    plt.plot(k.kernel[0](np.linspace(-
-                                     kt['kw_args']['Jd'][0] /
-                                     2, kt['kw_args']['Jd'][0] /
-                                     2 -
-                                     1, 1000)))  # , 2))
-    plt.title('diric')
+    if show_figures:
+        plt.figure()
+        plt.plot(k.kernel[0](np.linspace(-kt['kw_args']['Jd'][0]/2,
+                                         kt['kw_args']['Jd'][0]/2 - 1,
+                                         1000)))
+        plt.title('diric')
 
-    plt.figure()
-    for kt in ktype_tests:
-        k = NufftKernel(kt['kernel_type'],
-                        **kt['kw_args'])
-        if k.kernel is not None:
-            plt.plot(k.kernel[0](np.linspace(-1, 1, 1000)))  # , 2))
+        plt.figure()
+        for kt in ktype_tests:
+            k = NufftKernel(kt['kernel_type'],
+                            **kt['kw_args'])
+            if k.kernel is not None:
+                plt.plot(k.kernel[0](np.linspace(-1, 1, 1000)))  # , 2))
 
 
 def load_matlab_newfft(filename):
@@ -309,16 +306,16 @@ def load_matlab_newfft(filename):
         kernel_kwargs['beta'] = beta
     # now call python version using inputs from matlab
     st = NufftBase(om=om,
-                     Nd=Nd,
-                     Jd=Jd,
-                     Kd=Kd,
-                     Ld=Ld,
-                     n_shift=n_shift,
-                     kernel_type=ktype,
-                     phasing=phasing,
-                     mode=mode,
-                     kernel_kwargs=kernel_kwargs,
-                     )
+                   Nd=Nd,
+                   Jd=Jd,
+                   Kd=Kd,
+                   Ld=Ld,
+                   n_shift=n_shift,
+                   kernel_type=ktype,
+                   phasing=phasing,
+                   mode=mode,
+                   kernel_kwargs=kernel_kwargs,
+                   )
     # st.init_sparsemat()
     if mode == 'sparse':
         spmat = np.asarray(st.p.todense())
@@ -331,7 +328,6 @@ def load_matlab_newfft(filename):
         plt.imshow(montager(np.squeeze(np.angle(st.phase_before))))
         plt.subplot(122)
         plt.plot(montager(np.angle(st.phase_after)))
-
 
     print(("sn max diff: %0.4g" % max_percent_diff(st.sn, sn)))
     print(("om max diff: %0.4g" % max_percent_diff(st.om, om)))
@@ -505,6 +501,3 @@ def load_matlab_old_nufft(filename):
     if np.any(np.iscomplex(h[0])):
         plt.subplot(122)
         plt.plot(np.angle(h[0]))
-
-
-

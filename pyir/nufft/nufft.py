@@ -767,6 +767,10 @@ class NufftBase(object):
 #                        self.sn = self.sn.ravel()  # [(Nd)]
 
             else:
+                if self.kernel.kernel_type in ['kb:minmax', 'kb:beatty']:
+                    # avoid warnings in kernel calls during _nufft_table_make1
+                    kernel_kwargs.pop('kb_m', None)
+                    kernel_kwargs.pop('kb_alf', None)
                 h, t0 = _nufft_table_make1(how=how, N=self.Nd[d], J=self.Jd[d],
                                            K=self.Kd[d], L=self.Ld[d],
                                            phasing=self.phasing,
@@ -957,7 +961,7 @@ def _nufft_table_adj(st, X, om=None):
 
 
 def _nufft_table_make1(
-        how, N, J, K, L, kernel_type, phasing, kernel_kwargs={}):
+        how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={}):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
     nufft_args = dict(Jd=J, n_shift=0, kernel_type=kernel_type,
                       kernel_kwargs=kernel_kwargs,
@@ -987,9 +991,10 @@ def _nufft_table_make1(
     # which works for interpolators that depend only on the ratio K/N.
     elif how == 'ratio':  # e.g., 'minmax:kb' | 'kb:*'
         Nfake = J
-        print("N={},J={},K={}".format(N, J, K))
         Kfake = Nfake * K / N
-        print("Nfake={},Kfake={}".format(Nfake, Kfake))
+        if debug:
+            print("N={},J={},K={}".format(N, J, K))
+            print("Nfake={},Kfake={}".format(Nfake, Kfake))
         t1 = J / 2. - 1 + np.arange(L) / L  # [L]
         om1 = t1 * 2 * pi / Kfake		# gam
         s1 = NufftBase(om=om1, Nd=Nfake, Kd=Kfake, **nufft_args)
@@ -1128,7 +1133,7 @@ def nufft_adj(st, X, copy_X=True, return_psf=False):
         X = Xc.copy()
     else:
         X = Xc
-    
+
     if X.size % st.M != 0:
         raise ValueError("invalid size")
 
@@ -1270,7 +1275,7 @@ def compute_Q_v2(G, copy_X=True):
     experimental:  not recommended over compute_Q()
     """
     from pyir.nufft.nufft import nufft_adj
-    ones = np.ones(kspace.shape[0], G.Gnufft._cplx_dtype)
+    ones = np.ones(G.kspace.shape[0], G.Gnufft._cplx_dtype)
     sf = np.sqrt(np.prod(G.Gnufft.Kd))
     return sf * fftn(nufft_adj(G.Gnufft, ones, copy_X=True, return_psf=True))
 
