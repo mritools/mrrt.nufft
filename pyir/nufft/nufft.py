@@ -427,39 +427,47 @@ class NufftBase(object):
         if self.__init_complete:
             self._reinitialize()
 
+    def _update_dtype(self, arr, mode=None):
+        if mode is None:
+            if np.iscomplexobj(arr):
+                if arr.dtype != self._cplx_dtype:
+                    arr = arr.astype(self._cplx_dtype)
+            else:
+                if arr.dtype != self._real_dtype:
+                    arr = arr.astype(self._real_dtype)
+        elif mode == 'real':
+            if arr.dtype != self._real_dtype:
+                arr = arr.astype(self._real_dtype)
+        elif mode == 'complex':
+            if arr.dtype != self._cplx_dtype:
+                arr = arr.astype(self._cplx_dtype)
+        else:
+            raise ValueError("unrecognized mode")
+        return arr
+
     def _update_array__precision(self):
         # update the data types of other members
         # TODO: warn if losing precision during conversion?
         if isinstance(self.__om, np.ndarray):
-            if self.__om.dtype != self._real_dtype:
-                self.__om = self.__om.astype(self._real_dtype)
+            self.__om = self._update_dtype(self.om, 'real')
         if isinstance(self.__n_shift, np.ndarray):
-            if self.__n_shift.dtype != self._real_dtype:
-                self.__n_shift = self.__n_shift.astype(self._real_dtype)
+            self.__n_shift = self._update_dtype(self.__n_shift, 'real')
         if isinstance(self.phase_before, np.ndarray):
-            if self.phase_before.dtype != self._cplx_dtype:
-                self.phase_before = self.phase_before.astype(self._cplx_dtype)
+            self.phase_before = self._update_dtype(
+                self.phase_before, 'complex')
         if isinstance(self.phase_after, np.ndarray):
-            if self.phase_after.dtype != self._cplx_dtype:
-                self.phase_after = self.phase_after.astype(self._cplx_dtype)
+            self.phase_after = self._update_dtype(self.phase_after, 'complex')
         if hasattr(self, 'sn') and isinstance(self.sn, np.ndarray):
-            if np.iscomplexobj(self.sn) and self.sn.dtype != self._cplx_dtype:
-                self.sn = self.sn.astype(self._cplx_dtype)
-            elif self.sn.dtype != self._real_dtype:
-                self.sn = self.sn.astype(self._real_dtype)
-        if self.phasing == 'complex':
-            phasing_dtype = self._cplx_dtype
-        else:
-            phasing_dtype = self._real_dtype
+            self.sn = self._update_dtype(self.sn)
         if self.mode == 'sparse':
             if hasattr(self, 'p') and self.p is not None:
-                if self.p.dtype != phasing_dtype:
-                    self.p = self.p.astype(phasing_dtype)
+                self.p = self._update_dtype(self.p, self.phasing)
         elif 'table' in self.mode:
             if hasattr(self, 'h') and self.h is not None:
                 for idx, h in enumerate(self.h):
-                    if h.dtype != phasing_dtype:
-                        self.h[idx] = h.astype(phasing_dtype)
+                    self.h[idx] = self._update_dtype(h, self.phasing)
+        else:
+            raise ValueError("unknown mode")
 
     def _make_arrays_contiguous(self, order='F'):
         if order == 'F':
