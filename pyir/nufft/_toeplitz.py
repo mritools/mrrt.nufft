@@ -80,69 +80,7 @@ from pyir.utils import fftmod, fftscale
 #     md_recompose2(N, factors, odims, ostrs, out, idims, istrs, in, size);
 # }
 
-def MD_BIT(x):
-    """equivalent to the following C code:
-        define MD_BIT(x) (1ul << (x))
-    """
-    return 1 << x
 
-
-def MD_IS_SET(x, y):
-    """equivalent to the following C code:
-        define MD_IS_SET(x, y)  ((x) & MD_BIT(y))
-    """
-    return x & MD_BIT(y)
-
-
-def linear_phase(dims, pos, dtype=np.complex64, sparse=False):
-    """Compute the linear FFT phase corresponding to a spatial shift.
-
-    Parameters
-    ----------
-    dims : array-like
-        image shape
-    pos : array-like
-        shift along each image dimension
-
-    Returns
-    -------
-    linphase : ndarray
-        The complex phase in the Fourier domain corresponding to a shift by
-        ``pos``.
-    """
-    pos = np.asarray(pos)
-    dims = np.asarray(dims)
-    ndim = pos.size
-    if ndim != dims.size:
-        raise ValueError("size mismatch")
-    g = 2j * np.pi * pos / dims
-    linphase = 1
-    for d in range(ndim):
-        if sparse:
-            if d == 0:
-                linphase = ()
-        # phase along a single axis
-        if g[d] == 0:
-            if sparse:
-                ph = 1
-            else:
-                ph = np.ones(dims[d], dtype=dtype)
-        else:
-            ph = np.exp(g[d] * np.arange(dims[d], dtype=dtype))
-        if ph is not 1:
-            # add singleton size along the other axes
-            shape = [1, ] * ndim
-            shape[d] = dims[d]
-            ph = ph.reshape(shape)  # add singleton axes
-        if sparse:
-            if d == 0:
-                linphase = [ph, ]
-            else:
-                linphase.append(ph)
-        else:
-            # net phase across all axes via broadcasting
-            linphase = linphase * ph
-    return linphase
 
 
 # def apply_linear_phase(img, pos):
@@ -180,58 +118,6 @@ def linear_phase(dims, pos, dtype=np.complex64, sparse=False):
 #     return img
 
 
-def apply_linear_phase(img, linear_phase):
-    """Compute the linear FFT phase corresponding to a spatial shift.
-
-    Parameters
-    ----------
-    dims : array-like
-        image shape
-    pos : array-like
-        shift along each image dimension
-
-    Returns
-    -------
-    linphase : ndarray
-        The complex phase in the Fourier domain corresponding to a shift by
-        ``pos``.
-    """
-    img = np.asarray(img)
-    if len(linear_phase) != img.ndim:
-        raise ValueError("wrong number of dimensions.  expected a tuple")
-    for d in range(img.ndim):
-        lph = linear_phase[d]
-        if lph is 1:
-            continue
-        img = img * lph
-    return img
-
-
-def _get_shifts(img_dims):
-    """Compute FFT offsets for decompose/recompose."""
-    img_dims = np.asarray(img_dims)
-    ndim = img_dims.size
-    if np.any(np.asarray(img_dims.shape) <= 1):
-        raise ValueError("requires all dimensions to be non-singleton")
-    shifts = np.zeros((2**ndim, ndim))
-    slices = []
-    for d in range(2*ndim):
-        slices.append([slice(None), ] * ndim)
-    s = 0
-    for i in range(2**ndim):
-        skip = False
-        for j in range(ndim):
-            shifts[s][j] = 0.
-            slices[s][j] = slice(0, None, 2)
-            if MD_IS_SET(i, j):
-                skip = skip or (1 == img_dims[j])
-                shifts[s][j] = -0.5
-                slices[s][j] = slice(1, None, 2)
-        if not skip:
-            s += 1
-    return shifts, slices
-
-
 def compute_linphases(img_dims, fft_axes):
     """
     # # for img_dims = (16, 16, 1)
@@ -262,6 +148,7 @@ def compute_linphases(img_dims, fft_axes):
     #        [ 0. ,  0. ,  0. ],
     #        [ 0. ,  0. ,  0. ]])
     """
+    from pyir.nufft._pruned_fft import _get_shifts, linear_phase
     if fft_axes is None:
         img_dims = np.asarray(img_dims)
     else:
@@ -322,103 +209,6 @@ def recompose(src):
     raise ValueError("TODO: basically reshapes as in pruned_fft demo below")
 
 
-def _pruned_fft_demo():
-    """
-    References
-    ----------
-    ..[1] Ong F, Uecker M, Jiang W, Lustig M.
-    Fast Non-Cartesian Reconstruction with Pruned Fast Fourier Transform.
-    Annual Meeting ISMRM, Toronto 2015, In: Proc Intl Soc Mag Reson Med 23;
-    3639.
-
-    """
-    # import time
-    import skimage.data
-    import numpy as np
-    from pyir.nufft._toeplitz import apply_linear_phase, _get_shifts, linear_phase
-    from pyir.utils import fftn, ifftn
-    from numpy.testing import assert_allclose
-
-    img = skimage.data.camera().astype(np.complex64)
-    img /= np.abs(img).max()
-
-    # offsets = (shifts / -0.5).astype(np.intp)
-
-    F = fftn(img, s=(2*img.shape[0], 2*img.shape[1]))
-
-    def pruned_ifftn(F, linear_phases=None):
-        img_shape = np.asarray(F.shape)//2
-        shifts, slices = _get_shifts(img_shape)
-        cplx_dtype = np.result_type(F.dtype, np.complex64)
-        imgc = np.zeros(img_shape, dtype=cplx_dtype)
-        for d, (shift, sl) in enumerate(zip(shifts, slices)):
-            tmp = ifftn(F[sl])
-            # tmp *= linear_phase(img.shape, -shift)
-            if linear_phases is None:
-                linph = linear_phase(img.shape, -shift, sparse=True)
-            else:
-                # assume linear_phases were generated for the Forward FFT
-                # so need the conjugate here
-                linph = np.conj(linear_phases[d])
-            tmp = apply_linear_phase(tmp, linph)
-            imgc += tmp
-        sf = 2**img.ndim
-        imgc /= sf
-        return imgc
-
-    imgc = pruned_ifftn(F)
-    assert_allclose(img, imgc, rtol=1e-7, atol=1e-6)
-
-    def pruned_fftn(img, linear_phases=None):
-        shifts, slices = _get_shifts(img.shape)
-        cplx_dtype = np.result_type(img.dtype, np.complex64)
-        F = np.zeros(2*np.asarray(img.shape), dtype=cplx_dtype)
-        for d, (shift, sl) in enumerate(zip(shifts, slices)):
-            # tmp = img * linear_phase(img.shape, shift)
-            if linear_phases is None:
-                linph = linear_phase(img.shape, shift, sparse=True)
-            else:
-                linph = linear_phases[d]
-            tmp = apply_linear_phase(img, linph)
-            tmp = fftn(tmp)
-            F[sl] = tmp
-        return F
-
-    def pruned_fft_roundtrip(img, Q_pruned=None, linear_phases=None):
-        shifts, slices = _get_shifts(img.shape)
-        cplx_dtype = np.result_type(img.dtype, np.complex64)
-        img2 = np.zeros(img.shape, dtype=cplx_dtype)
-        sf_per_axis = 2
-        for d, (shift, sl) in enumerate(zip(shifts, slices)):
-            # tmp = img * linear_phase(img.shape, shift)
-            if linear_phases is None:
-                linph = linear_phase(img.shape, shift, sparse=True)
-                # linph_conj = linear_phase(img.shape, -shift, sparse=True)
-            else:
-                linph = linear_phases[d]
-            tmp = apply_linear_phase(img, linph)
-            tmp = fftn(tmp)
-            if Q_pruned is not None:
-                if isinstance(Q_pruned, np.ndarray):
-                    tmp *= Q_pruned[sl]
-                else:
-                    # list or tuple of already sliced Q_pruned
-                    tmp *= Q_pruned[d]
-            tmp = ifftn(tmp)
-            linph_conj = tuple([np.conj(l/sf_per_axis) for l in linph])
-            img2 += apply_linear_phase(tmp, linph_conj)
-        # sf = 2**img.ndim
-        # img2 /= sf
-        return img2
-
-    # assert_allclose(F, pruned_fftn(img), rtol=1e-7, atol=1e-4)
-    assert_allclose(F/1024, pruned_fftn(img)/1024, rtol=1e-7, atol=1e-5)
-
-    img2 = pruned_ifftn(pruned_fftn(img))
-    assert_allclose(img, img2, rtol=1e-7, atol=1e-5)
-
-    img3 = pruned_fft_roundtrip(img)
-    assert_allclose(img, img3, rtol=1e-7, atol=1e-5)
 
 
 def nufft_forward(self, src):
