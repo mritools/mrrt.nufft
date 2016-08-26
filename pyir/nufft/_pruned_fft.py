@@ -267,6 +267,7 @@ def apply_linear_phase_gpu(img, linear_phase):
 
 
 def pruned_fft_roundtrip_cuda(img, Q_pruned, linear_phases=None, out=None):
+    raise ValueError("TODO")
     import pycuda.autoinit
     import pycuda.gpuarray as gpuarray
     if out is None:
@@ -312,8 +313,10 @@ def _cuda_demo():
     from skimage import img_as_float
     import skimage.data
     from pyir.nufft._pruned_fft import _get_shifts, linear_phase
-    from pyir.cuda.autoinit import mulb
+    from pyir.cuda.autoinit import mulb, dev
     from pyvolplot import volshow
+    from pyir.cuda.thrust_launch_config import default_block_configuration
+    from pyir.cuda.cuda_utils import iDivUp
     img_cpu = img_as_float(skimage.data.camera())
     img = gpuarray.to_gpu(np.asfortranarray(img_cpu, dtype=np.complex64))
 
@@ -337,9 +340,6 @@ def _cuda_demo():
 
 
     volshow(img.get())
-    from pyir.cuda.thrust_launch_config import default_block_configuration
-    from pyir.cuda.cuda_utils import iDivUp
-    from pyir.cuda.autoinit import dev
     blocksize_mulb = (default_block_configuration(dev, mulb)[0], 1, 1)
     out = gpuarray.empty(img.shape, dtype=img.dtype, order='F')
     im_shape_gpu = gpuarray.to_gpu(np.asarray(img.shape, dtype=np.intp))
