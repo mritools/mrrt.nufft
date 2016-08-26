@@ -255,15 +255,13 @@ def nufft_best_alpha(J, L=2, K_N=2):
             alpha = alpha3
             Jlist = Jlist3
         else:
-            # raise ValueError('L=%d not done' % L)
-            warnings.warn('L=%d not done' % L)
+            raise ValueError('L=%d not done' % L)
             alpha = np.nan
             beta = np.nan
             ok = False
             return alpha, beta, ok
     else:
-        # raise ValueError('K_N=%g not done' % K_N)
-        warnings.warn('K_N=%g not done' % K_N)
+        raise ValueError('K_N=%g not done' % K_N)
         alpha = 1
         beta = 0.5
         ok = True

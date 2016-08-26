@@ -157,16 +157,20 @@ class NufftBase(object):
         self._adj = None
         self._init = None
         self.mode = mode  # {'table', 'sparse', 'exact'}
-        if 'MOLS' in kernel_type:
-            if 'table' not in self.mode:
-                raise ValueError(
-                    'MOLS NUFFT kernel, requires a table-based mode')
-            if self.phasing != 'real':
-                raise ValueError(
-                    'MOLS NUFFT kernel, requires a real phasing')
+        kernel_type = kernel_type.lower()
         # [M, *Kd]	sparse interpolation matrix (or empty if table-based)
         self.p = None
         self.Jd = Jd
+        if 'mols' in kernel_type:
+            if 'table' not in self.mode:
+                raise ValueError(
+                    'MOLS NUFFT kernel, requires a table-based mode')
+            if np.any(np.asarray(Jd) % 2):
+                raise ValueError("MOLS only currently working for even J")
+            if self.phasing != 'real':
+                raise ValueError(
+                    'MOLS NUFFT kernel, requires a real phasing')
+
         self.kernel = NufftKernel(kernel_type,
                                   ndim=self.ndim,
                                   Nd=self.Nd,
@@ -203,6 +207,11 @@ class NufftBase(object):
         elif 'table' in self.mode:
             # TODO: change name of Ld to table_oversampling
             self.Ld = to_1d_int_array(Ld, nelem=self.ndim)
+            odd_L = np.mod(self.Ld, 2) == 1
+            odd_J = np.mod(self.Jd, 2) == 1
+            if np.any(np.logical_and(odd_L, odd_J)):
+                warnings.warn(
+                    "accuracy may be compromised when L and J are both odd")
             if self.mode == 'table0':
                 self.table_order = 0  # just order in newfft
             elif self.mode == 'table1' or self.mode == 'table':
@@ -496,7 +505,7 @@ class NufftBase(object):
 
     def _set_phase_funcs(self):
         if self.phasing == 'real':
-            # TODO: fix 'MOLS' kernel in complex case to incorporate this?
+            # TODO: fix 'mols' kernel in complex case to incorporate this?
             self.phase_before = self._phase_before(self.Kd, self.Nmid)
             self.phase_after = self._phase_after(self.om,
                                                  self.Nmid,
@@ -727,7 +736,7 @@ class NufftBase(object):
                 kernel_kwargs['kb_alf'] = [self.kernel.params['kb_alf'][d], ]
                 kernel_kwargs['kb_m'] = [self.kernel.params['kb_m'][d], ]
 
-            if 'MOLS' in self.kernel.kernel_type:
+            if 'mols' in self.kernel.kernel_type:
                 if d == 0:
                     # dict to cache previously generated kernels
                     MOLS_generated = {}
@@ -735,7 +744,7 @@ class NufftBase(object):
                 #TODO: test this IOWA case
                 from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
                 if self.Ld[d] % 2 == 0:
-                    raise ValueError("MOLS requires odd Ld")
+                    raise ValueError("mols requires odd Ld")
                 key = (self.Jd[d], self.Nd[d], self.Ld[d], self.Kd[d])
 
                 if key in MOLS_generated:
@@ -1011,7 +1020,7 @@ def _nufft_table_make1(
         # [J*L+1] assuming symmetric
         h = np.concatenate((h, np.asarray([h[0], ])), axis=0)
         if phasing == 'complex':
-            # TODO: fix 'MOLS' case
+            # TODO: fix 'mols' case
             h = h * np.exp(1j * pi * t0 * (1 / K - 1 / Kfake))  # fix phase
     else:
         raise ValueError("Bad Type: {}".format(type))
@@ -1341,7 +1350,7 @@ def example_MOLS():
             s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
         h = np.concatenate((h, np.asarray([h[0], ])), axis=0)  # [J*L+1,]
         [c, arg] = _nufft_coef(om1, J, K, G.Gnufft.kernel.kernel[0])
-    nufft_kwargs['kernel_type'] = 'MOLS'
+    nufft_kwargs['kernel_type'] = 'mols'
     G_MOLS = MRI_Operator(Nd=Nd,
                           Kd=(4*((osf*Nd)//4)).astype(np.intp),
                           Jd=(J, J),

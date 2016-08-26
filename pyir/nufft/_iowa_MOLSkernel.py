@@ -24,9 +24,11 @@ from pyir.utils import rowF, colF
 from numpy.testing import assert_almost_equal
 
 from pyir.utils import fftnc, ifftnc  # centered FFT
+from pyir.utils import profile
 
 
 __all__ = ['PreNUFFT_fm']
+
 
 def sinc_new(x):
     # TODO: necessary? can probably just use np.sinc
@@ -37,17 +39,29 @@ def sinc_new(x):
     return out
 
 
+def _get_DFTMatrix_k(Nsamples):
+    k = np.arange(-np.ceil(Nsamples/2),
+                  np.floor(Nsamples/2))
+    return k
+
+
+@profile
 def _calcKernelDiscretemod_fm(DFTMtx, fn, K, N, Ofactor, Order, H):
     # in Matlab:  fn & H are column vectors.  DFTMtx is a 2D matrix
-    vector = np.arange(-K*Ofactor/2, K*Ofactor/2)
+    vector = np.arange(-np.ceil(K*Ofactor/2), np.floor(K*Ofactor/2))
     abeta = fftnc(bspline(vector, 2*(Order)-1))
+
+    try:
+        index = np.where(vector == -np.ceil(K/2))[0][0]
+    except:
+        raise IndexError("K={}, Ofactor={}".format(K, Ofactor))
 
     # FT from -2*pi*Ofactor/2 to 2*pi*Ofactor/2
     vector = 2*np.pi*vector/K
     # 1/Ofactor*sinc_new(omega/(2 Ofactor)^(Order+1)
     BsplineFourier = sinc_new(vector/(2*Ofactor))**(2*Order)  # TODO: colF?
 
-    index = (Ofactor - 1)*K//2
+    # index = (Ofactor - 1)*K//2
     bbeta = abeta.copy()
     bbeta[index:index+K] = abeta[index:index+K] - BsplineFourier[index:index+K]
 
@@ -65,19 +79,20 @@ def _calcKernelDiscretemod_fm(DFTMtx, fn, K, N, Ofactor, Order, H):
     Kernel = Num/Den
 
     subset_idx = np.concatenate(
-        (np.arange(K/2-N/2, dtype=np.intp),
-         np.arange(K/2+N/2+1, Kernel.size, dtype=np.intp)))
+        (np.arange(np.ceil(K/2)-np.ceil(N/2), dtype=np.intp),
+         np.arange(np.ceil(K/2)+np.floor(N/2)+1, Kernel.size, dtype=np.intp)))
     Kernel[subset_idx] = 0
 
     # new change
     H2 = np.zeros(K, dtype=FN.dtype)
-    H2[K//2-N//2:-K//2+N//2] = H
+    idx_start = int(np.ceil(K//2)-np.ceil(N//2))
+    H2[idx_start:idx_start+N] = H
     error = np.abs(np.mean(H2*Kernel))
     calcweight = H2/Den  # rowF
 
     calcweight[subset_idx] = 0
     CentralIndex = (Ofactor-1)/2*K
-    if CentralIndex % 2 != 0:
+    if CentralIndex % 1 != 0:
         raise ValueError("expected an integer")
     else:
         CentralIndex = int(CentralIndex)
@@ -86,6 +101,7 @@ def _calcKernelDiscretemod_fm(DFTMtx, fn, K, N, Ofactor, Order, H):
     return (Kernel, calcweight, error)
 
 
+@profile
 def _giveOptStepDiscrete_fm(DFTMtx, fn, K, N, Ofactor, Olderror, Oldfn, a,
                             Order, H, tol=None):
     steps = 0.5**(np.arange(31))
@@ -102,8 +118,9 @@ def _giveOptStepDiscrete_fm(DFTMtx, fn, K, N, Ofactor, Olderror, Oldfn, a,
     return (Kernel, calcweight, error, fn, step)
 
 
+@profile
 def _giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree,
-                              realkernel=False):
+                               realkernel=False, err_diff_tol=1e-9):
     if False:
         # direct matlab translation
         x = np.linspace(0, np.ceil(J/2), np.ceil(J/2)*Ofactor+1)
@@ -122,15 +139,15 @@ def _giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree,
 
     # K samples: ranges from -2*pi*(Ofactor-1)/2 to 2*pi*(Ofactor-1)/2
     Nsamples = Ofactor*K
-    k = np.arange(-Nsamples/2, Nsamples/2)
+    k = _get_DFTMatrix_k(Nsamples)
 
     # potential stability issue here... do not change order of operations in
     # the DFTMTx line
     DFTMtx = np.dot(-1j*2*np.pi*k[:, np.newaxis], x[np.newaxis, :])/K
     DFTMtx = np.exp(DFTMtx, out=DFTMtx)
 
-    vector = np.concatenate((np.arange(K*Ofactor/2),
-                             np.arange(-K*Ofactor/2, 0)))
+    vector = np.concatenate((np.arange(np.floor(K*Ofactor/2)),
+                             np.arange(-np.ceil(K*Ofactor/2), 0)))
     abeta = K*Ofactor*np.conj(ifftnc(bspline(vector, 3)))
     abeta = K*Ofactor*ifftnc(bspline(vector, 3)).real
     Weight = scipy.sparse.diags(abeta)
@@ -152,10 +169,11 @@ def _giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree,
     # Start of iteration
     for itr in range(100):
         print("itr = {}, error={}".format(itr, error))
+
         weight = current_weight
         Weight = scipy.sparse.diags(weight)
         A = np.dot(np.conj(DFTMtx.T), np.asarray(Weight * np.asmatrix(DFTMtx)))
-        evals, evecs = scipy.linalg.eig(A, B)
+        evals, evecs = scipy.linalg.eig(A, B, check_finite=False)
         newfn = evecs[:, np.argmin(np.abs(evals))]
         if realkernel:
             newfn = np.abs(newfn)
@@ -172,14 +190,21 @@ def _giveSymmetricDiscrete2_fm(J, K, N, Ofactor, Order, H, degree,
             if realkernel:
                 fn = np.abs(fn)
             oldfn = fn
-        e = error
+        if itr > 0:
+            # GRL: introduce secondary termination criterion
+            err_diff = abs(error - olderror)
+            if err_diff < err_diff_tol:
+                print("change in error = {}... terminating".format(err_diff))
+                break
         olderror = error
+
         oldfn = fn
         if step == 0:
             break
-    return (fn, Kernel, e)
+    return (fn, Kernel, error)
 
 
+@profile
 def _givePrefilterNew_fm(fn, J, K, Ofactor, Order):
     # x values over the range of the interpolation coefficients
     if False:
@@ -196,7 +221,7 @@ def _givePrefilterNew_fm(fn, J, K, Ofactor, Order):
     Nsamples = Ofactor*K
 
     # K samples: ranges from -2*pi*(Ofactor-1)/2 to 2*pi*(Ofactor-1)/2
-    k = np.arange(-Nsamples/2, Nsamples/2)
+    k = _get_DFTMatrix_k(Nsamples)
     # potential stability issue here... do not change order of operations in
     # the DFTMTx line
     DFTMtx = np.dot(-1j*2*np.pi*colF(k), rowF(x))/K
@@ -223,7 +248,7 @@ def _givePrefilterNew_fm(fn, J, K, Ofactor, Order):
         sl = slice(i*K, i*K + K)
         Den = Den + np.abs(BSPCorr[sl])
 
-    midindex = (Ofactor - 1)//2
+    midindex = int(np.ceil((Ofactor - 1)/2))
     sl = slice(midindex*K, midindex*K+K)
     prefilter = np.real(FN[sl])*BsplineFourier[sl]
     prefilter = prefilter/Den
@@ -258,6 +283,7 @@ if False:
              np.arange(fn_z3.size), fn_z3.imag)
 
 
+@profile
 def PreNUFFT_fm(J, N, Ofactor, K, Order=2, H=None, degree=None,
                 compute_prefilter=True, realkernel=False):
     """Function to computer MOL interpolators and scale factors for MOLS
