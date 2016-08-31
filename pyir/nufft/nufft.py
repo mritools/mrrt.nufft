@@ -53,7 +53,8 @@ from pyir.utils import (fftn,
                         outer_sum,
                         complexify,
                         is_string_like,
-                        reale)
+                        reale,
+                        profile)
 
 from ._kernels import NufftKernel
 
@@ -100,7 +101,7 @@ def _get_legend_text(ax):
 
 
 class NufftBase(object):
-
+    @profile
     def __init__(self, Nd, om, Jd=6, Kd=None, p=None, sn=None, Ld=2048,
                  tol=1e-7, precision=None, kernel_type='kb:beatty',
                  n_shift=None, kernel_kwargs={}, phasing='real',
@@ -243,13 +244,6 @@ class NufftBase(object):
     def _nufft_adj(self, X):
         y = nufft_adj(self, X=X)
         return y
-
-#    TODO:
-#    def _init_pyfftw(self, X):
-#        a_b = pyfftw.n_byte_align_empty(4, 16, dtype='complex128')
-#        self.pyfftw_fftn = yfftw.builders.fftn(a_b, threads=nthreads,
-#                                  overwrite_input=False,
-#                                  planner_effort=planning_flag)
 
     @property
     def sparse_format(self):
@@ -577,6 +571,7 @@ class NufftBase(object):
             else:
                 self.sn = self.sn.ravel()  # [(Nd)]
 
+    @profile
     def _init_sparsemat(self):
         """  [J?,M] interpolation coefficient vectors.  will need kron of these
         later
@@ -856,6 +851,7 @@ class NufftBase(object):
         return fig, axes
 
 
+@profile
 def _nufft_table_interp(st, Xk, om=None):
     """ table-based nufft
      in
@@ -922,6 +918,7 @@ def _nufft_table_interp(st, Xk, om=None):
     return X.astype(Xk.dtype)
 
 
+@profile
 def _nufft_table_adj(st, X, om=None):
     """  adjoint of table-based nufft interpolation.
      in
@@ -977,6 +974,7 @@ def _nufft_table_adj(st, X, om=None):
     return Xk.astype(X.dtype)
 
 
+@profile
 def _nufft_table_make1(
         how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={}):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
@@ -1049,6 +1047,7 @@ def _block_outer_prod(x1, x2):
     return y
 
 
+@profile
 def nufft_forward(st, x, copy_x=True):
     """
     %function X = nufft(x, st)
@@ -1124,6 +1123,7 @@ def nufft_forward(st, x, copy_x=True):
     return X
 
 
+@profile
 def nufft_adj(st, X, copy_X=True, return_psf=False):
     """
     function x = nufft_adj(X, st)
