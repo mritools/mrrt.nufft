@@ -1080,7 +1080,6 @@ def nufft_forward(st, x, copy_x=True):
     L = x.shape[-1]
     # x=np.squeeze(x)
 
-
     #
     # the usual case is where L=1, i.e., there is just one input signal.
     #
