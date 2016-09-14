@@ -239,7 +239,7 @@ src_path = pjoin('pyir', 'nufft')
 
 # C extensions for table-based NUFFT
 ext_nufft = Extension(
-    'pyir.nufft._nufft_table',
+    'pyir.nufft._extensions._nufft_table',
     sources=['pyir/nufft/_extensions/c/nufft_table.c',
              'pyir/nufft/_extensions/_nufft_table.pyx'],
     depends=['pyir/nufft/_extensions/c/nufft_table.template.c',
@@ -255,7 +255,7 @@ ext_nufft = Extension(
 
 # C extensions for brute-force discrete-time Fourier transform
 ext_dtft = Extension(
-    'pyir.nufft._dtft',
+    'pyir.nufft._extensions._dtft',
     sources=['pyir/nufft/_extensions/_dtft.pyx'],
     depends=['pyir/nufft/_extensions/c/_complexstuff.h'],
     language='c',
