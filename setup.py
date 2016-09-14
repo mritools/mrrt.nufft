@@ -1,14 +1,12 @@
 import os
 import sys
-from glob import glob
 import shutil
 from os.path import join as pjoin
-from setuptools import setup
+from setuptools import setup, find_packages
 import distutils
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy
-import inspect
 import tempfile
 import subprocess
 import versioneer
@@ -133,16 +131,6 @@ except AttributeError:
     numpy_include = numpy.get_numpy_include()
 
 
-# The following section auto-generates double precision source files by
-# changing the hardcoded define at the top of the single precision file
-# from SINGLE_PRECISION to DOUBLE_PRECISION and appending _double to the
-# primary function name
-filename = inspect.getframeinfo(inspect.currentframe()).filename
-src_path = pjoin(os.path.dirname(os.path.abspath(filename)), 'pyir.nufft', 'src')
-
-
-cpu_libs = []      # TOOD: will be able to remove
-cpu_flags = []     # TOOD: will be able to remove
 openmp_flags = {}
 openmp_libs = {}
 openmp_link = {}
@@ -226,14 +214,6 @@ cmdclass = {'build_ext': build_ext_openmp}
 
 cmdclass.update(versioneer.get_cmdclass())
 
-
-
-# The following section auto-generates double precision source files by
-# changing the hardcoded define at the top of the single precision file
-# from SINGLE_PRECISION to DOUBLE_PRECISION and appending _double to the
-# primary function name
-# filename = inspect.getframeinfo(inspect.currentframe()).filename
-# src_path = pjoin(os.path.dirname(os.path.abspath(filename)), 'pyir', 'nufft')
 src_path = pjoin('pyir', 'nufft')
 
 
@@ -281,7 +261,7 @@ setup(name='pyir.nufft',
       version=versioneer.get_version(),
       ext_modules=ext_modules,
       cmdclass=cmdclass,
-      packages=['pyir.nufft', ],
+      packages=find_packages(),
       namespace_package=['pyir'],
       # scripts=[],
       # since the package has c code, the egg cannot be zipped
