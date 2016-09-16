@@ -1210,7 +1210,7 @@ def nufft_adj(st, X, copy_X=True, return_psf=False):
     return x
 
 
-def compute_Q(G, Nd_os=2, Kd_os=1.35, J=5, use_CUDA=False,
+def compute_Q(G, wi=None, Nd_os=2, Kd_os=1.35, J=5, use_CUDA=False,
               **extra_nufft_kwargs):
     """compute Q such that IFFT(Q*FFT(x)) = (G.H * G * x).
 
@@ -1281,8 +1281,11 @@ def compute_Q(G, Nd_os=2, Kd_os=1.35, J=5, use_CUDA=False,
                         phasing='real',  # ONLY WORKS IF THIS IS REAL!
                         **extra_nufft_kwargs)
 
-    # psft = G2.H * np.ones(G2.kspace.shape[0], Gnufft_op._cplx_dtype)
-    psft = G2.H * np.ones(Gnufft_op.om.shape[0], Gnufft_op._cplx_dtype)
+    if wi is None:
+        # wi must be real?
+        wi = np.ones(Gnufft_op.om.shape[0], Gnufft_op._cplx_dtype)
+
+    psft = G2.H * wi
     # TODO: allow DiagOperator too for weights
     psft = np.fft.fftshift(psft.reshape(G2.Nd, order=G2.order))
     return fftn(psft)
