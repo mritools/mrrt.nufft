@@ -184,7 +184,7 @@ def pruned_ifftn(F, linear_phases=None):
 
 def pruned_fft_roundtrip(img, Q_pruned=None, linear_phases=None):
     """
-    Round trip case saves memory vecause only Q_pruned is full size
+    Round trip case saves memory because only Q_pruned is full size
     (oversampled by 2).  All FFTs and tmp are not oversampled.
 
     References

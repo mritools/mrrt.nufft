@@ -123,7 +123,7 @@ class ToeplitzOperator(LinearOperatorMulti):
     """A linear operator for Toeplitz NUFFT."""
 
     def __init__(self, mask, fftkern, nargin=None, nargout=None,
-                 shape=None, **kwargs):
+                 shape=None, order='F', **kwargs):
         if 'symmetric' in kwargs:
             kwargs.pop('symmetric')
         if 'hermitian' in kwargs:
@@ -153,6 +153,7 @@ class ToeplitzOperator(LinearOperatorMulti):
         super(ToeplitzOperator, self).__init__(
             nargin,
             nargout,
+            order=order,
             shape_in=shape_in,
             shape_out=shape_out,
             symmetric=False,
@@ -180,14 +181,14 @@ class ToeplitzOperator(LinearOperatorMulti):
         return y
 
 
-def Gnufft_gram(G, W, reuse={}):
+def Gnufft_gram(G, weights, reuse={}):
     """
-    #|def [T, reuse] = Gnufft_gram(A, W, reuse)
+    #|def [T, reuse] = Gnufft_gram(A, weights, reuse)
     #|
     #| construct Toeplitz gram matrix object T = A'WA for a Gnufft object
     #| in
     #|  A   [M np]      Gnufft object (Fatrix or fatrix2)
-    #|  W   [M M]       W = diag_sp(wi) (often simply "1" or [])
+    #|  W   [M M]       W = diag_sp(weights) (often simply "1" or [])
     #|              W = Gdiag() for fatrix2
     #|  reuse   struct      stuff from the last call that can be reused
     #|
@@ -198,19 +199,19 @@ def Gnufft_gram(G, W, reuse={}):
     #| Copyright 2004-6-29, Jeff Fessler & Hugo Shi, University of Michigan
     """
     nk, npix = G.shape
-    if W is None:
-        W = np.ones(nk)  # the usual unweighted case
-    elif np.isscalar(W):
-        W = np.full(nk, float(W))  # the usual unweighted case
+    if weights is None:
+        weights = np.ones(nk)  # the usual unweighted case
+    elif np.isscalar(weights):
+        weights = np.full(nk, float(weights))  # the usual unweighted case
 
-    if isinstance(W, DiagonalOperator):
-        W = W.diag.diagonal()
+    if isinstance(weights, DiagonalOperator):
+        weights = weights.diag.diagonal()
 
-    if not np.isrealobj(W):
-        raise ValueError("not implemented for complex W.  see old version in"
-                         "arch/ subfolder of irt Matlab package")
+    if not np.isrealobj(weights):
+        raise ValueError("not implemented for complex weights.  see old "
+                         "version in arch/ subfolder of irt Matlab package")
 
-    fftkern, reuse = Gnufft_gram_init(G, W, reuse, verbose=False)
+    fftkern, reuse = Gnufft_gram_init(G, weights, reuse, verbose=False)
 
     if np.any(~G.mask):
         omask = G.mask.copy()  # need copy?
@@ -223,7 +224,7 @@ def Gnufft_gram(G, W, reuse={}):
     return (T, reuse)
 
 
-def Gnufft_gram_init(G, wi, reuse={}, show=False, verbose=False):
+def Gnufft_gram_init(G, weights, reuse={}, show=False, verbose=False):
     """
     Construct kernel of circulant matrix into which T is embedded and take its
     DFT to prepare for multiplication.
@@ -246,7 +247,8 @@ def Gnufft_gram_init(G, wi, reuse={}, show=False, verbose=False):
         func = Gnufft_gram_init3
     else:
         raise ValueError(">3D not implemented")
-    fftkern, reuse = func(G, wi=wi, reuse=reuse, show=show, verbose=verbose)
+    fftkern, reuse = func(G, weights=weights, reuse=reuse, show=show,
+                          verbose=verbose)
     return fftkern, reuse
 
 
@@ -254,11 +256,11 @@ def Gnufft_gram_init(G, wi, reuse={}, show=False, verbose=False):
 # 1d filter for circulant matrix
 # note: only toeplitz kernel values from -(N-1) to (N-1) are relevant
 # so the value at +/- N does not matter so we set it to zero.
-def Gnufft_gram_init1(G, wi, reuse={}, show=False, verbose=False):
+def Gnufft_gram_init1(G, weights, reuse={}, show=False, verbose=False):
     if 'G1' not in reuse:
         reuse['G1'] = Gnufft_gram_setup(G)
 
-    block1 = reuse['G1'].H * complexify(wi.real)  # kludge
+    block1 = reuse['G1'].H * complexify(weights.real)  # kludge
 
     # kernel of Toeplitz matrix from -N to N-1 but with fftshift
     # this is inherently Hermitian symmetric except for the middle [0] value
@@ -273,14 +275,14 @@ def Gnufft_gram_init1(G, wi, reuse={}, show=False, verbose=False):
 
     # force Hermitian symmetry:
     #     This fixes slight asymmetry due to finite NUFFT precision
-    kern = dsft_gram_hermitify(kern, show, verbose=verbose)
+    kern = dsft_gram_hermitify(kern, show=show, verbose=verbose)
 
-    fftkern = fft(kern)  # [2*N1]
+    fftkern = fft(kern).real  # [2*Nd], real due to Hermitian symmetry
     return fftkern, reuse
 
 
 # Gnufft_gram_init2()
-def Gnufft_gram_init2(G, wi, reuse={}, show=False, verbose=False):
+def Gnufft_gram_init2(G, weights, reuse={}, show=False, verbose=False):
     if 'G2' not in reuse:
         reuse['G1'], reuse['G2'] = Gnufft_gram_setup(G)
 
@@ -288,8 +290,10 @@ def Gnufft_gram_init2(G, wi, reuse={}, show=False, verbose=False):
     N1, N2 = Nd
 
     # kludge
-    block1 = np.reshape(reuse['G1'].H * complexify(wi.real), Nd, order=G.order)
-    block2 = np.reshape(reuse['G2'].H * complexify(wi.real), Nd, order=G.order)
+    block1 = np.reshape(reuse['G1'].H * complexify(weights.real), Nd,
+                        order=G.order)
+    block2 = np.reshape(reuse['G2'].H * complexify(weights.real), Nd,
+                        order=G.order)
 
     # build the Hermitian NUFFT kernel (size 2*Nd)
     z1 = np.zeros((N1, 1))
@@ -311,11 +315,11 @@ def Gnufft_gram_init2(G, wi, reuse={}, show=False, verbose=False):
     #     This fixes slight asymmetry due to finite NUFFT precision
     kern = dsft_gram_hermitify(kern, show, verbose=verbose)
 
-    fftkern = fftn(kern)
+    fftkern = fftn(kern).real  # [2*Nd], real due to Hermitian symmetry
     return fftkern, reuse
 
 
-def Gnufft_gram_init3(G, wi, reuse={}, show=False, verbose=False):
+def Gnufft_gram_init3(G, weights, reuse={}, show=False, verbose=False):
     if 'G4' not in reuse:
         reuse['G1'], reuse['G2'], reuse['G3'], reuse['G4'] = \
             Gnufft_gram_setup(G)
@@ -324,10 +328,10 @@ def Gnufft_gram_init3(G, wi, reuse={}, show=False, verbose=False):
     N1, N2, N3 = Nd
 
     # build the Hermitian NUFFT kernel (size 2*Nd)
-    filtblk1 = np.reshape(reuse['G1'].H * wi.real, Nd, order=G.order)
-    filtblk2 = np.reshape(reuse['G2'].H * wi.real, Nd, order=G.order)
-    filtblk3 = np.reshape(reuse['G3'].H * wi.real, Nd, order=G.order)
-    filtblk4 = np.reshape(reuse['G4'].H * wi.real, Nd, order=G.order)
+    filtblk1 = np.reshape(reuse['G1'].H * weights.real, Nd, order=G.order)
+    filtblk2 = np.reshape(reuse['G2'].H * weights.real, Nd, order=G.order)
+    filtblk3 = np.reshape(reuse['G3'].H * weights.real, Nd, order=G.order)
+    filtblk4 = np.reshape(reuse['G4'].H * weights.real, Nd, order=G.order)
 
     tblk1 = filtblk1
     tblk2 = filtblk2[1:, :, :]   # remove the duplicated part with filtblk1
@@ -339,9 +343,9 @@ def Gnufft_gram_init3(G, wi, reuse={}, show=False, verbose=False):
 
     # top half of the 3D filter
     kern_top = np.vstack(
-        (hstack((tblk1, z1. tblk4[:, ::-1, :])),  # Upper block
+        (np.hstack((tblk1, z1, tblk4[:, ::-1, :])),  # Upper block
          np.zeros((1, 2*N2, N3)),  # Zero padding in the middle
-         hstack((tblk2[::-1, :, :], z2, tblk3[::-1, ::-1, :]))  # lower block
+         np.hstack((tblk2[::-1, :, :], z2, tblk3[::-1, ::-1, :]))  # lower
          ))
 
     # construct the bottom half now
@@ -369,12 +373,12 @@ def Gnufft_gram_init3(G, wi, reuse={}, show=False, verbose=False):
     #     This fixes slight asymmetry due to finite NUFFT precision
     kern = dsft_gram_hermitify(kern, show, verbose=verbose)
 
-    fftkern = fftn(kern)
+    fftkern = fftn(kern).real  # [2*Nd], real due to Hermitian symmetry
     return fftkern, reuse
 
 
 def Gnufft_gram_setup(G):
-    """modified versions of G (with full mask and no phase shifts)
+    """Modified versions of G (with full mask and no phase shifts).
 
     TODO:
     copy G and change mask to true and shifts to 0 instead of creating new
@@ -422,13 +426,14 @@ def Gnufft_gram_setup(G):
     # 3D case
     return G1, G2, G3, G4
 
+
 if False:
     import numpy as np
     import scipy.io
     from pyir.operators_private import NUFFT_Operator
     from pyir.utils import embed, masker, complexify
     d = scipy.io.loadmat('st_attributes.mat')
-    wi = np.squeeze(scipy.io.loadmat('wi.mat')['wi'])
+    weights = np.squeeze(scipy.io.loadmat('wi.mat')['wi'])
     mask = np.squeeze(scipy.io.loadmat('mask.mat')['mask']).astype(np.bool)
 
     Nd = np.squeeze(d['Nd'])
@@ -443,14 +448,15 @@ if False:
                        Ld=Ld,
                        n_shift=n_shift,
                        mask=mask,
-                       mode='table1')
+                       mode='table0',
+                       kernel_type='minmax:kb')
 
     # wi = np.ones(np.prod(Nd))
-    wi = complexify(wi)
-    embed(G.H*wi, mask)
+    weights = complexify(weights)
+    embed(G.H*weights, mask)
 
     G1, G2 = Gnufft_gram_setup(G)
-    fftkern, reuse = Gnufft_gram_init2(G, wi, reuse={}, show=False,
+    fftkern, reuse = Gnufft_gram_init2(G, weights, reuse={}, show=False,
                                        verbose=False)
     fftkern_mat = scipy.io.loadmat('fftkern.mat')['fftkern']
 
@@ -497,11 +503,9 @@ def Gnufft_gram_mult(x, fftkern):
     return np.squeeze(y)
 
 
-
 def assert_adjoint(A, nrep=1, tol=1e-5, do_complex=False, warn=False,
                    verbose=False):
-    """Verifies that an operator A is adjoint by multiplying with random
-    vectors.
+    """Verify that operator A is adjoint by multiplying with random vectors.
 
     Set do_complex=True to test for Hermitian symmetry.
     """
@@ -547,19 +551,19 @@ def test_Gnufft_gram_1d():
     omega = 2*np.pi*rstate.random_sample((M, 1))
     nufft_args = dict(Nd=N, Jd=J, Kd=K, n_shift=N/2, mode='table1', Ld=2**11,
                       kernel='minmax:kb')
-    wi = np.arange(omega.shape[0])
+    weights = np.arange(omega.shape[0])
     mask = np.ones((N, ), dtype=np.bool)
     mask[-3:] = 0
     A = NUFFT_Operator(om=omega, mask=mask, **nufft_args)
-    T, reuse = Gnufft_gram(A, wi)
-    # T = A.build_gram(wi)  # TODO
+    T, reuse = Gnufft_gram(A, weights)
+    # T = A.build_gram(weights)  # TODO
 
     assert_adjoint(T, do_complex=True)
 
     x = rstate.random_sample((A.shape[1], )) - 0.5
     x = x + 1j * rstate.random_sample((A.shape[1], )) - 0.5
 
-    r1 = A.H * (DiagonalOperator(wi) * (A * x))
+    r1 = A.H * (DiagonalOperator(weights) * (A * x))
     r2 = T * x
 
     assert_allclose(r1, r2, rtol=1e-4)
@@ -567,10 +571,11 @@ def test_Gnufft_gram_1d():
 
 # Gnufft_gram_test2()
 # test this object and compare its speed to Gnufft approach
-def test_Gnufft_gram_2d():
+def test_Gnufft_gram_2d(verbose=False):
     from numpy.testing import assert_allclose
-    from pyir.utils import ImageGeometry, ellipse_im
+    from pyir.utils import ImageGeometry, ellipse_im, masker, max_percent_diff
     from pyir.mri import mri_trajectory
+    from pyir.operators import NUFFT_Operator, DiagonalOperator
 
     N = (16, 14)
     fov = N
@@ -578,7 +583,10 @@ def test_Gnufft_gram_2d():
     K = 2*np.asarray(N)
     ktype = 'spiral0'
     # 'voronoi')
-    (kspace, omega, wi) = mri_trajectory(ktype, N=N, fov=fov, arg_wi=None)
+    (kspace, omega, weights) = mri_trajectory(ktype, N=N, fov=fov, arg_wi=None)
+    # TODO: fix weights returned by mri_trajectory
+    # weights = np.abs(omega[:, 0] + 1j * omega[:, 1])
+
     ig = ImageGeometry(nx=N[0], ny=N[1], dx=1)
     mask, junk = ellipse_im(ig, [0, 0, 14, 15, 0, 1], oversample=3)
     mask = mask > 0
@@ -586,21 +594,23 @@ def test_Gnufft_gram_2d():
     x = complexify(x)
 
     nufft_args = dict(Nd=N, Jd=J, Kd=K, n_shift=np.asarray(N)/2, mode='table1',
-                      Ld=2**12, kernel='kb:beatty')
+                      Ld=2**12, kernel_type='kb:beatty')
     A = NUFFT_Operator(om=omega, mask=mask, **nufft_args)
-    T, reuse = Gnufft_gram(A, wi)
-    # T = A.build_gram(wi)  # TODO
-
+    T, reuse = Gnufft_gram(A, weights)
+    # T = A.build_gram(weights)  # TODO
     assert_adjoint(T, do_complex=True)
 
-    r1 = A.H * (DiagonalOperator(wi) * (A * x))
+    r1 = A.H * (DiagonalOperator(weights) * (A * x))
     r2 = T * x
-    assert_allclose(r1, r2, rtol=1e-4)
+    assert_allclose(r1, r2, rtol=1e-2)
+    if verbose:
+        print("max % diff (r1, r2) = {}".format(max_percent_diff(r1, r2)))
 
-    A.prep_toeplitz()
-    r1_unweighted = A.H * (A * x)
+    A.prep_toeplitz(Kd_os=1.5, J=6, weights=weights)
     r3 = masker(A.norm(x), mask)
-    assert_allclose(r1_unweighted, r3, rtol=1e-3)
+    assert_allclose(r1, r3, rtol=1e-2)
+    if verbose:
+        print("max % diff (r1, r3) = {}".format(max_percent_diff(r1, r3)))
 
 
 
