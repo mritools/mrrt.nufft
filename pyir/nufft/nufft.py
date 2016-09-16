@@ -703,7 +703,8 @@ class NufftBase(object):
         # how = 'ratio'  #currently a bug in ratio case for non-integer K/N
         #     else:
         how = 'fast'
-        if self.phasing == 'complex':
+        if self.phasing == 'complex' and \
+                np.any(np.asarray(self.n_shift) != 0):
             self.phase_shift = np.exp(
                 1j * np.dot(self.om, self.n_shift.ravel()))  # [M 1]
         else:
