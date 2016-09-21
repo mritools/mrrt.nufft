@@ -8,7 +8,7 @@ from pyir.operators import LinearOperatorMulti, DiagonalOperator
 
 
 def dsft_gram_hermitify(kern, show=False, verbose=False):
-    """ Fixup Hermitian symmetry for an NUFFT kernel.
+    """Fixup Hermitian symmetry for an NUFFT kernel.
 
     When A is a Gdsft object and W is a Hermitian positive semidefinite matrix,
     e.g., when W is diagonal with real, nonnegative diagonal elements,
@@ -77,7 +77,7 @@ def _dsft_gram_hermitify_avg(in1, in2, verbose=False):
 
 
 def _dsft_gram_hermitify_plot1(ax, data):
-    n = numel(data)
+    n = len(data)
     ax.plot(np.arange(-n/2, n/2), np.fft.fftshift(data), '-o')
     ax.set_xticks([-n/2, 0, n/2-1])
     return ax
@@ -124,6 +124,12 @@ class ToeplitzOperator(LinearOperatorMulti):
 
     def __init__(self, mask, fftkern, nargin=None, nargout=None,
                  shape=None, order='F', **kwargs):
+        """Constructor.
+
+        Parameters
+        ----------
+        TODO
+        """
         if 'symmetric' in kwargs:
             kwargs.pop('symmetric')
         if 'hermitian' in kwargs:
@@ -169,6 +175,7 @@ class ToeplitzOperator(LinearOperatorMulti):
             **kwargs)
 
     def forward(self, x):
+        """Forward transform."""
         # if (self.mask is not None) and (not self.nd_input):
         if self.mask is not None:
             x = embed(x, self.mask, order=self.order)
@@ -182,11 +189,11 @@ class ToeplitzOperator(LinearOperatorMulti):
 
 
 def Gnufft_gram(G, weights, reuse={}):
-    """
-    #|def [T, reuse] = Gnufft_gram(A, weights, reuse)
-    #|
-    #| construct Toeplitz gram matrix object T = A'WA for a Gnufft object
-    #| in
+    """Construct Toeplitz gram matrix object T = A'WA for a Gnufft object.
+
+    Parameters
+    ----------
+    TODO
     #|  A   [M np]      Gnufft object (Fatrix or fatrix2)
     #|  W   [M M]       W = diag_sp(weights) (often simply "1" or [])
     #|              W = Gdiag() for fatrix2
@@ -252,11 +259,12 @@ def Gnufft_gram_init(G, weights, reuse={}, show=False, verbose=False):
     return fftkern, reuse
 
 
-# Gnufft_gram_init1()
-# 1d filter for circulant matrix
-# note: only toeplitz kernel values from -(N-1) to (N-1) are relevant
-# so the value at +/- N does not matter so we set it to zero.
 def Gnufft_gram_init1(G, weights, reuse={}, show=False, verbose=False):
+    """1d filter for circulant matrix.
+
+    note: only toeplitz kernel values from -(N-1) to (N-1) are relevant
+    so the value at +/- N does not matter so we set it to zero.
+    """
     if 'G1' not in reuse:
         reuse['G1'] = Gnufft_gram_setup(G)
 
@@ -281,7 +289,6 @@ def Gnufft_gram_init1(G, weights, reuse={}, show=False, verbose=False):
     return fftkern, reuse
 
 
-# Gnufft_gram_init2()
 def Gnufft_gram_init2(G, weights, reuse={}, show=False, verbose=False):
     if 'G2' not in reuse:
         reuse['G1'], reuse['G2'] = Gnufft_gram_setup(G)
@@ -658,3 +665,6 @@ def test_Gnufft_gram_2d(verbose=False):
 #     end
 # end
 
+
+
+# TODO: test 3D case
