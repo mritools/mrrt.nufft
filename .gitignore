@@ -22,6 +22,7 @@ cythonize.dat
 # Sphinx documentation
 /doc/_build
 /doc/generated
+/doc/reference
 /doc/img_extra
 
 # Byte-compiled / optimized / DLL files
