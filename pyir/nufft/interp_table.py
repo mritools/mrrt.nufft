@@ -60,6 +60,7 @@ def interp1_table_adj(fm, h1, J1, L1, tm, K1, order=None):
 
     J1 = int(J1)
     L1 = int(L1)
+    debug = True
     ck = _interp1_table_adj(fm, K1, h1, J1, L1, tm, M, N, order)
     return ck
 

@@ -5,9 +5,9 @@ developed by Jeff Fessler and his students at the University of Michigan.
 OpenMP support and the Cython wrappers were created by Gregory R. Lee
 (Cincinnati Childrens Hospital Medical Center).
 
-Note:  For simplicity the adjoint NUFFT is only parallelized across multiple
-coils and/or repetitions.  This was done for simplicity to avoid any potential
-thread conflicts.
+Note:  The adjoint NUFFT is only threaded across multiple coils and/or
+repetitions.  This was done for simplicity to avoid any potential thread
+conflicts.
 """
 from __future__ import division, print_function, absolute_import
 
@@ -37,7 +37,8 @@ def _interp1_table_per(
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
     ck = np.asarray(ck, dtype=cplx_dtype)
-    tm = tm.astype(h1.real.dtype)
+    if tm.dtype != h1.real.dtype:
+        tm = tm.astype(h1.real.dtype)
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
@@ -138,7 +139,8 @@ def _interp1_table_adj(
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     ck = np.zeros((K1, N), dtype=cplx_dtype, order='F')
-    tm = tm.astype(h1.real.dtype)
+    if tm.dtype != h1.real.dtype:
+        tm = tm.astype(h1.real.dtype)
 
     if order == 0:
         floatfunc_cplx = float_interp1_table0_complex_per_adj
@@ -244,7 +246,9 @@ def _interp2_table_per(
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
     ck = np.asarray(ck, dtype=cplx_dtype)
-    tm = tm.astype(h1.real.dtype)
+    if tm.dtype != h1.real.dtype:
+        tm = tm.astype(h1.real.dtype)
+
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
@@ -373,7 +377,8 @@ def _interp2_table_adj(
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
 
     ck = np.zeros((np.prod(Kd), N), dtype=cplx_dtype, order='F')
-    tm = tm.astype(h1.real.dtype)
+    if tm.dtype != h1.real.dtype:
+        tm = tm.astype(h1.real.dtype)
 
     if order == 0:
         floatfunc_cplx = float_interp2_table0_complex_per_adj
@@ -502,7 +507,9 @@ def _interp3_table_per(
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
     ck = np.asarray(ck, dtype=cplx_dtype)
-    tm = tm.astype(h1.real.dtype)
+    if tm.dtype != h1.real.dtype:
+        tm = tm.astype(h1.real.dtype)
+
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
@@ -652,7 +659,8 @@ def _interp3_table_adj(
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     ck = np.zeros((np.prod(Kd), N), dtype=cplx_dtype, order='F')
-    tm = tm.astype(h1.real.dtype)
+    if tm.dtype != h1.real.dtype:
+        tm = tm.astype(h1.real.dtype)
 
     if order == 0:
         floatfunc_cplx = float_interp3_table0_complex_per_adj

@@ -8,12 +8,12 @@ from pyir.utils import max_percent_diff
 from numpy.testing import assert_allclose, run_module_suite
 
 
-__all__ = ['test_dtft_3d',
+__all__ = ['test_dtft_1d',
            'test_dtft_2d',
-           'test_dtft_1d',
-           'test_dtft_adj_3d',
+           'test_dtft_3d',
+           'test_dtft_adj_1d',
            'test_dtft_adj_2d',
-           'test_dtft_adj_1d']
+           'test_dtft_adj_3d', ]
 
 
 def _uniform_freqs(Nd):
@@ -110,7 +110,7 @@ def test_dtft_adj_3d(verbose=False, test_Cython=False):
     om = _uniform_freqs(Nd)
 
     xd = dtft_adj(X, om, Nd, n_shift)
-    xl = dtft_adj(X, om, Nd, n_shift, True)
+    xl = dtft_adj(X, om, Nd, n_shift, useloop=True)
     assert_allclose(xd, xl, atol=1e-7)
 
     Xp = np.exp(-1j * np.dot(om, n_shift))
@@ -155,7 +155,7 @@ def test_dtft_adj_2d(verbose=False):
     om = _uniform_freqs(Nd)
 
     xd = dtft_adj(X, om, Nd, n_shift)
-    xl = dtft_adj(X, om, Nd, n_shift, True)
+    xl = dtft_adj(X, om, Nd, n_shift, useloop=True)
     assert_allclose(xd, xl, atol=1e-7)
 
     Xp = np.exp(-1j * np.dot(om, n_shift))
@@ -179,7 +179,7 @@ def test_dtft_adj_1d(verbose=False):
     om = _uniform_freqs(Nd)
 
     xd = dtft_adj(X, om, Nd, n_shift)
-    xl = dtft_adj(X, om, Nd, n_shift, True)
+    xl = dtft_adj(X, om, Nd, n_shift, useloop=True)
     assert_allclose(xd, xl, atol=1e-7)
 
     Xp = np.exp(-1j * np.dot(om, n_shift))

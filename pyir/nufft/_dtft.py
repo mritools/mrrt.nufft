@@ -105,7 +105,8 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
 
 
 def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
-    """  Compute adjoint of d-dim DTFT for spectrum X at frequency locations omega
+    """Compute adjoint of d-dim DTFT for spectrum X at frequency locations
+    omega.
 
     Parameters
     ----------
@@ -125,9 +126,6 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
 
     Requires enough memory to store M * (*Nd) size matrices.
     (For testing only)
-
-    Matlab version: Copyright 2003-4-13, Jeff Fessler,
-                    The University of Michigan
     """
     dd = omega.shape[1]
     if Nd is None:
@@ -182,4 +180,5 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
 
     if x.shape[-1] == 1:
         x.shape = x.shape[:-1]
+        
     return x

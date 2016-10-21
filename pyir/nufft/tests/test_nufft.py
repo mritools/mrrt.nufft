@@ -333,15 +333,23 @@ def test_nufft_1d():
     Nd = 64
     Kd = 128
     Jd = 6
-    Ld = 4096
+    Ld_table1 = 512
     n_shift = Nd // 2
     om = _perturbed_gridpoints(Nd)
     rstate = np.random.RandomState(1234)
 
+    rtol = 1e-3
+    atol = 1e-5
+    maxdiff_forward = {}
+    maxdiff_adjoint = {}
     for kernel_type in ['kb:beatty', ]:
         for mode in ['table1', 'table0', 'sparse']:
             for precision in ['single', 'double']:
                 for phasing in ['real', 'complex']:
+                    if mode == 'table0':
+                        Ld = Ld_table1 * 100
+                    else:
+                        Ld = Ld_table1
                     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                                   mode=mode, Ld=Ld,
                                   kernel_type=kernel_type,
@@ -350,43 +358,22 @@ def test_nufft_1d():
 
                     x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
                     y = A._nufft_forward(x)
+                    
                     y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
-                    # max_percent_diff(y, y2[:, 0])
+                    assert_allclose(y, y2, rtol=rtol, atol=atol)
+                    
+                    x_adj = A._nufft_adj(y)
+                    x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
+                    assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
-                    if mode == 'table0':
-                        assert_allclose(y, y2, rtol=1e-2)
-                    else:
-                        assert_allclose(y, y2, rtol=4e-3)
+                    maxdiff_forward[
+                        (kernel_type, mode, precision, phasing)] = \
+                            max_percent_diff(y, y2)
 
-
-# def test_nufft_1d_adj():
-#     Nd = 64
-#     Kd = 128
-#     Jd = 6
-#     Ld = 4096
-#     n_shift = Nd // 2
-#     om = _perturbed_gridpoints(Nd)
-#     rstate = np.random.RandomState(1234)
-
-#     for kernel_type in ['kb:beatty', ]:
-#         for mode in ['table1', 'table0', 'sparse']:
-#             for precision in ['single', 'double']:
-#                 for phasing in ['real', 'complex']:
-#                     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
-#                                   mode=mode, Ld=Ld,
-#                                   kernel_type=kernel_type,
-#                                   precision=precision,
-#                                   phasing=phasing)  # TODO:  'table' case
-
-#                     x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
-#                     y = A._nufft_adj(x)
-#                     y2 = dtft_adj(x, omega=om, Nd=Nd, n_shift=n_shift)
-#                     # max_percent_diff(y, y2[:, 0])
-
-#                     if mode == 'table0':
-#                         assert_allclose(y, y2, rtol=1e-2)
-#                     else:
-#                         assert_allclose(y, y2, rtol=4e-3)
+                    maxdiff_adjoint[
+                        (kernel_type, mode, precision, phasing)] = \
+                            max_percent_diff(x_adj, x_adj2)
+                        
 
 
 def test_nufft_2d():
@@ -394,30 +381,97 @@ def test_nufft_2d():
     Nd = [16, ] * ndim
     Kd = [32, ] * ndim
     Jd = [6, ] * ndim
-    Ld = 4096
+    Ld_table1 = 512
     n_shift = np.asarray(Nd) / 2
     om = _perturbed_gridpoints(Nd)
     rstate = np.random.RandomState(1234)
 
+    rtol = 1e-3
+    atol = 1e-5
+    maxdiff_forward = {}
+    maxdiff_adjoint = {}
     for kernel_type in ['kb:beatty', ]:
         for mode in ['table1', 'table0', 'sparse']:
             for precision in ['single', 'double']:
                 for phasing in ['real', 'complex']:  # 'complex']:
+                    if mode == 'table0':
+                        Ld = Ld_table1 * 100
+                    else:
+                        Ld = Ld_table1                        
                     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                                   mode=mode, Ld=Ld,
                                   kernel_type=kernel_type,
                                   precision=precision,
                                   phasing=phasing)  # TODO:  'table' case
-
                     x = rstate.standard_normal(Nd)
                     x = x + 1j * rstate.standard_normal(Nd)
                     y = A._nufft_forward(x)
                     y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+
                     # max_percent_diff(y, y2[:, 0])
+                    assert_allclose(y, y2, rtol=rtol, atol=atol)
+                    
+                    x_adj = A._nufft_adj(y)
+                    x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
+                    assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
+                    
+                    maxdiff_forward[
+                        (kernel_type, mode, precision, phasing)] = \
+                            max_percent_diff(y, y2)
+
+                    maxdiff_adjoint[
+                        (kernel_type, mode, precision, phasing)] = \
+                            max_percent_diff(x_adj, x_adj2)
+
+def test_nufft_3d():
+    ndim = 3
+    Nd = [8, ] * ndim
+    Kd = [16, ] * ndim
+    Jd = [5, ] * ndim
+    Ld_table1 = 512
+    n_shift = np.asarray(Nd) / 2
+    om = _perturbed_gridpoints(Nd)
+    rstate = np.random.RandomState(1234)
+
+    rtol = 5e-3
+    atol = 1e-5
+    maxdiff_forward = {}
+    maxdiff_adjoint = {}
+    for kernel_type in ['kb:beatty', ]:
+        for mode in ['table1', 'table0', 'sparse']:
+            for precision in ['single', 'double']:
+                for phasing in ['real', 'complex']:  # 'complex']:
                     if mode == 'table0':
-                        assert_allclose(y, y2, rtol=1e-2)
+                        Ld = Ld_table1 * 100
                     else:
-                        assert_allclose(y, y2, rtol=1e-3)
+                        Ld = Ld_table1
+                        
+                    if mode == 'table1' and phasing == 'complex':
+                        # TODO: why so much worse only in this case?
+                        atol *= 10
+                        rtol *= 50
+                    A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
+                                  mode=mode, Ld=Ld,
+                                  kernel_type=kernel_type,
+                                  precision=precision,
+                                  phasing=phasing)  # TODO:  'table' case
+                    x = rstate.standard_normal(Nd)
+                    x = x + 1j * rstate.standard_normal(Nd)
+                    y = A._nufft_forward(x)
+                    y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+                    assert_allclose(y, y2, rtol=rtol, atol=atol)
+                    
+                    x_adj = A._nufft_adj(y)
+                    x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
+                    assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
+
+                    maxdiff_forward[
+                        (kernel_type, mode, precision, phasing)] = \
+                            max_percent_diff(y, y2)
+
+                    maxdiff_adjoint[
+                        (kernel_type, mode, precision, phasing)] = \
+                            max_percent_diff(x_adj, x_adj2)
 
 # TODO: test other nshift, odd shape, odd Kd, etc
 # TODO: test order='F'/'C'

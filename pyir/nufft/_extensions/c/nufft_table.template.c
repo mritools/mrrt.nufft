@@ -1540,7 +1540,7 @@ TYPE *i_fm)
                     const TYPE p1 = (t1 - k1) * L1;
                     const int n1 = floor(p1);
                     const TYPE alf1 = p1 - n1;
-                    TYPE coef1r = (1 - alf1) * r_h1[n1+1] + alf1 * r_h1[n1+1];
+                    TYPE coef1r = (1 - alf1) * r_h1[n1] + alf1 * r_h1[n1+1];
                     TYPE coef1i = (1 - alf1) * i_h1[n1] + alf1 * i_h1[n1+1];
                     const int k1mod = mymod(k1, K1);
                     const int kk = k23mod + k1mod; /* 3D array index */
