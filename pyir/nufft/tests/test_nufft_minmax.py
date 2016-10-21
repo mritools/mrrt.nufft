@@ -84,7 +84,7 @@ def test_nufft2_err_mm(verbose=False):
     if verbose:
         from matplotlib import pyplot as plt
         plt.figure()
-        plt.plot(f1.T, err.T)
+        plt.plot(f1, err)
         plt.xlabel('$\omega_1 / \gamma$')
         plt.ylabel('$E_{max}(\omega_1,\omega_2)$')
         plt.show()
@@ -136,65 +136,77 @@ def test_nufft1_err_mm(verbose=False):
 
 def test_nufft1_error(verbose=False):
     N = 2 ** 7
-    K = 2 * N
-    gam = 2 * np.pi / K
-    Jlist = np.arange(2, 11)
-    om = gam * np.linspace(0, 1, 101)
-
-    err = {}
-    err['linear'] = np.zeros(Jlist.shape)
-    err['minmaxu'] = np.zeros(Jlist.shape)
-    err['minmax2'] = np.zeros(Jlist.shape)
-    err['minmaxo'] = np.zeros(Jlist.shape)
-    err['minmaxk'] = np.zeros(Jlist.shape)    # kaiser sn's
-    err['gauss_zn'] = np.zeros(Jlist.shape)
-    err['gauss_ft'] = np.zeros(Jlist.shape)
-    err['kaiser'] = np.zeros(Jlist.shape)
-    err['kb:beatty'] = np.zeros(Jlist.shape)
-
-    for ii in range(0, len(Jlist)):
-        J = Jlist[ii]
-        print('J=%d' % J)
-        err['linear'][ii] = np.max(nufft1_error(om, N, J, K,
-                                                kernel='linear')[0])
-        err['minmaxu'][ii] = np.max(nufft1_error(om, N, J, K,
-                                                 kernel='minmax,uniform')[0])
-        err['minmax2'][ii] = np.max(nufft1_error(om, N, J, K,
-                                                 kernel='minmax,best,L=2')[0])
-        err['minmaxo'][ii] = np.max(nufft1_error(om, N, J, K,
-                                                 kernel='minmax,best')[0])
-        err['gauss_zn'][ii] = np.max(nufft1_error(om, N, J, K,
-                                                  kernel='gauss')[0])
-        err['gauss_ft'][ii] = np.max(nufft1_error(om, N, J, K,
-                                                  kernel='gauss', sn='ft')[0])
-        [tmp, sn] = nufft1_error(om, N, J, K, kernel='kaiser', sn='ft')[0:2]
-        err['kaiser'][ii] = np.max(tmp)
-        [tmp, sn] = nufft1_error(om, N, J, K, kernel='kb:beatty', sn='ft')[0:2]
-        err['kb:beatty'][ii] = np.max(tmp)
-        err['minmaxk'][ii] = np.max(nufft1_err_mm(om, N, J, K, 'qr', sn)[0])
-
-    if verbose:
-        from matplotlib import pyplot as plt
-        plt.figure()
-        lines = plt.semilogy(Jlist, err['linear'], 'g-x',
-                             Jlist, err['minmaxu'], 'c-+',
-                             Jlist, err['gauss_zn'], 'b-*',
-                             Jlist, err['gauss_ft'], 'b-o',
-                             Jlist, err['minmax2'], 'r-^',
-                             Jlist, err['kaiser'], 'm->',
-                             Jlist, err['minmaxo'], 'y-<',
-                             Jlist, err['minmaxk'], 'w-o',
-                             Jlist, err['kb:beatty'], 'k-+')
-        plt.axis('tight')
-        plt.xlabel('J')
-        plt.ylabel('worst-case error')
-        plt.legend(lines,
-                   ['linear', 'min-max, uniform', 'gaussian (zn)',
-                    'gaussian (FT)', 'min-max, best L=2', 'kaiser',
-                    'min-max, optimized', 'min-max, kaiser s',
-                    'kaiser (Beatty)'],
-                   loc='lower left')
-        plt.show()
+    for K in [int(1.25 * N), int(1.5 * N), int(2 * N)]:
+        gam = 2 * np.pi / K
+        Jlist = np.arange(2, 11)
+        om = gam * np.linspace(0, 1, 101)
+    
+        err = {}
+        err['linear'] = np.zeros(Jlist.shape)
+        err['minmaxu'] = np.zeros(Jlist.shape)
+        err['minmax2'] = np.zeros(Jlist.shape)
+        err['minmaxo'] = np.zeros(Jlist.shape)
+        err['minmaxk'] = np.zeros(Jlist.shape)    # kaiser sn's
+        err['gauss_zn'] = np.zeros(Jlist.shape)
+        err['gauss_ft'] = np.zeros(Jlist.shape)
+        err['kaiser'] = np.zeros(Jlist.shape)
+        err['kb:beatty'] = np.zeros(Jlist.shape)
+    
+        for ii in range(0, len(Jlist)):
+            J = Jlist[ii]
+            print('J=%d' % J)
+            err['linear'][ii] = np.max(nufft1_error(om, N, J, K,
+                                                    kernel='linear')[0])
+            if K/N == 2:
+                err['minmaxu'][ii] = np.max(nufft1_error(om, N, J, K,
+                                                         kernel='minmax,uniform')[0])
+                err['minmax2'][ii] = np.max(nufft1_error(om, N, J, K,
+                                                         kernel='minmax,best,L=2')[0])
+                err['minmaxo'][ii] = np.max(nufft1_error(om, N, J, K,
+                                                         kernel='minmax,best')[0])
+                err['gauss_zn'][ii] = np.max(nufft1_error(om, N, J, K,
+                                                          kernel='gauss')[0])
+                err['gauss_ft'][ii] = np.max(nufft1_error(om, N, J, K,
+                                                          kernel='gauss', sn='ft')[0])
+            [tmp, sn] = nufft1_error(om, N, J, K, kernel='kaiser', sn='ft')[0:2]
+            err['kaiser'][ii] = np.max(tmp)
+            [tmp, sn] = nufft1_error(om, N, J, K, kernel='kb:beatty', sn='ft')[0:2]
+            err['kb:beatty'][ii] = np.max(tmp)
+            err['minmaxk'][ii] = np.max(nufft1_err_mm(om, N, J, K, 'qr', sn)[0])
+    
+        if verbose:
+            from matplotlib import pyplot as plt
+            plt.figure()
+            if K/N == 2:
+                lines = plt.semilogy(Jlist, err['linear'], 'g-x',
+                                     Jlist, err['minmaxu'], 'c-+',
+                                     Jlist, err['gauss_zn'], 'b-*',
+                                     Jlist, err['gauss_ft'], 'b-o',
+                                     Jlist, err['minmax2'], 'r-^',
+                                     Jlist, err['kaiser'], 'm->',
+                                     Jlist, err['minmaxo'], 'y-<',
+                                     Jlist, err['minmaxk'], 'w-o',
+                                     Jlist, err['kb:beatty'], 'k-+')
+                labels = ['linear', 'min-max, uniform', 'gaussian (zn)',
+                          'gaussian (FT)', 'min-max, best L=2', 'kaiser',
+                          'min-max, optimized', 'min-max, kaiser s',
+                          'kaiser (Beatty)'],
+    
+            else:
+                lines = plt.semilogy(Jlist, err['linear'], 'g-x',
+                                     Jlist, err['kaiser'], 'm->',
+                                     Jlist, err['minmaxk'], 'w-o',
+                                     Jlist, err['kb:beatty'], 'k-+')
+                labels = ['linear', 'kaiser', 'min-max, kaiser s',
+                          'kaiser (Beatty)'],
+    
+            plt.axis('tight')
+            plt.xlabel('J')
+            plt.ylabel('worst-case error')
+            plt.legend(lines,
+                       labels,
+                       loc='lower left')
+            plt.show()
     return
 
 

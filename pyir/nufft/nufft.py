@@ -110,7 +110,7 @@ def _block_outer_prod(x1, x2):
 class NufftBase(object):
     @profile
     def __init__(self, Nd, om, Jd=6, Kd=None, p=None, sn=None, Ld=2048,
-                 tol=1e-7, precision=None, kernel_type='kb:beatty',
+                 tol=1e-7, precision='single', kernel_type='kb:beatty',
                  n_shift=None, kernel_kwargs={}, phasing='real',
                  mode='table0', sparse_format='CSC', verbose=False,
                  ortho=False, **kwargs):
@@ -908,14 +908,7 @@ def _nufft_table_interp(obj, Xk, om=None):
 
     Xk = complexify(Xk, complex_dtype=obj._cplx_dtype)  # force complex
 
-    # if (ndim == 3) and (order == 1) and (obj._cplx_dtype == np.complex64):
-    #     # TODO: fix this case
-    #     warnings.warn(
-    #         "Forward NUFFT known to be inaccurate for 3D+single+1st-order")
-
-    # X = np.zeros((om.shape[0], nc),dtype=Xk.dtype)
     arg = [obj.Jd, obj.Ld, tm, order]
-
     if ndim == 1:
         X = interp1_table(Xk, obj.h[0], *arg)
     elif ndim == 2:
