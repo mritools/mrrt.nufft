@@ -24,29 +24,6 @@ data_dir = pjoin(os.path.dirname(pyir.nufft.__file__),
                  'tests', 'data', 'mat_files')
 
 
-def test_nufft_table_make1():
-    from pyir.nufft.nufft import _nufft_table_make1
-    from numpy.testing import assert_almost_equal
-    for N in [33, 64]:
-        for phasing in ['real', 'complex']:
-            h0, t0 = _nufft_table_make1(how='slow', N=N, J=6, K=2 * N, L=2048,
-                                        phasing=phasing,
-                                        kernel_type='kb:beatty',
-                                        kernel_kwargs={})
-            h1, t1 = _nufft_table_make1(how='fast', N=N, J=6, K=2 * N, L=2048,
-                                        phasing=phasing,
-                                        kernel_type='kb:beatty',
-                                        kernel_kwargs={})
-            h2, t2 = _nufft_table_make1(how='ratio', N=N, J=6, K=2 * N, L=2048,
-                                        phasing=phasing,
-                                        kernel_type='kb:beatty',
-                                        kernel_kwargs={})
-            assert_almost_equal(h0, h1)
-            assert_almost_equal(h0, h2)
-            assert_almost_equal(t0, t1)
-            assert_almost_equal(t0, t2)
-
-
 def NufftBase_tests():
     from numpy.testing import assert_equal
 

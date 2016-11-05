@@ -206,6 +206,7 @@ class NufftBase(object):
         self._adj = None
         self._init = None
         self.mode = mode  # {'table', 'sparse', 'exact'}
+        self.adjoint_scalefactor = adjoint_scalefactor
         kernel_type = kernel_type.lower()
         # [M, *Kd]	sparse interpolation matrix (or empty if table-based)
         self.p = None
@@ -1040,6 +1041,16 @@ def _nufft_table_adj(obj, X, om=None):
     return Xk.astype(X.dtype)
 
 
+if False:
+    how='fast'
+    N=33
+    J=6
+    K=2*N
+    L=2048
+    kernel_type='kb:beatty'
+    phasing='real'
+    debug=False
+
 @profile
 def _nufft_table_make1(
         how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={}):
@@ -1052,6 +1063,9 @@ def _nufft_table_make1(
     t0 = np.arange(-J * L / 2., J * L / 2. + 1) / L  # [J*L+1]
     assert_(t0.size == (J*L + 1))
     pi = np.pi
+    if N % 2 == 0:
+        # may be a slight symmetry error for odd N?
+        warnings.warn("odd N in _nufft_table_make1.  even N recommended.")
     # This is a slow and inefficient (but simple) way to get the table
     # because it builds a huge sparse matrix but only uses 1 column!
     if how == 'slow':
@@ -1061,12 +1075,19 @@ def _nufft_table_make1(
     # This way is "J times faster" than the slow way, but still not ideal.
     # It works for any user-specified interpolator.
     elif how == 'fast':
-        t1 = J / 2. - 1 + np.arange(L) / L  # [L]
+        # odd case set to match result of 'slow' above
+        if N % 2 == 0:
+            t1 = J / 2. - 1 + np.arange(L) / L  # [L]
+        else:
+            t1 = J / 2. - 1 + np.arange(1, L+1) / L  # [L]
         om1 = t1 * 2 * pi / K		# * gam
         s1 = NufftBase(om=om1, Nd=N, Kd=K, **nufft_args)
         h = np.asarray(
             s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
-        h = np.concatenate((h, np.asarray([h[0], ])), axis=0)  # [J*L+1,]
+        if N % 2 == 0:
+            h = np.concatenate((h, np.asarray([h[0], ])), axis=0)  # [J*L+1,]
+        else:
+            h = np.concatenate((np.asarray([h[-1], ]), h), axis=0)  # [J*L+1,]
     # This efficient way uses only "J" columns of sparse matrix!
     # The trick to this is to use fake small values for N and K,
     # which works for interpolators that depend only on the ratio K/N.
@@ -1239,8 +1260,8 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
         raise ValueError("invalid size")
     X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
     X = np.reshape(X, (obj.M, -1), order='F')  # [M,*L]
-    if copy_X and (data_address_in is get_data_address(X)):
-        # make sure the original array isn't modified!
+    if copy_X and (data_address_in == get_data_address(X)):
+        # ensure input array isn't modified by in-place operations below
         X = X.copy()
 
     nrepetitions = X.shape[-1]
@@ -1274,7 +1295,7 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
     x = x[subset_slices]
 
     if obj.ortho:
-         # TODO: even if obj.ortho?
+        # TODO: even if obj.ortho?
         x *= (obj.scale_ortho * np.product(Kd) * obj.adjoint_scalefactor)
     else:
         x *= (np.product(Kd) * obj.adjoint_scalefactor)
@@ -1319,7 +1340,7 @@ def nufft_adjoint_exact(obj, X, copy_X=True):
         raise ValueError("invalid size")
     X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
     X = np.reshape(X, (obj.M, -1), order='F')  # [M,*L]
-    if copy_X and (data_address_in is get_data_address(X)):
+    if copy_X and (data_address_in == get_data_address(X)):
         # make sure the original array isn't modified!
         X = X.copy()
 
