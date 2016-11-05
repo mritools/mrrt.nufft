@@ -102,8 +102,8 @@ def check_for_openmp():
     """
     WARNING:
     OpenMP support is not available in your default C compiler, even though
-    your machine has more than one core available. Some routines in pyir.nufft are
-    parallelized using OpenMP and these will only run on one core with your
+    your machine has more than one core available. Some routines in pyir.nufft
+    are parallelized using OpenMP and these will only run on one core with your
     current configuration.
     """)
             if platform.uname()[0] == 'Darwin':
@@ -233,17 +233,7 @@ ext_nufft = Extension(
     include_dirs=[numpy_include, pjoin(src_path, '_extensions', 'c')])
 
 
-# C extensions for brute-force discrete-time Fourier transform
-ext_dtft = Extension(
-    'pyir.nufft._extensions._dtft',
-    sources=['pyir/nufft/_extensions/_dtft.pyx'],
-    depends=['pyir/nufft/_extensions/c/_complexstuff.h'],
-    language='c',
-    extra_compile_args=extra_compile_args,
-    extra_link_args=extra_link_args,
-    include_dirs=[numpy_include, pjoin(src_path, '_extensions', 'c')])
-
-ext_modules = [ext_nufft, ext_dtft]
+ext_modules = [ext_nufft, ]
 
 c_macros = [("PY_EXTENSION", None)]
 cython_macros = []
