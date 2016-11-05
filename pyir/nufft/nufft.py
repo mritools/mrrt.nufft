@@ -11,10 +11,6 @@ license for the Matlab code is reproduced below.
     publications in any papers that present results based on this software.
     UM and the authors make all the usual disclaimers about liability etc.
 
-Matlab version of nufft_table_adj
-copyright 2004-3-30, Jeff Fessler and Yingying Zhang,
-University of Michigan
-
 """
 
 from __future__ import division, print_function, absolute_import
@@ -26,7 +22,7 @@ from time import time
 import numpy as np
 from numpy.testing import assert_
 
-
+import scipy.sparse
 from scipy.sparse import coo_matrix
 
 from pyir.nufft.nufft_utils import (_nufft_samples,
@@ -60,15 +56,11 @@ from pyir.utils import (fftn,
                         complexify,
                         is_string_like,
                         reale,
-                        profile)
+                        profile,
+                        get_data_address)
 
 from ._kernels import NufftKernel
 
-try:
-    import scipy.sparse
-except:
-    # most cases don't need scipy
-    pass
 
 __all__ = ['NufftBase', 'compute_Q', 'nufft_adj', 'nufft_forward']
 
@@ -108,13 +100,68 @@ def _block_outer_prod(x1, x2):
 
 
 class NufftBase(object):
+    """Base NUFFT Class"""
     @profile
-    def __init__(self, Nd, om, Jd=6, Kd=None, p=None, sn=None, Ld=2048,
-                 tol=1e-7, precision='single', kernel_type='kb:beatty',
-                 n_shift=None, kernel_kwargs={}, phasing='real',
-                 mode='table0', sparse_format='CSC', verbose=False,
-                 ortho=False, **kwargs):
+    def __init__(self, Nd, om, Jd=6, Kd=None, Ld=2048, precision='single',
+                 kernel_type='kb:beatty', mode='table0', ortho=False,
+                 n_shift=None, phasing='real', sparse_format='CSC',
+                 adjoint_scalefactor=1., kernel_kwargs={}, verbose=False):
+        """ Initialize NufftBase instance
 
+        Parameters
+        ----------
+        Nd : array-like
+            Shape of the Cartesian grid in the spatial domain.
+        om : array
+            non-Cartesian sampling frequencies
+        J : int or array-like, optional
+            size of the NUFFT kernel on each axis
+        Kd : array-like, optional
+            Oversampled cartesian grid size (default = 2*Nd)
+        Ld : array-like, optional
+            When ``mode != 'sparse'``, this controls the size of the kernel
+            lookup table used.   (size will be ``J[i]*Ld[i]`` for axis i).
+        precision : {'single', 'double'}, optional
+            precision of the NUFFT operations
+        kernel_type : {'kb:beatty', ...}, optional
+            The type of gridding kernel to use.  'kb:beatty' is near optimal in
+            most cases and works well for grid oversampling factors
+            substantially less than 2.
+        mode : {'sparse', 'table1', 'table0'}, optional
+            The NUFFT implementation to use.  ``sparse`` corresponds to
+            precomputation of a sparse matrix corresponding to the operation.
+            This requires a longer initialization and uses more memory, but is
+            typically faster than the lookup-table based approaches.
+            ``table*`` modes use a look-up table based interpolation.  This is
+            fast to initialize and uses less memory.
+            ``table1`` and ``table0`` correspond to first-order and
+            nearest-neighbor interpolation from the gridding lookup table.
+        ortho : bool, optional
+            TODO
+
+        Additional Parameters
+        ---------------------
+        n_shift : array-like, optional
+            controls the shift applied (e.g. default is like N/2 shift like
+            fftshift)
+        phasing : {'real', 'complex'}, optional
+            If complex, the gridding kernel is complex-valued and the phase
+            roll corresponding to ``n_shift`` is built into the kernel.
+            If real, a real-valued kernel is used and the phase rolls are
+            applied separately.  Performance is similar in either case.
+        sparse_format : {'CSC', 'CSR', 'COO', 'LIL', 'DOK'}, optional
+            The sparse matrix format used by scipy.sparse for CPU-based
+            implementation.  The GPU implementation always uses CSR.
+        adjoint_scalefactor : float, optional
+            A custom, constant multiplicative scaling factor for the
+            adjoint operation.
+        kernel_kwargs : dict
+            Addtional kwargs to pass along to the NufftKernel object created.
+
+
+
+
+        """
         self.verbose = verbose
         if self.verbose:
             print("Entering NufftBase init")
@@ -187,7 +234,6 @@ class NufftBase(object):
                                   Nmid=self.Nmid,
                                   **kernel_kwargs)
         self._calc_scaling()  # [(Nd)]  scaling factors
-        self.tol = tol
         self.M = 0
         if self.om is not None:
             self.M = self.om.shape[0]
@@ -617,7 +663,7 @@ class NufftBase(object):
                 alpha = self.kernel.alpha[d]
                 beta = self.kernel.beta[d]
                 # [J?,J?]  TODO: move .tol into kernel object
-                T = _nufft_T(N, J, K, tol=self.tol, alpha=alpha, beta=beta)
+                T = _nufft_T(N, J, K, tol=1e-7, alpha=alpha, beta=beta)
                 [r, arg] = _nufft_r(
                     om[:, d], N, J, K, alpha=alpha, beta=beta)  # [J?,M]
                 # c = T * r  clear T r
@@ -750,7 +796,7 @@ class NufftBase(object):
                     # dict to cache previously generated kernels
                     MOLS_generated = {}
 
-                #TODO: test this IOWA case
+                # TODO: test this IOWA case
                 from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
                 if self.Ld[d] % 2 == 0:
                     raise ValueError("mols requires odd Ld")
@@ -972,7 +1018,6 @@ def _nufft_table_adj(obj, X, om=None):
 
     if X.ndim is 1:
         X = X[:, np.newaxis]
-    nc = X.shape[1]
 
     # adjoint of phase shift
     if hasattr(obj, 'phase_shift'):
@@ -1074,16 +1119,19 @@ def nufft_forward(obj, x, copy_x=True):
     """
     Nd = obj.Nd
     Kd = obj.Kd
-
-    if copy_x:  # make sure original array isn't modified!
-        x = x.copy()
-    try:  # collapse all excess dimensions into just one
+    try:
+        # collapse all excess dimensions into just one
+        data_address_in = get_data_address(x)
         x = x.reshape(list(Nd) + [-1, ], order='F')
     except:
         raise ValueError('input signal has wrong size')
 
     # Promote to complex if real input was provided
     x = complexify(x, complex_dtype=obj._cplx_dtype)
+
+    if copy_x and (data_address_in == get_data_address(x)):
+        # make sure original array isn't modified!
+        x = x.copy()
 
     L = x.shape[-1]
     #
@@ -1142,15 +1190,19 @@ def nufft_forward_exact(obj, x, copy_x=True):
     """
     Nd = obj.Nd
 
-    if copy_x:  # make sure original array isn't modified!
-        x = x.copy()
-    try:  # collapse all excess dimensions into just one
-        x = x.reshape((np.prod(Nd), -1), order='F')
+    try:
+        # collapse all excess dimensions into just one
+        data_address_in = get_data_address(x)
+        x = x.reshape(list(Nd) + [-1, ], order='F')
     except:
         raise ValueError('input signal has wrong size')
 
     # Promote to complex if real input was provided
     x = complexify(x, complex_dtype=obj._cplx_dtype)
+
+    if copy_x and (data_address_in == get_data_address(x)):
+        # make sure original array isn't modified!
+        x = x.copy()
 
     L = x.shape[-1]
 
@@ -1168,7 +1220,7 @@ def nufft_forward_exact(obj, x, copy_x=True):
 
 @profile
 def nufft_adj(obj, X, copy_X=True, return_psf=False):
-    """ Adjoint NUFFT (k-space to image-space).
+    """Adjoint NUFFT (k-space to image-space).
 
     Parameters
     ----------
@@ -1176,7 +1228,7 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
         instance of NufftBase (contains k-space locations, kernel, etc.)
     X : array
         DTFT values (k-space) [nsamples, ncoils*nrepetitions]
-    copy_x : bool, optional
+    copy_X : bool, optional
         make a copy of x internally to avoid potentially modifying the
         original array.
     return_psf : bool, optional
@@ -1187,26 +1239,18 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
     x : array
         DFT coefficients
     """
-    # extract attributes from structure
     Nd = obj.Nd
     Kd = obj.Kd
-
-    Xc = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
-
-    #
-    # adjoint of interpolator using precomputed sparse matrix
-    #
-    if copy_X and Xc is X:
-        # make sure the original array isn't modified!
-        X = Xc.copy()
-    else:
-        X = Xc
-
+    data_address_in = get_data_address(X)
     if X.size % obj.M != 0:
         raise ValueError("invalid size")
-
+    X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
     X = np.reshape(X, (obj.M, -1), order='F')  # [M,*L]
-    Lprod = X.shape[-1]
+    if copy_X and (data_address_in is get_data_address(X)):
+        # make sure the original array isn't modified!
+        X = X.copy()
+
+    nrepetitions = X.shape[-1]
 
     if obj.phase_after is not None and not return_psf:
         # replaced np.tile() with broadcasting
@@ -1220,12 +1264,12 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
         # interpolate using precomputed sparse matrix
         Xk_all = (obj.p.H * X)  # [*Kd,*L]
 
-    x = np.zeros(tuple(Kd) + (Lprod,), dtype=X.dtype)  # [*Kd,*L]
+    x = np.zeros(tuple(Kd) + (nrepetitions,), dtype=X.dtype)
 
     if Xk_all.ndim == 1:
         Xk_all = Xk_all[:, None]
 
-    Xk_all = Xk_all.reshape(tuple(Kd) + (Lprod, ), order='F')
+    Xk_all = Xk_all.reshape(tuple(Kd) + (nrepetitions, ), order='F')
     if return_psf:
         return Xk_all[..., 0]
     if obj.phase_before is not None:
@@ -1237,16 +1281,17 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
     x = x[subset_slices]
 
     if obj.ortho:
-        x *= (obj.scale_ortho * np.product(Kd))  # TODO: even if obj.ortho?
+         # TODO: even if obj.ortho?
+        x *= (obj.scale_ortho * np.product(Kd) * obj.adjoint_scalefactor)
     else:
-        x *= np.product(Kd)  # TODO: even if obj.ortho?
+        x *= (np.product(Kd) * obj.adjoint_scalefactor)
 
     # scaling factors
     if obj.sn is not None:
         x *= np.conj(obj.sn)[..., np.newaxis]
 
     remove_singleton = True
-    if remove_singleton and Lprod == 1:
+    if remove_singleton and nrepetitions == 1:
         x = x[..., 0]
 
     return x
@@ -1276,30 +1321,29 @@ def nufft_adjoint_exact(obj, X, copy_X=True):
     # extract attributes from structure
     Nd = obj.Nd
 
-    Xc = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
-    if copy_X and Xc is X:
-        # make sure the original array isn't modified!
-        X = Xc.copy()
-    else:
-        X = Xc
-
+    data_address_in = get_data_address(X)
     if X.size % obj.M != 0:
         raise ValueError("invalid size")
-
+    X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
     X = np.reshape(X, (obj.M, -1), order='F')  # [M,*L]
-    Lprod = X.shape[-1]
+    if copy_X and (data_address_in is get_data_address(X)):
+        # make sure the original array isn't modified!
+        X = X.copy()
 
-    x = np.empty((np.prod(Nd), Lprod), dtype=X.dtype, order='F')  # [*Kd,*L]
+    nrepetitions = X.shape[-1]
 
-    for rep in range(Lprod):
+    x = np.empty((np.prod(Nd), nrepetitions), dtype=X.dtype, order='F')
+    for rep in range(nrepetitions):
         x[..., rep] = dtft_adj(X[:, rep], omega=obj.om, Nd=obj.Nd,
                                n_shift=obj.n_shift)
 
     if obj.ortho:
-        x *= obj.scale_ortho
+        x *= (obj.scale_ortho * obj.adjoint_scalefactor)
+    elif obj.adjoint_scalefactor != 1:
+        x *= obj.adjoint_scalefactor
 
     remove_singleton = True
-    if remove_singleton and Lprod == 1:
+    if remove_singleton and nrepetitions == 1:
         x = x[..., 0]
 
     return x
@@ -1347,22 +1391,6 @@ def compute_Q(G, wi=None, Nd_os=2, Kd_os=1.35, J=5, use_CUDA=False,
     if Nd_os != 2:
         warnings.warn("recommend keeping Nd_os=2")
 
-    # if isinstance(G, MRI_Operator):
-    #     # TODO: support weights in MRI_Operator
-    #     G2 = MRI_Operator(Nd=Nd,
-    #                       Kd=Kd,
-    #                       Jd=(J, )*len(G.Nd),
-    #                       Ld=Gnufft_op.Ld,
-    #                       fov=G.fov,
-    #                       kspace=Nd/Gnufft_op.Nd*G.kspace,
-    #                       order=G.order,
-    #                       mask=np.ones(Nd, dtype=np.bool),
-    #                       kernel=Gnufft_op.kernel.kernel_type,
-    #                       mode=Gnufft_op.mode,
-    #                       use_CUDA=use_CUDA,
-    #                       phasing='real',  # ONLY WORKS IF THIS IS REAL!
-    #                       **extra_nufft_kwargs)
-    # elif isinstance(G, NUFFT_Operator):
     G2 = NUFFT_Operator(om=Gnufft_op.om,
                         Nd=Nd,
                         Kd=Kd,
@@ -1376,11 +1404,10 @@ def compute_Q(G, wi=None, Nd_os=2, Kd_os=1.35, J=5, use_CUDA=False,
                         **extra_nufft_kwargs)
 
     if wi is None:
-        # wi must be real?
-        wi = np.ones(Gnufft_op.om.shape[0], Gnufft_op._cplx_dtype)
+        wi = np.ones(Gnufft_op.om.shape[0], dtype=Gnufft_op._cplx_dtype)
 
     psft = G2.H * wi
-    # TODO: allow DiagOperator too for weights
+    # TODO: allow DiagonalOperator too for weights
     psft = np.fft.fftshift(psft.reshape(G2.Nd, order=G2.order))
     return fftn(psft)
 
@@ -1394,4 +1421,3 @@ def compute_Q_v2(G, copy_X=True):
     ones = np.ones(G.kspace.shape[0], G.Gnufft._cplx_dtype)
     sf = np.sqrt(np.prod(G.Gnufft.Kd))
     return sf * fftn(nufft_adj(G.Gnufft, ones, copy_X=True, return_psf=True))
-
