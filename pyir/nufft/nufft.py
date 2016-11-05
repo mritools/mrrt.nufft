@@ -157,10 +157,6 @@ class NufftBase(object):
             adjoint operation.
         kernel_kwargs : dict
             Addtional kwargs to pass along to the NufftKernel object created.
-
-
-
-
         """
         self.verbose = verbose
         if self.verbose:
@@ -177,8 +173,6 @@ class NufftBase(object):
 
         self.kernel_type = kernel_type
         self.__phasing = phasing
-        # TODO: lowmem functionality not currently implemented
-        self._lowmem = False  # if True don't prestore phase values
         self.__om = None  # will be set later below
         self._set_Nmid()
         self.ndim = len(self.Nd)  # number of dimensions
@@ -479,8 +473,7 @@ class NufftBase(object):
             self.Nmid = np.floor(self.Nd / 2.)
         else:
             self.Nmid = (self.Nd - 1) / 2.
-        if self.phasing == 'real'and \
-                (not self._lowmem) and (self.__om is not None):
+        if self.phasing == 'real'and (self.__om is not None):
             self.phase_after = self._phase_after(self.__om,
                                                  self.Nmid, self.__n_shift)
         if self.__init_complete:
