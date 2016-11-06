@@ -1065,7 +1065,9 @@ def _nufft_table_make1(
     pi = np.pi
     if N % 2 == 0:
         # may be a slight symmetry error for odd N?
-        warnings.warn("odd N in _nufft_table_make1.  even N recommended.")
+        # warnings.warn("odd N in _nufft_table_make1.  even N recommended.")
+        pass
+
     # This is a slow and inefficient (but simple) way to get the table
     # because it builds a huge sparse matrix but only uses 1 column!
     if how == 'slow':

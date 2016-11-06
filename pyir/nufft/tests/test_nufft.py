@@ -321,7 +321,7 @@ def test_nufft_table_make1():
     from pyir.nufft.nufft import _nufft_table_make1
     from numpy.testing import assert_almost_equal
     decimal = 6
-    for N in [64, ]:   # [33, 64]:
+    for N in [64, ]:   # [33, 64]:  # TODO: odd case doesn't pass
         for phasing in ['real', 'complex']:
             h0, t0 = _nufft_table_make1(how='slow', N=N, J=6, K=2 * N, L=2048,
                                         phasing=phasing,
