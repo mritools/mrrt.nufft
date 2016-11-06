@@ -1041,16 +1041,6 @@ def _nufft_table_adj(obj, X, om=None):
     return Xk.astype(X.dtype)
 
 
-if False:
-    how='fast'
-    N=33
-    J=6
-    K=2*N
-    L=2048
-    kernel_type='kb:beatty'
-    phasing='real'
-    debug=False
-
 @profile
 def _nufft_table_make1(
         how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={}):
