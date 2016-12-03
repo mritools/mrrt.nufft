@@ -40,17 +40,17 @@ developed for the BSD-licensed PyWavelets project.
 * 1D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp1_table0_complex_per)(
-const TYPE *r_ck, /* [K1,1] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,1] in */
+const TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1, /* imaginary part of complex interpolator */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1, /* imaginary part of complex interpolator */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -91,17 +91,17 @@ TYPE *i_fm)
 * 1D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp1_table1_complex_per)(
-const TYPE *r_ck, /* [K1,1] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,1] in */
+const TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1, /* imaginary part of complex interpolator */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1, /* imaginary part of complex interpolator */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -124,8 +124,8 @@ TYPE *i_fm)
             const TYPE p1 = (t1 - k1) * L1;
             const int n1 = floor(p1);
             const TYPE alf1 = p1 - n1;
-            register const TYPE *ph1r = r_h1 + n1;
-            register const TYPE *ph1i = i_h1 + n1;
+            register const TYPE * restrict ph1r = r_h1 + n1;
+            register const TYPE * restrict ph1i = i_h1 + n1;
             register TYPE coef1r = (1 - alf1) * *ph1r + alf1 * *(ph1r+1);
             register TYPE coef1i = (1 - alf1) * *ph1i + alf1 * *(ph1i+1);
             const int k1mod = mymod(k1, K1);
@@ -145,16 +145,16 @@ TYPE *i_fm)
 * 1D, 0th-order, real, periodic
 */
 void CAT(TYPE, _interp1_table0_real_per)(
-const TYPE *r_ck, /* [K,1] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K,1] in */
+const TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in (real) */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -194,16 +194,16 @@ TYPE *i_fm)
 * 1D, 1st-order, real, periodic
 */
 void CAT(TYPE, _interp1_table1_real_per)(
-const TYPE *r_ck, /* [K,1] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K,1] in */
+const TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in (real) */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -225,7 +225,7 @@ TYPE *i_fm)
             const TYPE p1 = (t1 - k1) * L1;
             const int n1 = floor(p1);
             const TYPE alf1 = p1 - n1;
-            register const TYPE *ph1 = r_h1 + n1;
+            register const TYPE * restrict ph1 = r_h1 + n1;
             register TYPE coef1r = (1 - alf1) * *ph1 + alf1 * *(ph1+1);
             const int wrap1 = floor(k1 / (TYPE) K1);
             const int k1mod = k1 - K1 * wrap1;
@@ -241,17 +241,17 @@ TYPE *i_fm)
 
 
 void CAT(TYPE, _interp1_table0_complex_per_adj_inner)(
-TYPE *r_ck,       /* [K1,1] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,1] out */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1, /* imaginary part of complex interpolator */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1, /* imaginary part of complex interpolator */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -293,17 +293,17 @@ const TYPE *i_fm)
 * 1D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp1_table0_complex_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -321,17 +321,17 @@ const int N)
 }
 
 void CAT(TYPE, _interp1_table1_complex_per_adj_inner)(
-TYPE *r_ck,       /* [K1,1] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,1] out */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1, /* imaginary part of complex interpolator */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1, /* imaginary part of complex interpolator */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -358,8 +358,8 @@ const TYPE *i_fm)
             const TYPE p1 = (t1 - k1) * L1;
             const int n1 = floor(p1);
             const TYPE alf1 = p1 - n1;
-            register const TYPE *ph1r = r_h1 + n1;
-            register const TYPE *ph1i = i_h1 + n1;
+            register const TYPE * restrict ph1r = r_h1 + n1;
+            register const TYPE * restrict ph1i = i_h1 + n1;
             register TYPE coef1r = (1 - alf1) * *ph1r + alf1 * *(ph1r+1);
             register TYPE coef1i = (1 - alf1) * *ph1i + alf1 * *(ph1i+1);
             const int k1mod = mymod(k1, K1);
@@ -376,17 +376,17 @@ const TYPE *i_fm)
 * 1D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp1_table1_complex_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -405,16 +405,16 @@ const int N)
 
 
 void CAT(TYPE, _interp1_table0_real_per_adj_inner)(
-TYPE *r_ck,       /* [K1,1] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,1] out */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in (real) */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -456,16 +456,16 @@ const TYPE *i_fm)
 * 1D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp1_table0_real_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -484,16 +484,16 @@ const int N)
 
 
 void CAT(TYPE, _interp1_table1_real_per_adj_inner)(
-TYPE *r_ck,       /* [K1,1] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,1] out */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in (real) */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in (real) */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,1] in */
+const TYPE * restrict p_tm, /* [M,1] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -519,7 +519,7 @@ const TYPE *i_fm)
             const TYPE p1 = (t1 - k1) * L1;
             const int n1 = floor(p1);
             const TYPE alf1 = p1 - n1;
-            register const TYPE *ph1 = r_h1 + n1;
+            register const TYPE * restrict ph1 = r_h1 + n1;
             register TYPE coef1r = (1 - alf1) * *ph1 + alf1 * *(ph1+1);
             const int wrap1 = floor(k1 / (TYPE) K1);
             const int k1mod = k1 - K1 * wrap1;
@@ -536,16 +536,16 @@ const TYPE *i_fm)
 * 1D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp1_table1_real_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const int J1,
 const int L1,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -564,22 +564,22 @@ const int N)
 
 
 void CAT(TYPE, _interp2_table0_complex_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -641,22 +641,22 @@ const TYPE *i_fm)
 * 2D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp2_table0_complex_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -675,20 +675,20 @@ const int N)
 
 
 void CAT(TYPE, _interp2_table0_real_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -748,20 +748,20 @@ const TYPE *i_fm)
 * 2D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp2_table0_real_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -780,20 +780,20 @@ const int N)
 
 
 void CAT(TYPE, _interp2_table1_real_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -825,7 +825,7 @@ const TYPE *i_fm)
             const TYPE p2 = (t2 - k2) * L2;
             const int n2 = floor(p2);
             const TYPE alf2 = p2 - n2;
-            register const TYPE *ph2 = r_h2 + n2;
+            register const TYPE * restrict ph2 = r_h2 + n2;
             TYPE coef2r = (1 - alf2) * *ph2 + alf2 * *(ph2+1);
             const int wrap2 = floor(k2 / (TYPE) K2);
             const int k2mod = k2 - K2 * wrap2;
@@ -840,7 +840,7 @@ const TYPE *i_fm)
                 const TYPE p1 = (t1 - k1) * L1;
                 const int n1 = floor(p1);
                 const TYPE alf1 = p1 - n1;
-                register const TYPE *ph1 = r_h1 + n1;
+                register const TYPE * restrict ph1 = r_h1 + n1;
                 register TYPE coef1r = (1 - alf1) * *ph1 + alf1 * *(ph1+1);
                 const int wrap1 = floor(k1 / (TYPE) K1);
                 const int k1mod = k1 - K1 * wrap1;
@@ -859,20 +859,20 @@ const TYPE *i_fm)
 * 2D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp2_table1_real_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -891,22 +891,22 @@ const int N)
 
 
 void CAT(TYPE, _interp2_table1_complex_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -940,8 +940,8 @@ const TYPE *i_fm)
             const TYPE p2 = (t2 - k2) * L2;
             const int n2 = floor(p2);
             const TYPE alf2 = p2 - n2;
-            register const TYPE *r_ph2 = r_h2 + n2;
-            register const TYPE *i_ph2 = i_h2 + n2;
+            register const TYPE * restrict r_ph2 = r_h2 + n2;
+            register const TYPE * restrict i_ph2 = i_h2 + n2;
             /* const TYPE coef2r = r_h2[n2]; */
             /* const TYPE coef2i = i_h2[n2]; */
             TYPE coef2r = (1 - alf2) * *r_ph2 + alf2 * *(r_ph2+1);
@@ -957,8 +957,8 @@ const TYPE *i_fm)
                 const TYPE p1 = (t1 - k1) * L1;
                 const int n1 = floor(p1);
                 const TYPE alf1 = p1 - n1;
-                register const TYPE *r_ph1 = r_h1 + n1;
-                register const TYPE *i_ph1 = i_h1 + n1;
+                register const TYPE * restrict r_ph1 = r_h1 + n1;
+                register const TYPE * restrict i_ph1 = i_h1 + n1;
                 TYPE coef1r = (1 - alf1) * *r_ph1 + alf1 * *(r_ph1+1);
                 TYPE coef1i = (1 - alf1) * *i_ph1 + alf1 * *(i_ph1+1);
                 const int k1mod = mymod(k1, K1);
@@ -976,22 +976,22 @@ const TYPE *i_fm)
 * 2D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp2_table1_complex_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -1010,22 +1010,22 @@ const int N)
 
 
 void CAT(TYPE, _interp2_table0_complex_per)(
-const TYPE *r_ck, /* [K1,K2] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1093,20 +1093,20 @@ TYPE *i_fm)
 * 2D, 0th-order, real, periodic
 */
 void CAT(TYPE, _interp2_table0_real_per)(
-const TYPE *r_ck, /* [K1,K2] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1171,20 +1171,20 @@ TYPE *i_fm)
 * 2D, 1st-order, real, periodic
 */
 void CAT(TYPE, _interp2_table1_real_per)(
-const TYPE *r_ck, /* [K1,K2] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1217,7 +1217,7 @@ TYPE *i_fm)
             const TYPE p2 = (t2 - k2) * L2;
             const int n2 = floor(p2);
             const TYPE alf2 = p2 - n2;
-            register const TYPE *ph2 = r_h2 + n2;
+            register const TYPE * restrict ph2 = r_h2 + n2;
             TYPE coef2r = (1 - alf2) * *ph2 + alf2 * *(ph2+1);
             const int wrap2 = floor(k2 / (TYPE) K2);
             const int k2mod = k2 - K2 * wrap2;
@@ -1231,7 +1231,7 @@ TYPE *i_fm)
                 const TYPE p1 = (t1 - k1) * L1;
                 const int n1 = floor(p1);
                 const TYPE alf1 = p1 - n1;
-                register const TYPE *ph1 = r_h1 + n1;
+                register const TYPE * restrict ph1 = r_h1 + n1;
                 register TYPE coef1r = (1 - alf1) * *ph1 + alf1 * *(ph1+1);
                 const int wrap1 = floor(k1 / (TYPE) K1);
                 const int k1mod = k1 - K1 * wrap1;
@@ -1257,22 +1257,22 @@ TYPE *i_fm)
 * 2D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp2_table1_complex_per)(
-const TYPE *r_ck, /* [K1,K2] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
 const int L2,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1303,8 +1303,8 @@ TYPE *i_fm)
             const TYPE p2 = (t2 - k2) * L2;
             const int n2 = floor(p2);
                     const TYPE alf2 = p2 - n2;
-                    register const TYPE *r_ph2 = r_h2 + n2;
-                    register const TYPE *i_ph2 = i_h2 + n2;
+                    register const TYPE * restrict r_ph2 = r_h2 + n2;
+                    register const TYPE * restrict i_ph2 = i_h2 + n2;
                     TYPE coef2r = (1 - alf2) * *r_ph2 + alf2 * *(r_ph2+1);
                     TYPE coef2i = (1 - alf2) * *i_ph2 + alf2 * *(i_ph2+1);
                 const int k2mod = mymod(k2, K2);
@@ -1318,8 +1318,8 @@ TYPE *i_fm)
                 const TYPE p1 = (t1 - k1) * L1;
                 const int n1 = floor(p1);
                         const TYPE alf1 = p1 - n1;
-                        register const TYPE *r_ph1 = r_h1 + n1;
-                        register const TYPE *i_ph1 = i_h1 + n1;
+                        register const TYPE * restrict r_ph1 = r_h1 + n1;
+                        register const TYPE * restrict i_ph1 = i_h1 + n1;
                     TYPE coef1r = (1 - alf1) * *r_ph1 + alf1 * *(r_ph1+1);
                         TYPE coef1i = (1 - alf1) * *i_ph1 + alf1 * *(i_ph1+1);
                     const int k1mod = mymod(k1, K1);
@@ -1347,27 +1347,27 @@ TYPE *i_fm)
 * 3D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp3_table0_complex_per)(
-const TYPE *r_ck, /* [K1,K2,K3] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2,K3] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
-const TYPE *r_h3, /* [J3*L3+1,1] in */
-const TYPE *i_h3,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1457,27 +1457,27 @@ TYPE *i_fm)
 * 3D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp3_table1_complex_per)(
-const TYPE *r_ck, /* [K1,K2,K3] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2,K3] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
-const TYPE *r_h3, /* [J3*L3+1,1] in */
-const TYPE *i_h3,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1571,24 +1571,24 @@ TYPE *i_fm)
 * 3D, 0th-order, real, periodic
 */
 void CAT(TYPE, _interp3_table0_real_per)(
-const TYPE *r_ck, /* [K1,K2,K3] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2,K3] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1676,24 +1676,24 @@ TYPE *i_fm)
 * 3D, 1st-order, real, periodic
 */
 void CAT(TYPE, _interp3_table1_real_per)(
-const TYPE *r_ck, /* [K1,K2,K3] in */
-const TYPE *i_ck,
+const TYPE * restrict r_ck, /* [K1,K2,K3] in */
+const TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-TYPE *r_fm,       /* [M,1] out */
-TYPE *i_fm)
+TYPE * restrict r_fm,       /* [M,1] out */
+TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1780,27 +1780,27 @@ TYPE *i_fm)
 
 
 void CAT(TYPE, _interp3_table0_complex_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2,K3] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2,K3] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
-const TYPE *r_h3, /* [J3*L3+1,1] in */
-const TYPE *i_h3,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1883,27 +1883,27 @@ const TYPE *i_fm)
 * 3D, 0th order, complex, periodic
 */
 void CAT(TYPE, _interp3_table0_complex_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
-const TYPE *r_h3, /* [J3*L3+1,1] in */
-const TYPE *i_h3,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -1922,27 +1922,27 @@ const int N)
 
 
 void CAT(TYPE, _interp3_table1_complex_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2,K3] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2,K3] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
-const TYPE *r_h3, /* [J3*L3+1,1] in */
-const TYPE *i_h3,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -1983,8 +1983,8 @@ const TYPE *i_fm)
             const TYPE p3 = (t3 - k3) * L3;
             const int n3 = floor(p3);
             const TYPE alf3 = p3 - n3;
-            register const TYPE *r_ph3 = r_h3 + n3;
-                    register const TYPE *i_ph3 = i_h3 + n3;
+            register const TYPE * restrict r_ph3 = r_h3 + n3;
+                    register const TYPE * restrict i_ph3 = i_h3 + n3;
             TYPE coef3r = (1 - alf3) * *r_ph3 + alf3 * *(r_ph3+1);
                     TYPE coef3i = (1 - alf3) * *i_ph3 + alf3 * *(i_ph3+1);
             const int k3mod = mymod(k3, K3);
@@ -1997,8 +1997,8 @@ const TYPE *i_fm)
                 const TYPE p2 = (t2 - k2) * L2;
                 const int n2 = floor(p2);
                 const TYPE alf2 = p2 - n2;
-                        register const TYPE *r_ph2 = r_h2 + n2;
-                        register const TYPE *i_ph2 = i_h2 + n2;
+                        register const TYPE * restrict r_ph2 = r_h2 + n2;
+                        register const TYPE * restrict i_ph2 = i_h2 + n2;
                 TYPE coef2r = (1 - alf2) * *r_ph2 + alf2 * *(r_ph2+1);
                         TYPE coef2i = (1 - alf2) * *i_ph2 + alf2 * *(i_ph2+1);
                 const int k2mod = mymod(k2, K2);
@@ -2012,8 +2012,8 @@ const TYPE *i_fm)
                     const TYPE p1 = (t1 - k1) * L1;
                     const int n1 = floor(p1);
                             const TYPE alf1 = p1 - n1;
-                            register const TYPE *r_ph1 = r_h1 + n1;
-                            register const TYPE *i_ph1 = i_h1 + n1;
+                            register const TYPE * restrict r_ph1 = r_h1 + n1;
+                            register const TYPE * restrict i_ph1 = i_h1 + n1;
                     TYPE coef1r = (1 - alf1) * *r_ph1 + alf1 * *(r_ph1+1);
                             TYPE coef1i = (1 - alf1) * *i_ph1 + alf1 * *(i_ph1+1);
 
@@ -2035,27 +2035,27 @@ const TYPE *i_fm)
 * 3D, 1st order, complex, periodic
 */
 void CAT(TYPE, _interp3_table1_complex_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *i_h1,
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *i_h2,
-const TYPE *r_h3, /* [J3*L3+1,1] in */
-const TYPE *i_h3,
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict i_h1,
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict i_h2,
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -2075,24 +2075,24 @@ const int N)
 
 
 void CAT(TYPE, _interp3_table0_real_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2,K3] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2,K3] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -2170,24 +2170,24 @@ const TYPE *i_fm)
 * 3D, 0th order, real, periodic
 */
 void CAT(TYPE, _interp3_table0_real_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
@@ -2205,24 +2205,24 @@ const int N)
 }
 
 void CAT(TYPE, _interp3_table1_real_per_adj_inner)(
-TYPE *r_ck,       /* [K1,K2,K3] out */
-TYPE *i_ck,
+TYPE * restrict r_ck,       /* [K1,K2,K3] out */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,3] in */
+const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
-const TYPE *r_fm, /* [M,1] in */
-const TYPE *i_fm)
+const TYPE * restrict r_fm, /* [M,1] in */
+const TYPE * restrict i_fm)
 {
     int mm;
 
@@ -2260,7 +2260,7 @@ const TYPE *i_fm)
             const TYPE p3 = (t3 - k3) * L3;
             const int n3 = floor(p3);
             const TYPE alf3 = p3 - n3;
-            register const TYPE *ph3 = r_h3 + n3;
+            register const TYPE * restrict ph3 = r_h3 + n3;
             TYPE coef3r = (1 - alf3) * *ph3 + alf3 * *(ph3+1);
             const int wrap3 = floor(k3 / (TYPE) K3);
             const int k3mod = k3 - K3 * wrap3;
@@ -2273,7 +2273,7 @@ const TYPE *i_fm)
                 const TYPE p2 = (t2 - k2) * L2;
                 const int n2 = floor(p2);
                 const TYPE alf2 = p2 - n2;
-                register const TYPE *ph2 = r_h2 + n2;
+                register const TYPE * restrict ph2 = r_h2 + n2;
                 TYPE coef2r = (1 - alf2) * *ph2 + alf2 * *(ph2+1);
                 const int wrap2 = floor(k2 / (TYPE) K2);
                 const int k2mod = k2 - K2 * wrap2;
@@ -2287,7 +2287,7 @@ const TYPE *i_fm)
                     const TYPE p1 = (t1 - k1) * L1;
                     const int n1 = floor(p1);
                     const TYPE alf1 = p1 - n1;
-                    register const TYPE *ph1 = r_h1 + n1;
+                    register const TYPE * restrict ph1 = r_h1 + n1;
                     register TYPE coef1r = (1 - alf1) * *ph1 + alf1 * *(ph1+1);
                     const int wrap1 = floor(k1 / (TYPE) K1);
                     const int k1mod = k1 - K1 * wrap1;
@@ -2306,24 +2306,24 @@ const TYPE *i_fm)
 * 3D, 1st order, real, periodic
 */
 void CAT(TYPE, _interp3_table1_real_per_adj)(
-TYPE *r_ck,   /* [K1,K2] in */
-TYPE *i_ck,
+TYPE * restrict r_ck,   /* [K1,K2] in */
+TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const int K3,
-const TYPE *r_h1, /* [J1*L1+1,1] in */
-const TYPE *r_h2, /* [J2*L2+1,1] in */
-const TYPE *r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
 const int L2,
 const int L3,
-const TYPE *p_tm, /* [M,2] in */
+const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
-const TYPE *r_fm,     /* [M,1] out */
-const TYPE *i_fm,
+const TYPE * restrict r_fm,     /* [M,1] out */
+const TYPE * restrict i_fm,
 const int N)
 {
     int nn;
