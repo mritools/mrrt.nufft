@@ -1355,8 +1355,7 @@ def nufft_adjoint_exact(obj, X, copy_X=True):
     return x
 
 
-def compute_Q(G, wi=None, Nd_os=2, Kd_os=1.35, J=5, use_CUDA=False,
-              **extra_nufft_kwargs):
+def compute_Q(G, wi=None, Nd_os=2, Kd_os=1.35, J=5, **extra_nufft_kwargs):
     """compute Q such that IFFT(Q*FFT(x)) = (G.H * G * x).
 
     Notes
@@ -1403,9 +1402,8 @@ def compute_Q(G, wi=None, Nd_os=2, Kd_os=1.35, J=5, use_CUDA=False,
                         Jd=(J, )*len(Nd),
                         Ld=Gnufft_op.Ld,
                         n_shift=Nd/2,
-                        kernel=Gnufft_op.kernel.kernel_type,
+                        kernel_type=Gnufft_op.kernel.kernel_type,
                         mode=Gnufft_op.mode,
-                        use_CUDA=use_CUDA,
                         phasing='real',  # ONLY WORKS IF THIS IS REAL!
                         **extra_nufft_kwargs)
 
