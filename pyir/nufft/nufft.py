@@ -1288,8 +1288,9 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
 
     if obj.ortho:
         # TODO: even if obj.ortho?
-        x *= (obj.scale_ortho * np.product(Kd) * obj.adjoint_scalefactor)
+        x *= (obj.scale_ortho * obj.adjoint_scalefactor)
     else:
+        # undo default normalization of ifftn (as in matlab nufft_adj)
         x *= (np.product(Kd) * obj.adjoint_scalefactor)
 
     # scaling factors
