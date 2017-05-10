@@ -209,8 +209,6 @@ def recompose(src):
     raise ValueError("TODO: basically reshapes as in pruned_fft demo below")
 
 
-
-
 def nufft_forward(self, src):
     return self * src
 
@@ -273,39 +271,6 @@ def compute_psf2(kspace, img_dims, fov, weights, **nufft_kwargs):
     psft *= scale
     factors = np.ones(len(img_dims2))
     factors[non_singleton_dims] = 2
-
-    # psf = md_decompose(N + 0, factors, psf_dims, img2_dims, psft, CFL_SIZE);
-
-
-def test_psf(show_figures=False):
-    kspace = np.arange(-128, 128, dtype=np.float32).reshape(-1, 1)
-    fov = 1
-    Nd = 256
-    weights = None
-    nufft_kwargs = dict(mode='table0', kernel='kb:beatty')
-    psf = compute_psf(kspace, Nd, fov, weights, **nufft_kwargs)
-    from numpy.testing import assert_almost_equal
-    # should be a delta function
-    assert_almost_equal(psf[Nd//2].real, Nd, decimal=2)
-    assert_almost_equal(psf[Nd//2-1].real, 0, decimal=2)
-    assert_almost_equal(psf[0].real, 0, decimal=2)
-    assert_almost_equal(psf[-1].real, 0, decimal=2)
-    assert_almost_equal(psf[Nd//2+1].real, 0, decimal=2)
-    if show_figures:
-        from matplotlib import pyplot as plt
-        plt.figure()
-        plt.plot(np.abs(psf))
-
-    # double matrix size & FOV, but keep the same number of k-space samples
-    psf2 = compute_psf(kspace*2, Nd*2, fov*2, weights, **nufft_kwargs)
-    # should now get 3 aliased peaks
-    assert_almost_equal(psf2[Nd//2].real, Nd, decimal=2)
-    assert_almost_equal(psf2[Nd].real, Nd, decimal=2)
-    assert_almost_equal(psf2[3*Nd//2].real, Nd, decimal=2)
-    if show_figures:
-        from matplotlib import pyplot as plt
-        plt.figure()
-        plt.plot(np.abs(psf2))
 
 
 def compute_psf(kspace, Nd, fov, weights, Kd=None, Jd=None, **nufft_kwargs):
