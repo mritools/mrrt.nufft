@@ -594,7 +594,7 @@ def test_Gnufft_gram_2d(verbose=False):
     # TODO: fix weights returned by mri_trajectory
     # weights = np.abs(omega[:, 0] + 1j * omega[:, 1])
 
-    ig = ImageGeometry(nx=N[0], ny=N[1], dx=1)
+    ig = ImageGeometry(shape=N, distances=1)
     mask, junk = ellipse_im(ig, [0, 0, 14, 15, 0, 1], oversample=3)
     mask = mask > 0
     x, params = ellipse_im(ig, 'shepplogan-emis')  # , oversample=2, fov=250)
