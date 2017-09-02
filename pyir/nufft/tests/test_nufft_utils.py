@@ -14,7 +14,8 @@ from pyir.nufft.nufft_utils import (_nufft_interp_zn,
 from pyir.nufft.simple_kernels import (linear_kernel,
                                        nufft_diric,
                                        nufft_gauss)
-from pyir.utils import diric, max_percent_diff, reale
+from pyir.utils import max_percent_diff, reale
+from scipy.special import diric
 
 
 # some tests load results from Fessler's Matlab implementation for comparison

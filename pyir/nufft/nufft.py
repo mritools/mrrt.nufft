@@ -65,7 +65,7 @@ from ._kernels import NufftKernel
 __all__ = ['NufftBase', 'compute_Q', 'nufft_adj', 'nufft_forward']
 
 supported_real_types = [np.float32, np.float64]
-supported_cplx_types = [np.complex64, np.float128]
+supported_cplx_types = [np.complex64, np.complex128]
 
 
 def _get_legend_text(ax):
