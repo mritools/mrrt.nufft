@@ -1,26 +1,22 @@
-# -*- coding: utf-8 -*-
+from __future__ import division, print_function, absolute_import
 import os
-from os.path import join as pjoin
 
 import numpy as np
 from numpy.testing import (run_module_suite,
                            assert_almost_equal,
                            assert_allclose,
                            assert_equal,
-                           assert_,
-                           dec)
+                           assert_)
 
 import pyir.nufft
 from pyir.nufft import dtft, dtft_adj
-from pyir.nufft.nufft import NufftBase, nufft_forward, nufft_adj
+from pyir.nufft.nufft import NufftBase, nufft_adj
 from pyir.nufft.tests.test_dtft import _uniform_freqs
 from pyir.utils import max_percent_diff
 pkg_dir = os.path.dirname(pyir.nufft.__file__)
-data_dir = pjoin(pkg_dir, 'data', 'mat_files')
 
-__all__ = ['test_nufft_init',
-           'test_nufft',
-           'test_nufft_adj']
+# __all__ = ['test_nufft_init',
+#            'test_nufft_adj']
 
 
 def _perturbed_gridpoints(Nd, rel_std=0.5, seed=1234):
@@ -104,24 +100,6 @@ def test_nufft_adj():
             except:
                 print("Failed for mode: {}, {}".format(mode, phasing))
     return
-
-
-@dec.skipif(True)  # test data not available
-def test_nufft(verbose=False):
-    for test3d in [False, True]:
-        for initialize_from_Matlab in [True, ]:  # False,]:
-            if verbose:
-                make_fig = True
-                print("\n\nRunning _nufft_test with " +
-                      "test3d={}, Matlab_init={}: ".format(
-                          test3d,  initialize_from_Matlab))
-            else:
-                make_fig = False
-            _nufft_test(
-                test3d=test3d,
-                initialize_from_Matlab=initialize_from_Matlab,
-                make_fig=make_fig)
-
 
 def test_nufft_1d():
     Nd = 64
