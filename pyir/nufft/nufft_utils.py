@@ -175,7 +175,8 @@ def _nufft_coef(om, J, K, kernel):
 
     Notes
     -----
-    Matlab vn. Copyright 2002-4-11, Jeff Fessler, The University of Michigan
+    Matlab version Copyright 2002-4-11, Jeff Fessler, The University of
+    Michigan.
     """
 
     om = np.atleast_1d(np.squeeze(om))
@@ -197,12 +198,12 @@ def _nufft_coef(om, J, K, kernel):
     return (coef, arg)
 
 
-def to_1d_int_array(arr, nelem=None, dtype_out=np.intp):
+def to_1d_int_array(arr, n=None, dtype_out=np.intp):
     """ convert to 1D integer array.  returns an error if the elements of arr
     aren't an integer type or arr has more than one non-singleton dimension.
 
-    If nelem is specified, an error is raised if the array doesn't contain
-    nelem elements.
+    If `n` is specified, an error is raised if the array doesn't contain
+    `n` elements.
     """
     arr = np.atleast_1d(arr)
     if arr.ndim > 1:
@@ -216,12 +217,12 @@ def to_1d_int_array(arr, nelem=None, dtype_out=np.intp):
         if not np.all(np.mod(arr, 1) == 0):
             print("arr = {}".format(arr))
             raise ValueError("arr contains non-integer values")
-    if nelem is not None:
-        if arr.size != nelem:
+    if n is not None:
+        if arr.size != n:
             if arr.size == 1:
-                arr = np.asarray([arr[0], ] * nelem)
+                arr = np.asarray([arr[0], ] * n)
             else:
                 raise ValueError(
-                    "array did not have the expected size of {}".format(nelem))
+                    "array did not have the expected size of {}".format(n))
 
     return arr.astype(dtype_out)

@@ -71,7 +71,7 @@ def test_nufft_init(verbose=False):
         print(st)
 
 
-def test_nufft_adj():
+def test_nufft_adj(verbose=False):
     """ test nufft_adj() """
     N1 = 4
     N2 = 8
@@ -91,15 +91,19 @@ def test_nufft_adj():
             xd = dtft_adj(X, om, Nd=[N1, N2], n_shift=n_shift)  # TODO...
             XXX = np.vstack((X, X, X)).T
             xn = nufft_adj(st, XXX)
-            # print('nufft vs dtft max%%diff = %g' %
-            # max_percent_diff(xd,xn[:,:,-1]))  #TODO
+            if verbose:
+                print('nufft vs dtft max%%diff = %g' %
+                      max_percent_diff(xd, xn[:, :, -1]))  #TODO
             try:
                 assert_almost_equal(
                     np.squeeze(xd), np.squeeze(xn[:, :, -1]), decimal=1)
-                print("Success for mode: {}, {}".format(mode, phasing))
+                if verbose:
+                    print("Success for mode: {}, {}".format(mode, phasing))
             except:
-                print("Failed for mode: {}, {}".format(mode, phasing))
+                if verbose:
+                    print("Failed for mode: {}, {}".format(mode, phasing))
     return
+
 
 def test_nufft_1d():
     Nd = 64

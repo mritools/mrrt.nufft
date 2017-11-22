@@ -106,16 +106,8 @@ class NufftKernel(object):
         Kd = params.get('Kd', None)  # oversampled image size
         Jd = params.get('Jd', None)  # kernel size
         Nd = params.get('Nd', None)  # image size
-        kb_alf = params.get('kb_alf', None)  # alpha for kb:* cases
-        kb_m = params.get('kb_m', None)  # m for kb:* cases
-
-        # warn if user specified specific alpha, m
-        if kernel_type in ['kb:beatty', ] and \
-                ((kb_m is not None) or (kb_alf is not None)):
-            # warnings.warn(
-            #     '%s: user supplied kb_alf and kb_m ignored' % kernel_type)
-            raise ValueError(
-                '%s: user supplied kb_alf and kb_m ignored' % kernel_type)
+        kb_alf = params.get('kb_alf', None)
+        kb_m = params.get('kb_m', None)
 
         # linear interpolator straw man
         kernel_type = kernel_type.lower()

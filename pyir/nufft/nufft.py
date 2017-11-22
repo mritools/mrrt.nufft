@@ -172,11 +172,11 @@ class NufftBase(object):
         self.__om = None  # will be set later below
         self._set_Nmid()
         self.ndim = len(self.Nd)  # number of dimensions
-        self._Jd = to_1d_int_array(Jd, nelem=self.ndim)
+        self._Jd = to_1d_int_array(Jd, n=self.ndim)
 
         if Kd is None:
             Kd = 2 * self.__Nd
-        self.__Kd = to_1d_int_array(Kd, nelem=self.ndim)
+        self.__Kd = to_1d_int_array(Kd, n=self.ndim)
 
         self.ortho = ortho  # normalization for orthogonal FFT
         if self.ortho:
@@ -241,7 +241,7 @@ class NufftBase(object):
                 self.sparse_format = sparse_format
         elif 'table' in self.mode:
             # TODO: change name of Ld to table_oversampling
-            self.Ld = to_1d_int_array(Ld, nelem=self.ndim)
+            self.Ld = to_1d_int_array(Ld, n=self.ndim)
             odd_L = np.mod(self.Ld, 2) == 1
             odd_J = np.mod(self.Jd, 2) == 1
             if np.any(np.logical_and(odd_L, odd_J)):
@@ -284,6 +284,20 @@ class NufftBase(object):
         else:
             y = nufft_adj(self, X=X)
         return y
+
+    def _set_phase_funcs(self):
+        if self.phasing == 'real':
+            self.phase_before = self._phase_before(self.Kd, self.Nmid)
+            self.phase_after = self._phase_after(self.om,
+                                                 self.Nmid,
+                                                 self.n_shift)
+        elif self.phasing == 'complex':
+            # complex kernel incorporates the FFTshift phase
+            self.phase_before = None
+            self.phase_after = None
+        else:
+            raise ValueError("Invalid phasing: {}\n\t".format(self.phasing) +
+                             "must be 'real' or 'complex'")
 
     @property
     def sparse_format(self):
@@ -391,7 +405,7 @@ class NufftBase(object):
     @Nd.setter
     def Nd(self, Nd):
         K_N_ratio = self.__Kd / self.__Nd
-        self.__Nd = to_1d_int_array(Nd, nelem=self.ndim)
+        self.__Nd = to_1d_int_array(Nd, n=self.ndim)
         self._set_Nmid()
         # update Kd to maintain approximately the same amount of oversampling
         self.__Kd = np.round(K_N_ratio * self.__Nd).astype(self.__Kd.dtype)
@@ -404,7 +418,7 @@ class NufftBase(object):
 
     @Jd.setter
     def Jd(self, Jd):
-        self._Jd = to_1d_int_array(Jd, nelem=self.ndim)
+        self._Jd = to_1d_int_array(Jd, n=self.ndim)
         if self.__init_complete:
             self._reinitialize()
 
@@ -414,7 +428,7 @@ class NufftBase(object):
 
     @Ld.setter
     def Ld(self, Ld):
-        self.__Ld = to_1d_int_array(Ld, nelem=self.ndim)
+        self.__Ld = to_1d_int_array(Ld, n=self.ndim)
         if 'table' not in self.mode:
             warnings.warn("Ld is ignored for mode = {}".format(self.mode))
         elif self.__init_complete:
@@ -426,7 +440,7 @@ class NufftBase(object):
 
     @Kd.setter
     def Kd(self, Kd):
-        self.__Kd = to_1d_int_array(Kd, nelem=self.ndim)
+        self.__Kd = to_1d_int_array(Kd, n=self.ndim)
         if isinstance(self.phase_before, np.ndarray):
             self.phase_before = self._phase_before(Kd, self.Nmid)
         if self.__init_complete:
@@ -735,7 +749,8 @@ class NufftBase(object):
         self.h = []
         # build kernel lookup table (LUT) for each dimension
         for d in range(ndim):
-            if 'kb_alf' in kernel_kwargs:
+            if ('kb_alf' in kernel_kwargs and
+                    kernel_kwargs['kb_alf'] is not None):
                 kernel_kwargs['kb_alf'] = [self.kernel.params['kb_alf'][d], ]
                 kernel_kwargs['kb_m'] = [self.kernel.params['kb_m'][d], ]
 
@@ -1258,7 +1273,7 @@ def nufft_adjoint_exact(obj, X, copy_X=True):
 
 
 def compute_Q(G, wi=None, Nd_os=2, Kd_os=1.35, J=5, **extra_nufft_kwargs):
-    """compute Q such that IFFT(Q*FFT(x)) = (G.H * G * x).
+    """Compute Q such that IFFT(Q*FFT(x)) = (G.H * G * x).
 
     Notes
     -----

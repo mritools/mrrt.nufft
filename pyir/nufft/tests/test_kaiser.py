@@ -22,17 +22,14 @@ def test_kaiser_bessel(verbose=False):
         yf = func(x, J)
         assert_array_equal(yf, yy[:, i])
 
-    yb = kaiser_bessel(x, J, alpha='best', kb_m=None, K_N=2)
-    leg.append('best')
     if verbose:
         from matplotlib import pyplot as plt
         plt.figure()
-        l1, l2, l3, l4, l5 = plt.plot(x, yy[:, 0], 'c-',
-                                      x, yy[:, 1], 'y-',
-                                      x, yy[:, 2], 'm-',
-                                      x, yy[:, 3], 'g-',
-                                      x, yb, 'r--')
-        plt.legend((l1, l2, l3, l4, l5), leg, loc='upper right')
+        l1, l2, l3, l4 = plt.plot(x, yy[:, 0], 'c-',
+                                  x, yy[:, 1], 'y-',
+                                  x, yy[:, 2], 'm-',
+                                  x, yy[:, 3], 'g-')
+        plt.legend((l1, l2, l3, l4), leg, loc='upper right')
         plt.xlabel(r'$\kappa$')
         plt.ylabel(r'F($\kappa$)')
         plt.title(r'KB functions: J=%g $\alpha$=%g' % (J, alpha))
@@ -96,77 +93,6 @@ def test_kaiser_bessel_ft(verbose=False):
         plt.title(r'KB FT: $\alpha$=%g' % alpha)
 
     return
-
-
-@dec.skipif(True)  # skip this as it requires Matlab
-def _kaiser_matlab_compare(show_figures=True):
-    from pymatbridge import Matlab
-    if show_figures:
-        from matplotlib import pyplot as plt
-
-    mlab = Matlab(executable='/usr/local/bin/matlab')
-    mlab.start()
-
-    J = 5
-    alpha = 6.8
-    N = 2 ** 10
-    x = np.arange(-N / 2., N / 2.) / float(N) * (J + 3) / 2.
-    dx = x[1] - x[0]
-    du = 1 / float(N) / float(dx)
-    u = np.arange(-N / 2., N / 2.) * du
-    uu = 1.5 * np.linspace(-1, 1, 201)
-    mlist = [-2, 0, 2, 7]
-    for ii, kb_m in enumerate(mlist):
-        mcmd = "J = %d; alpha = %g; N = %d; kb_m=%d; " % (J, alpha, N, kb_m)
-        mcmd += "x = [-N/2:N/2-1]'/N * (J+3)/2; "
-        mcmd += "dx = x(2) - x(1); "
-        mcmd += "du = 1 / N / dx; "
-        mcmd += "u = [-N/2:N/2-1]' * du; "
-        mcmd += "uu = 1.5*linspace(-1,1,201)';"
-        mcmd += "k=kaiser_bessel(x, J, alpha, kb_m);"
-        mcmd += "kft=kaiser_bessel_ft(u, J, alpha, kb_m, 1);"
-        mcmd += "kft_uu=kaiser_bessel_ft(uu, J, alpha, kb_m, 1);"
-        res = mlab.run_code(mcmd)
-        k = []
-        kft = []
-        kft_uu = []
-        exec('k=np.array(%s)' % mlab.get_variable('k'))
-        exec('kft=np.array(%s)' % mlab.get_variable('kft'))
-        exec('kft_uu=np.array(%s)' % mlab.get_variable('kft_uu'))
-        k_py = kaiser_bessel(x, J, alpha, kb_m)
-        kft_py = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
-        kft_uu_py = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
-        diff_k = np.max(k_py - k)
-        diff_kft = np.max(kft_py - kft)
-        diff_kft_uu = np.max(kft_uu_py - kft_uu)
-        assert(diff_k < 1e-8)
-        assert(diff_kft < 1e-8)
-        assert(diff_kft_uu < 1e-8)
-        if show_figures:
-            plt.figure(
-                1 + 3 * ii), plt.plot(
-                x, k, 'k.', x, k_py, 'k'), plt.title(
-                'm = %d, max diff = %g' %
-                (kb_m, diff_k))
-            plt.figure(
-                2 + 3 * ii), plt.plot(
-                u, kft, 'k.', u, kft_py, 'k'), plt.title(
-                'm = %d, max diff = %g' %
-                (kb_m, diff_kft))
-            plt.figure(
-                3 + 3 * ii), plt.plot(
-                uu, kft_uu, 'k.', uu, kft_uu_py, 'k'), plt.title(
-                'm = %d, max diff = %g' %
-                (kb_m, diff_kft_uu))
-    # res=mlab.run_func('kaiser_bessel.m',{'x' : x.tolist(), 'J' : J,
-    #                   'alpha' : alpha, 'kb_m' : 0, 'K_N' : 2})
-    mlab.stop()
-
-    # res=mlab.run_code(mcmd)
-    # ip=get_ipython()
-    # pymat.load_ipython_extension(ip)
-    return
-
 
 if __name__ == "__main__":
     run_module_suite()

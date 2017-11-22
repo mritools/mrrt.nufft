@@ -1,4 +1,5 @@
-"""
+"""Kaiser-Bessel function and it's Fourier transform.
+
 The code in this module is a based on Matlab routines originally created by
 Jeff Fessler and his students at the University of Michigan.  The original
 license for the Matlab code is reproduced below.
@@ -17,54 +18,9 @@ from __future__ import division, print_function, absolute_import
 import warnings
 import numpy as np
 from scipy.special import iv, jv
-from pyir.utils import reale, is_string_like
+from pyir.utils import reale
 
 __all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
-
-
-def _kaiser_bessel_params(alpha='best', J=6, K_N=2):
-    """ optimized shape and order parameters"""
-    if alpha == 'best':
-        if K_N == 2:
-            kb_m = 0  # hardwired, because it was nearly the best!
-
-            # manually replicate the file private/kaiser,m=0.mat
-            Jlist = np.arange(2, 17)
-            abest = np.array([2.5,
-                              2.27,
-                              2.31,
-                              2.34,
-                              2.32,
-                              2.32,
-                              2.35,
-                              2.34,
-                              2.34,
-                              2.35,
-                              2.34,
-                              2.35,
-                              2.35,
-                              2.35,
-                              2.33])
-
-            ii = (J == Jlist)  # .nonzero()
-            if(np.sum(ii) == 0):
-                ii = np.abs(J - Jlist).argmin()
-                warnings.warn(
-                    'J=%d not found, using %d' % (J, int(Jlist[ii])))
-            alpha = J * abest[ii]
-        else:
-            wstr = ('kaiser_bessel optimized only for K/N=2!\n'
-                    'using good defaults: m=0 and alpha = 2.34*J')
-            warnings.warn(wstr)
-            kb_m = 0
-            alpha = 2.34 * J
-    elif alpha == 'beatty':
-        # Eq. 5 of Beatty2005:  IEEE TMI 24(6):799:808, kb_m = 0
-        alpha = np.pi * np.sqrt(J**2/K_N**2 * (K_N - 0.5)**2 - 0.8)
-        kb_m = 0
-    else:
-        raise ValueError('unknown alpha mode')
-    return alpha, kb_m
 
 
 def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
@@ -115,9 +71,6 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
 
     if alpha is None:
         alpha = 2.34 * J
-
-    if is_string_like(alpha):
-        alpha, kb_m = _kaiser_bessel_params(alpha, J, K_N)
 
     """Warn about use of modified formula for negative kb_m"""
     if (kb_m < 0) and ((abs(round(kb_m) - kb_m)) > np.finfo(float).eps):
