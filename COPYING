@@ -2,17 +2,6 @@ pyir.nufft was developed by Gregory R. Lee, largely based on the Matlab NUFFT
 implementation of Jeff Fessler and his students.
 http://web.eecs.umich.edu/~fessler/code/
 
-Code within the _MOLSkernel.py module is based on Matlab code originally
-developed by Zhili Yang (University of Rochester) and Mathews Jacob
-(University of Iowa).  The original author's implementation is available at:
-https://research.engineering.uiowa.edu/cbig/content/accurate-nufft-using-optimized-interpolator-and-scale-factors
-
-
-License
-=======
-pyir.nufft is made available under a BSD license.
-
-
 
 Original license for the Matlab code by Jeff Fessler and his students
 ---------------------------------------------------------------------
@@ -22,3 +11,9 @@ Original license for the Matlab code by Jeff Fessler and his students
     It would also be courteous for you to cite the toolbox and any related
     publications in any papers that present results based on this software.
     UM and the authors make all the usual disclaimers about liability etc.
+
+
+License
+=======
+pyir.nufft is made available under a BSD license.
+
