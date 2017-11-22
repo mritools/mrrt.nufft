@@ -22,23 +22,16 @@ from pyir.nufft._kaiser_bessel import kaiser_bessel
 
 from pyir.nufft.nufft_utils import to_1d_int_array
 
-from pyir.nufft._minmax import (nufft_alpha_kb_fit,
-                                nufft_best_alpha)
-
 from pyir.nufft.simple_kernels import nufft_diric
 
 from pyir.utils import is_string_like
 
 __all__ = ['NufftKernel', ]
 
-kernel_types = ['minmax:kb',
-                'linear',
+kernel_types = ['linear',
                 'diric',
                 'kb:beatty',
-                'kb:minmax',
                 'kb:user',
-                'minmax:unif',
-                'minmax:tuned',
                 ]
 
 
@@ -113,14 +106,11 @@ class NufftKernel(object):
         Kd = params.get('Kd', None)  # oversampled image size
         Jd = params.get('Jd', None)  # kernel size
         Nd = params.get('Nd', None)  # image size
-        Nmid = params.get('Nmid', None)
         kb_alf = params.get('kb_alf', None)  # alpha for kb:* cases
         kb_m = params.get('kb_m', None)  # m for kb:* cases
-        alpha = params.get('alpha', None)  # alpha for minmax:* cases
-        beta = params.get('beta', None)  # beta for minmax:* cases
 
         # warn if user specified specific alpha, m
-        if kernel_type in ['kb:beatty', 'kb:minmax'] and \
+        if kernel_type in ['kb:beatty', ] and \
                 ((kb_m is not None) or (kb_alf is not None)):
             # warnings.warn(
             #     '%s: user supplied kb_alf and kb_m ignored' % kernel_type)
@@ -172,26 +162,6 @@ class NufftKernel(object):
                                       alpha=params['kb_alf'][d],
                                       kb_m=params['kb_m'][d]))
 
-        # KB with minmax-optimized parameters
-        elif kernel_type == 'kb:minmax':
-            self.is_kaiser_scale = True
-
-            if (Jd is None):
-                raise ValueError("kwargs must contain Jd for " +
-                                 "{} case".format(kernel_type))
-
-            self.kernel = []
-            params['kb_alf'] = []
-            params['kb_m'] = []
-            for d in range(ndim):
-                alf = 2.34 * Jd[d]
-                m = 0
-                self.kernel.append(
-                    functools.partial(kaiser_bessel, J=Jd[d], alpha=alf,
-                                      kb_m=m))
-                params['kb_alf'].append(alf)
-                params['kb_m'].append(0)
-
         elif kernel_type == 'kb:user':
             self.is_kaiser_scale = True
 
@@ -205,54 +175,6 @@ class NufftKernel(object):
                                                      J=Jd[d],
                                                      alpha=kb_alf[d],
                                                      kb_m=kb_m[d]))
-
-        # minmax interpolator with KB scaling factors (recommended default)
-        elif kernel_type == 'minmax:kb':
-            if (Kd is None) or (Nd is None) or (Jd is None) or (Nmid is None):
-                raise ValueError("kwargs must contain Kd, Nd, Jd, Nmid for " +
-                                 "{} case".format(kernel_type))
-            params['alpha'] = []
-            params['beta'] = []
-            for d in range(ndim):
-                [al, be] = nufft_alpha_kb_fit(N=Nd[d], J=Jd[d], K=Kd[d],
-                                              Nmid=Nmid[d])
-                params['alpha'].append(al)
-                params['beta'].append(be)
-
-        # minmax interpolator with numerically "tuned" scaling factors
-        elif kernel_type == 'minmax:tuned':  # TODO
-            if (Kd is None) or (Nd is None) or (Jd is None):
-                raise ValueError("kwargs must contain Kd, Nd, Jd for " +
-                                 "{} case".format(kernel_type))
-            params['alpha'] = []
-            params['beta'] = []
-            for d in range(ndim):
-                [al, be, ok] = nufft_best_alpha(J=Jd[d], L=0,
-                                                K_N=Kd[d] / Nd[d])
-                params['alpha'].append(al)
-                params['beta'].append(be)
-                if not ok:
-                    raise ValueError('unknown J,K/N')
-
-        # minmax interpolator with user-provided scaling factors
-        elif kernel_type == 'minmax:user':
-            if (alpha is None) or (beta is None):
-                raise ValueError("user must provide alpha, beta for " +
-                                 "{} case".format(kernel_type))
-            if len(alpha) != ndim or len(beta) != ndim:
-                print("alpha={}".format(alpha))
-                print("beta={}".format(beta))
-                print("ndim={}".format(ndim))
-                raise ValueError('alpha/beta size mismatch')
-
-        elif kernel_type == 'minmax:unif':
-            params['alpha'] = []
-            params['beta'] = []
-            for d in range(ndim):
-                params['alpha'].append(1.)
-                params['beta'].append(0.)
-        elif 'mols' in kernel_type:
-            pass
         else:
             raise ValueError('unknown kernel type')
 
@@ -269,7 +191,6 @@ class NufftKernel(object):
 
     def plot(self, real_imag=False, axes=None):
         from matplotlib import pyplot as plt
-        from pyir.nufft.nufft import _nufft_table_make1
         """plot the (separable) kernel for each axis."""
         title_text = 'type: {}'.format(self.kernel_type)
         if axes is None:
@@ -282,14 +203,7 @@ class NufftKernel(object):
                 J = 1
             x = np.linspace(-J/2, J/2, 1001)
 
-            if 'minmax:kb' in self.kernel_type:
-                y = _nufft_table_make1('fast', N=self.params['Nd'][d],
-                                       K=self.params['Kd'][d],
-                                       J=self.params['Jd'][d],
-                                       L=250, kernel_type=self.kernel_type,
-                                       phasing='real')[0]
-            else:
-                y = self.kernel[d](x)
+            y = self.kernel[d](x)
             if real_imag:
                 axes[d].plot(x, y.real, 'k-', label='real')
                 axes[d].plot(x, y.imag, 'r--', label='imaginary')
@@ -312,9 +226,4 @@ class NufftKernel(object):
             for d in range(self.ndim):
                 repstr += "    alpha[{}], m[{}] = {}, {}\n".format(
                     d, d, self.kb_alf[d], self.kb_m[d])
-        elif 'minmax:' in self.kernel_type:
-            repstr += "Minmax params:\n"
-            for d in range(self.ndim):
-                repstr += "    alpha[{}], beta[{}] = {}, {}".format(
-                    d, d, self.alpha[d], self.beta[d])
         return repstr

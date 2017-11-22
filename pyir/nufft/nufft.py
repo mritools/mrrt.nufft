@@ -32,10 +32,6 @@ from pyir.nufft.nufft_utils import (_nufft_samples,
                                     to_1d_int_array
                                     )
 
-from pyir.nufft._minmax import (_nufft_r,
-                                _nufft_T,
-                                nufft_scale)
-
 from pyir.nufft._dtft import dtft, dtft_adj
 
 from pyir.nufft._kaiser_bessel import kaiser_bessel_ft
@@ -211,16 +207,6 @@ class NufftBase(object):
         # [M, *Kd]	sparse interpolation matrix (or empty if table-based)
         self.p = None
         self.Jd = Jd
-        if 'mols' in kernel_type:
-            if 'table' not in self.mode:
-                raise ValueError(
-                    'MOLS NUFFT kernel, requires a table-based mode')
-            if np.any(np.asarray(Jd) % 2):
-                raise ValueError("MOLS only currently working for even J")
-            if self.phasing != 'real':
-                raise ValueError(
-                    'MOLS NUFFT kernel, requires a real phasing')
-
         self.kernel = NufftKernel(kernel_type,
                                   ndim=self.ndim,
                                   Nd=self.Nd,
@@ -547,20 +533,6 @@ class NufftBase(object):
                 for h in self.h:
                     h = contig_func(h)
 
-    def _set_phase_funcs(self):
-        if self.phasing == 'real':
-            # TODO: fix 'mols' kernel in complex case to incorporate this?
-            self.phase_before = self._phase_before(self.Kd, self.Nmid)
-            self.phase_after = self._phase_after(self.om,
-                                                 self.Nmid,
-                                                 self.n_shift)
-        elif self.phasing == 'complex':
-            # complex kernel incorporates the FFTshift phase
-            self.phase_before = None
-            self.phase_after = None
-        else:
-            raise ValueError("Invalid phasing: {}\n\t".format(self.phasing) +
-                             "must be 'real' or 'complex'")
 
     def _phase_before(self, Kd, Nmid):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
@@ -590,11 +562,6 @@ class NufftBase(object):
         ktype = kernel.kernel_type.lower()
         if ktype == 'diric':
             self.sn = np.ones(Nd)
-        elif 'minmax:' in ktype:
-            self.sn = nufft_scale(Nd, Kd, kernel.alpha, kernel.beta, self.Nmid)
-        elif 'mols' in ktype:
-            self.sn = None
-            # will get set later during _init_table()
         else:
             self.sn = np.array([1.])
             for d in range(self.ndim):
@@ -619,11 +586,10 @@ class NufftBase(object):
                 # tmp = reale(tmp)  #TODO: reale?
                 # TODO: replace outer with broadcasting?
                 self.sn = np.outer(self.sn.ravel(), tmp.conj())
-        if 'mols' not in ktype:
-            if len(Nd) > 1:
-                self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
-            else:
-                self.sn = self.sn.ravel()  # [(Nd)]
+        if len(Nd) > 1:
+            self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
+        else:
+            self.sn = self.sn.ravel()  # [(Nd)]
 
     @profile
     def _init_sparsemat(self):
@@ -647,21 +613,12 @@ class NufftBase(object):
             K = self.Kd[d]
 
             # callable kernel:  kaiser, linear, etc
-            if (self.kernel.kernel is not None):
-                kernel_func = self.kernel.kernel[d]
-                if not isinstance(kernel_func, collections.Callable):
-                    raise ValueError("callable kernel function required")
-                # [J?,M]
-                [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func)
-            else:  # minmax:
-                alpha = self.kernel.alpha[d]
-                beta = self.kernel.beta[d]
-                # [J?,J?]  TODO: move .tol into kernel object
-                T = _nufft_T(N, J, K, tol=1e-7, alpha=alpha, beta=beta)
-                [r, arg] = _nufft_r(
-                    om[:, d], N, J, K, alpha=alpha, beta=beta)  # [J?,M]
-                # c = T * r  clear T r
-                c = np.dot(T, r)
+            kernel_func = self.kernel.kernel[d]
+            if not isinstance(kernel_func, collections.Callable):
+                raise ValueError("callable kernel function required")
+
+            # [J?,M]
+            [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func)
             #
             # indices into oversampled FFT components
             #
@@ -778,70 +735,15 @@ class NufftBase(object):
         self.h = []
         # build kernel lookup table (LUT) for each dimension
         for d in range(ndim):
-            if 'alpha' in kernel_kwargs:
-                kernel_kwargs['alpha'] = [self.kernel.params['alpha'][d], ]
-                kernel_kwargs['beta'] = [self.kernel.params['beta'][d], ]
             if 'kb_alf' in kernel_kwargs:
                 kernel_kwargs['kb_alf'] = [self.kernel.params['kb_alf'][d], ]
                 kernel_kwargs['kb_m'] = [self.kernel.params['kb_m'][d], ]
 
-            if 'mols' in self.kernel.kernel_type:
-                if d == 0:
-                    # dict to cache previously generated kernels
-                    MOLS_generated = {}
-
-                # TODO: test this IOWA case
-                from pyir.nufft._iowa_MOLSkernel import PreNUFFT_fm
-                if self.Ld[d] % 2 == 0:
-                    raise ValueError("mols requires odd Ld")
-                key = (self.Jd[d], self.Nd[d], self.Ld[d], self.Kd[d])
-
-                if key in MOLS_generated:
-                    pre, h = MOLS_generated[key]
-                else:
-                    pre, h, junk1, err1 = PreNUFFT_fm(
-                        J=self.Jd[d], N=self.Nd[d], Ofactor=self.Ld[d],
-                        K=self.Kd[d], Order=2, H=np.ones(self.Nd[d]),
-                        degree=self.Jd[d]-1, realkernel=True)
-                    # store for reuse in case other dimensions are the same
-                    MOLS_generated[key] = (pre, h)
-
-                if d == ndim - 1:
-                    del MOLS_generated
-
-                if len(h) != (self.Jd[d] * self.Ld[d] + 1):
-                    raise ValueError("unexpected kernel size")
-                # scale factor computation
-                if d == 0:
-                    self.sn = 1
-                pre_shape = np.ones(self.ndim, dtype=np.intp)
-                pre_shape[d] = len(pre)
-                # if negligable imaginary component, keep only the real part
-                try:
-                    pre = reale(pre)
-                except ValueError:
-                    pass
-                self.sn = self.sn * pre.reshape(pre_shape, order='F')
-                h = np.abs(h)  # TODO: take abs here?
-                # h /= h.max() # can't renormalize unless prefilter also scaled
-
-#                self.sn = np.outer(self.sn.ravel(), pre.conj())
-#                if d == ndim - 1:
-#                    if len(Nd) > 1:
-#                        self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
-#                    else:
-#                        self.sn = self.sn.ravel()  # [(Nd)]
-
-            else:
-                if self.kernel.kernel_type in ['kb:minmax', 'kb:beatty']:
-                    # avoid warnings in kernel calls during _nufft_table_make1
-                    kernel_kwargs.pop('kb_m', None)
-                    kernel_kwargs.pop('kb_alf', None)
-                h, t0 = _nufft_table_make1(how=how, N=self.Nd[d], J=self.Jd[d],
-                                           K=self.Kd[d], L=self.Ld[d],
-                                           phasing=self.phasing,
-                                           kernel_type=self.kernel.kernel_type,
-                                           kernel_kwargs=kernel_kwargs)
+            h, t0 = _nufft_table_make1(how=how, N=self.Nd[d], J=self.Jd[d],
+                                       K=self.Kd[d], L=self.Ld[d],
+                                       phasing=self.phasing,
+                                       kernel_type=self.kernel.kernel_type,
+                                       kernel_kwargs=kernel_kwargs)
 
             if self.phasing == 'complex':
                 if np.isrealobj(h):
@@ -1083,7 +985,7 @@ def _nufft_table_make1(
     # This efficient way uses only "J" columns of sparse matrix!
     # The trick to this is to use fake small values for N and K,
     # which works for interpolators that depend only on the ratio K/N.
-    elif how == 'ratio':  # e.g., 'minmax:kb' | 'kb:*'
+    elif how == 'ratio':
         Nfake = J
         Kfake = Nfake * K / N
         if debug:
@@ -1097,7 +999,6 @@ def _nufft_table_make1(
         # [J*L+1] assuming symmetric
         h = np.concatenate((h, np.asarray([h[0], ])), axis=0)
         if phasing == 'complex':
-            # TODO: fix 'mols' case
             h = h * np.exp(1j * pi * t0 * (1 / K - 1 / Kfake))  # fix phase
     else:
         raise ValueError("Bad Type: {}".format(type))

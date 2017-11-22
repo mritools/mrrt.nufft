@@ -87,8 +87,7 @@ def test_nufft_adj():
         for phasing in ['real', 'complex']:
             st = NufftBase(om=om, Nd=np.array([N1, N2]), Jd=[4, 6],
                            Kd=2 * np.array([N1, N2]), n_shift=n_shift,
-                           kernel_type='minmax:tuned',
-                           # kernel_type='kb:beatty',
+                           kernel_type='kb:beatty',
                            phasing=phasing,
                            mode=mode)
 
