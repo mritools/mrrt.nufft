@@ -20,7 +20,6 @@ import warnings
 
 from time import time
 import numpy as np
-from numpy.testing import assert_
 
 import scipy.sparse
 from scipy.sparse import coo_matrix
@@ -968,7 +967,8 @@ def _nufft_table_make1(
                       phasing=phasing,
                       sparse_format='csc')
     t0 = np.arange(-J * L / 2., J * L / 2. + 1) / L  # [J*L+1]
-    assert_(t0.size == (J*L + 1))
+    if not t0.size == (J*L + 1):
+        raise ValueError("bad t0.size")
     pi = np.pi
     if N % 2 == 0:
         # may be a slight symmetry error for odd N?
