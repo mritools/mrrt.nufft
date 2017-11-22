@@ -18,7 +18,7 @@ import os
 
 # General information about the project.
 project = 'pyir.nufft'
-copyright = '2015-2016, Gregory R. Lee'
+copyright = '2015-2017, Gregory R. Lee'
 
 currentdir = os.path.abspath(os.path.dirname(__file__))
 if False:
@@ -28,12 +28,9 @@ if False:
         exec(f.read())
     source_version = get_versions()['version']
 else:
-    try:
-        os.chdir('..')
-        import versioneer
-        source_version = versioneer.get_version()
-    finally:
-        os.chdir(currentdir)
+    from pyir.nufft._version import get_versions
+    __version__ = get_versions()['version']
+    source_version = get_versions()['version']
 print("source_version = {}".format(source_version))
 print("type(source_version) = {}".format(type(source_version)))
 
