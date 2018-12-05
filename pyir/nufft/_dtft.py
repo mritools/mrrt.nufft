@@ -9,11 +9,12 @@ originally developed by Jeff Fessler and his students.
 from __future__ import division, print_function, absolute_import
 
 import numpy as np
+from pyir.utils._cupy import get_array_module
 
 __all__ = ['dtft', 'dtft_adj']
 
 
-def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
+def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
     """  Compute d-dimensional DTFT of signal x at frequency locations omega
 
     Parameters
@@ -38,7 +39,8 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
     Matlab version: Copyright 2001-9-17, Jeff Fessler,
                     The University of Michigan
     """
-
+    if xp is None:
+        xp, on_gpu = get_array_module(omega)
     dd = omega.shape[1]
     if Nd is None:
         if x.ndim == dd+1:
@@ -47,56 +49,56 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
             Nd = x.shape
         else:
             raise ValueError("Nd must be specified")
-    Nd = np.atleast_1d(Nd)
+    Nd = xp.atleast_1d(Nd)
 
     if len(Nd) == dd:		# just one image
         x = x.ravel(order='F')
-        x = x[:, np.newaxis]
+        x = x[:, xp.newaxis]
     elif len(Nd) == dd+1:  # multiple images
         Nd = Nd[:-1]
-        x = np.reshape(x, (np.prod(Nd), -1))  # [*Nd,L]
+        x = xp.reshape(x, (xp.prod(Nd), -1))  # [*Nd,L]
     else:
         print('bad input signal size')
 
     if n_shift is None:
-        n_shift = np.zeros(dd)
-    n_shift = np.atleast_1d(np.squeeze(n_shift))
+        n_shift = xp.zeros(dd)
+    n_shift = xp.atleast_1d(xp.squeeze(n_shift))
     if len(n_shift) != dd:
         raise ValueError("must specify one shift per axis")
 
-    if np.any(n_shift != 0):
+    if xp.any(n_shift != 0):
         nng = []
         for d in range(dd):
-            nng.append(np.arange(0, Nd[d]) - n_shift[d])
-        nng = np.meshgrid(*nng, indexing='ij')
+            nng.append(xp.arange(0, Nd[d]) - n_shift[d])
+        nng = xp.meshgrid(*nng, indexing='ij')
     else:
-        nng = np.indices(Nd)
+        nng = xp.indices(Nd)
 
     if useloop:
         #
         # loop way: slower but less memory
         #
         M = len(omega)
-        X = np.zeros((x.size // np.prod(Nd), M),
-                     dtype=np.result_type(x.dtype, omega.dtype,
-                                          np.complex64))  # [L,M]
+        X = xp.zeros((x.size // xp.prod(Nd), M),
+                     dtype=xp.result_type(x.dtype, omega.dtype,
+                                          xp.complex64))  # [L,M]
         if omega.shape[1] < 3:
             # trick: make '3d'
-            omega = np.hstack((omega,
-                               np.zeros(omega.shape[0])[:, np.newaxis]))
+            omega = xp.hstack((omega,
+                               xp.zeros(omega.shape[0])[:, xp.newaxis]))
         for d in range(dd):
             nng[d] = nng[d].ravel(order='F')
         for mm in range(0, M):
             tmp = omega[mm, 0] * nng[0]
             for d in range(1, dd):
                 tmp += omega[mm, d] * nng[d]
-            X[:, mm] = np.dot(np.exp(-1j*tmp), x)
+            X[:, mm] = xp.dot(xp.exp(-1j*tmp), x)
         X = X.T  # [M,L]
     else:
-        X = np.outer(omega[:, 0], nng[0].ravel(order='F'))
+        X = xp.outer(omega[:, 0], nng[0].ravel(order='F'))
         for d in range(1, dd):
-            X += np.outer(omega[:, d], nng[d].ravel(order='F'))
-        X = np.dot(np.exp(-1j*X), x)
+            X += xp.outer(omega[:, d], nng[d].ravel(order='F'))
+        X = xp.dot(xp.exp(-1j*X), x)
 
     if X.shape[-1] == 1:
         X.shape = X.shape[:-1]
@@ -104,7 +106,7 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False):
     return X
 
 
-def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
+def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False, xp=None):
     """Compute adjoint of d-dim DTFT for spectrum X at frequency locations
     omega.
 
@@ -127,6 +129,10 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
     Requires enough memory to store M * (*Nd) size matrices.
     (For testing only)
     """
+    if xp is None:
+        xp, on_gpu = get_array_module(omega)
+    else:
+        on_gpu = (xp != np)
     dd = omega.shape[1]
     if Nd is None:
         if X.ndim == dd+1:
@@ -135,13 +141,13 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
             Nd = X.shape
         else:
             raise ValueError("Nd must be specified")
-    Nd = np.atleast_1d(Nd)
+    Nd = xp.atleast_1d(Nd)
     if len(Nd) == dd:		# just one image
         X = X.ravel(order='F')
-        X = X[:, np.newaxis]
+        X = X[:, xp.newaxis]
     elif len(Nd) == dd+1:  # multiple images
         Nd = Nd[:-1]
-        X = np.reshape(X, (np.prod(Nd), -1))  # [*Nd,L]
+        X = xp.reshape(X, (xp.prod(Nd), -1))  # [*Nd,L]
     else:
         print('bad input signal size')
 
@@ -149,36 +155,39 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False):
         raise ValueError("length of Nd must match number of columns in omega")
 
     if n_shift is None:
-        n_shift = np.zeros(dd)
-    n_shift = np.atleast_1d(np.squeeze(n_shift))
+        n_shift = xp.zeros(dd)
+    n_shift = xp.atleast_1d(xp.squeeze(n_shift))
     if len(n_shift) != dd:
         raise ValueError("must specify one shift per axis")
 
-    if np.any(n_shift != 0):
+    if xp.any(n_shift != 0):
         nn = []
         for id in range(dd):
-            nn.append(np.arange(0, Nd[id]) - n_shift[id])
-        nn = np.meshgrid(*nn, indexing='ij')
+            nn.append(xp.arange(0, Nd[id]) - n_shift[id])
+        nn = xp.meshgrid(*nn, indexing='ij')
     else:
-        nn = np.indices(Nd)
+        nn = xp.indices(Nd)
+
+    if on_gpu:
+        Nd = tuple(Nd.get())
 
     if useloop:
         # slower, but low memory
         M = omega.shape[0]
-        x = np.zeros(Nd)  # [(Nd), M]
+        x = xp.zeros(Nd)  # [(Nd), M]
         for mm in range(0, M):
             t = omega[mm, 0]*nn[0]
             for d in range(1, dd):
                 t += omega[mm, d]*nn[d]
-            x = x + np.exp(1j*t) * X[mm]
+            x = x + xp.exp(1j*t) * X[mm]
     else:
-        x = np.outer(nn[0].ravel(order='F'), omega[:, 0])
+        x = xp.outer(nn[0].ravel(order='F'), omega[:, 0])
         for d in range(1, dd):
-            x += np.outer(nn[d].ravel(order='F'), omega[:, d])
-        x = np.dot(np.exp(1j*x[:, np.newaxis]), X)  # [(*Nd),L]
-        x = np.reshape(x, Nd, order='F')  # [(Nd),L]
+            x += xp.outer(nn[d].ravel(order='F'), omega[:, d])
+        x = xp.dot(xp.exp(1j*x[:, xp.newaxis]), X)  # [(*Nd),L]
+        x = xp.reshape(x, Nd, order='F')  # [(Nd),L]
 
     if x.shape[-1] == 1:
         x.shape = x.shape[:-1]
-        
+
     return x

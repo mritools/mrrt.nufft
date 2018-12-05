@@ -21,6 +21,10 @@ else:
 # Note if rpath errors related to libgomp occur on OsX, try adding the path
 # containing libgomp to the link arguments.  e.g.
 # LDFLAGS="$LDFLAGS -Wl,-rpath,/Users/lee8rx/anaconda/lib" pip install -e . -v
+#
+# On OS X, recent clang does have OpenMP support.
+# From conda-forge, one can install the clangdev and openmp packages to get a
+# version supporting it.
 
 if sys.platform == 'darwin':
     if 'ENABLE_OPENMP' in os.environ:

@@ -23,6 +23,20 @@ from pyir.utils import reale
 __all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
 
 
+def _iv(x1, x2, xp):
+    # no iv function in CUDA math library, so must compute on the CPU
+    if xp != np:
+        return xp.asarray(iv(x1.get(), x2.get()))
+    return iv(x1, x2)
+
+
+def _jv(x1, x2, xp):
+    # no jv function in CUDA math library, so must compute on the CPU
+    if xp != np:
+        return xp.asarray(jv(x1.get(), x2.get()))
+    return jv(x1, x2)
+
+
 def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     '''  generalized Kaiser-Bessel function for x in support [-J/2,J/2]
 
@@ -81,11 +95,11 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     ii = (2 * np.abs(x) < J).nonzero()
     tmp = (2 * x[ii] / J)
     f = np.sqrt(1 - tmp * tmp)
-    denom = iv(kb_m_bi, alpha)
+    denom = _iv(kb_m_bi, alpha, xp=np)
     if denom == 0:
         print('m=%g alpha=%g' % (kb_m, alpha))
     kb = np.zeros_like(x)
-    kb[ii] = (f ** kb_m * iv(kb_m_bi, alpha * f)) / float(denom)
+    kb[ii] = (f ** kb_m * _iv(kb_m_bi, alpha * f, xp=np)) / float(denom)
     kb = kb.real
     return kb
 
@@ -139,10 +153,11 @@ def kaiser_bessel_ft(u=None, J=6, alpha=None, kb_m=0, d=1):
 
     # trick: scipy.special.jv can handle complex args
     tmp = (np.pi * J * u)
+    # lib.scimath.sqrt gives complex values instead of NaN for negative inputs
     z = np.lib.scimath.sqrt(tmp * tmp - alpha * alpha)
     nu = d / 2. + kb_m
     y = (2 * np.pi) ** (d / 2.) * (J / 2.) ** d * alpha ** kb_m \
-        / iv(kb_m, alpha) * jv(nu, z) / z ** nu
+        / _iv(kb_m, alpha, xp=np) * _jv(nu, z, xp=np) / z ** nu
     y = reale(y.real)
 
     return y

@@ -22,7 +22,6 @@ from time import time
 import numpy as np
 
 import scipy.sparse
-from scipy.sparse import coo_matrix
 
 from pyir.nufft.nufft_utils import (_nufft_samples,
                                     _nufft_interp_zn,
@@ -55,6 +54,7 @@ from pyir.utils import (fftn,
                         get_data_address)
 
 from ._kernels import NufftKernel
+from pyir.utils._cupy import get_array_module
 
 
 __all__ = ['NufftBase', 'compute_Q', 'nufft_adj', 'nufft_forward']
@@ -71,21 +71,21 @@ def _get_legend_text(ax):
         return [t.get_text() for t in l.get_texts()]
 
 
-def _block_outer_sum(x1, x2):
+def _block_outer_sum(x1, x2, xp=None):
     J1, M = x1.shape
     J2, M = x2.shape
-    xx1 = np.reshape(x1, (J1, 1, M))
-    xx2 = np.reshape(x2, (1, J2, M))
+    xx1 = x1.reshape((J1, 1, M))
+    xx2 = x2.reshape((1, J2, M))
     # use numpy broadcasting
     y = xx1 + xx2			# (J1, J2, M)
     return y
 
 
-def _block_outer_prod(x1, x2):
+def _block_outer_prod(x1, x2, xp=None):
     J1, M = x1.shape
     J2, M = x2.shape
-    xx1 = np.reshape(x1, (J1, 1, M))
-    xx2 = np.reshape(x2, (1, J2, M))
+    xx1 = x1.reshape((J1, 1, M))
+    xx2 = x2.reshape((1, J2, M))
     # use numpy broadcasting
     y = xx1 * xx2			# (J1, J2, M)
     return y
@@ -100,7 +100,8 @@ class NufftBase(object):
     def __init__(self, Nd, om, Jd=6, Kd=None, Ld=2048, precision='single',
                  kernel_type='kb:beatty', mode='table0', ortho=False,
                  n_shift=None, phasing='real', sparse_format='CSC',
-                 adjoint_scalefactor=1., kernel_kwargs={}, verbose=False):
+                 adjoint_scalefactor=1., kernel_kwargs={}, verbose=False,
+                 loc='cpu'):
         """ Initialize NufftBase instance
 
         Parameters
@@ -158,9 +159,21 @@ class NufftBase(object):
             print("Entering NufftBase init")
         self.__init_complete = False  # will be set true after __init__()
 
+        loc = loc.lower()
+        if loc == 'cpu':
+            self.xp = np
+            self.on_gpu = False
+        elif loc == 'gpu':
+            import cupy
+            self.xp = cupy
+            self.on_gpu = True
+        else:
+            raise ValueError("loc must be 'cpu' or 'gpu'.")
+        xp = self.xp
+
         # must set the __ version of these to avoid circular calls by the
         # setters
-        self.__Nd = to_1d_int_array(Nd)
+        self.__Nd = to_1d_int_array(Nd, xp=xp)
         if self.verbose:
             print("Nd={}".format(Nd))
             print("self.__Nd={}".format(self.__Nd))
@@ -171,15 +184,15 @@ class NufftBase(object):
         self.__om = None  # will be set later below
         self._set_Nmid()
         self.ndim = len(self.Nd)  # number of dimensions
-        self._Jd = to_1d_int_array(Jd, n=self.ndim)
+        self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=xp)
 
         if Kd is None:
             Kd = 2 * self.__Nd
-        self.__Kd = to_1d_int_array(Kd, n=self.ndim)
+        self.__Kd = to_1d_int_array(Kd, n=self.ndim, xp=xp)
 
         self.ortho = ortho  # normalization for orthogonal FFT
         if self.ortho:
-            self.scale_ortho = np.sqrt(self.__Kd.prod())
+            self.scale_ortho = xp.sqrt(self.__Kd.prod())
         else:
             self.scale_ortho = 1
 
@@ -240,10 +253,10 @@ class NufftBase(object):
                 self.sparse_format = sparse_format
         elif 'table' in self.mode:
             # TODO: change name of Ld to table_oversampling
-            self.Ld = to_1d_int_array(Ld, n=self.ndim)
-            odd_L = np.mod(self.Ld, 2) == 1
-            odd_J = np.mod(self.Jd, 2) == 1
-            if np.any(np.logical_and(odd_L, odd_J)):
+            self.Ld = to_1d_int_array(Ld, n=self.ndim, xp=xp)
+            odd_L = xp.mod(self.Ld, 2) == 1
+            odd_J = xp.mod(self.Jd, 2) == 1
+            if np.any(xp.logical_and(odd_L, odd_J)):
                 warnings.warn(
                     "accuracy may be compromised when L and J are both odd")
             if self.mode == 'table0':
@@ -546,7 +559,6 @@ class NufftBase(object):
                 for h in self.h:
                     h = contig_func(h)
 
-
     def _phase_before(self, Kd, Nmid):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
@@ -616,6 +628,13 @@ class NufftBase(object):
         if om.ndim == 1:
             om = om[:, np.newaxis]
 
+        # TODO: kernel() call below doesn't currently support CuPy
+        xp, on_gpu = get_array_module(om)
+        if on_gpu:
+            coo_matrix = xp.cupyx.scipy.sparse.coo_matrix
+        else:
+            coo_matrix = scipy.sparse.coo_matrix
+
         if self.phasing == 'real':
             # call again just to be safe in case Kd, Nmid, etc changed?
             self._set_phase_funcs()
@@ -631,20 +650,27 @@ class NufftBase(object):
                 raise ValueError("callable kernel function required")
 
             # [J?,M]
-            [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func)
+            if on_gpu:
+                # TODO: for now _nufft_coef only supports numpy backend
+                [c, arg] = _nufft_coef(om[:, d].get(), J, K, kernel_func,
+                                       xp=np)
+                c = xp.asarray(c)
+                arg = xp.asarray(arg)
+            else:
+                [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func, xp=np)
             #
             # indices into oversampled FFT components
             #
             # [M,1] to leftmost near nbr
-            koff = _nufft_offset(om[:, d], J, K)
+            koff = _nufft_offset(om[:, d], J, K, xp=xp)
 
             # [J,M]
-            kd[d] = np.mod(outer_sum(np.arange(1, J + 1), koff), K)
+            kd[d] = xp.mod(outer_sum(xp.arange(1, J + 1), koff, xp=xp), K)
 
             if self.phasing == 'complex':
                 gam = 2 * np.pi / K
                 phase_scale = 1j * gam * (N - 1) / 2.
-                phase = np.exp(phase_scale * arg)   # [J,M] linear phase
+                phase = xp.exp(phase_scale * arg)   # [J,M] linear phase
             else:
                 phase = 1.
             # else:
@@ -669,21 +695,21 @@ class NufftBase(object):
             # trick: pre-convert these indices into offsets! (Fortran order)
             tmp = kd[d] * np.prod(self.Kd[:d])
             kk = _block_outer_sum(kk, tmp)  # outer sum of indices
-            kk = kk.reshape(Jprod, M, order='F')
+            kk = kk.reshape((Jprod, M), order='F')
             uu = _block_outer_prod(uu, ud[d])  # outer product of coefficients
-            uu = uu.reshape(Jprod, M, order='F')
+            uu = uu.reshape((Jprod, M), order='F')
         # now kk and uu are shape (*Jd, M)
 
         #
         # apply phase shift
         # pre-do Hermitian transpose of interpolation coefficients
         #
-        if np.iscomplexobj(uu):
+        if xp.iscomplexobj(uu):
             uu = uu.conj()
 
         if self.phasing == 'complex':
             if np.any(self.n_shift != 0):
-                phase = np.exp(1j * np.dot(om, self.n_shift.ravel()))			# [1,M]
+                phase = xp.exp(1j * xp.dot(om, self.n_shift.ravel()))			# [1,M]
                 phase = phase.reshape((1, -1), order='F')
                 uu *= phase  # use broadcasting along first dimension
             sparse_dtype = self._cplx_dtype
@@ -700,7 +726,7 @@ class NufftBase(object):
                       '%g GB' % (RAM_GB))
 
         # shape (*Jd, M)
-        mm = np.tile(np.arange(M), (np.product(self.Jd), 1))
+        mm = np.tile(xp.arange(M), (xp.product(self.Jd), 1))
 
         self.p = coo_matrix((uu.ravel(order='F'),
                              (mm.ravel(order='F'), kk.ravel(order='F'))),
@@ -1184,7 +1210,7 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
         Xk_all = obj.interp_table_adj(obj, X)
     else:
         # interpolate using precomputed sparse matrix
-        Xk_all = (obj.p.H * X)  # [*Kd,*L]
+        Xk_all = (obj.p.H * X)  # [*Kd, *L]
 
     x = np.zeros(tuple(Kd) + (nrepetitions,), dtype=X.dtype)
 

@@ -3,6 +3,7 @@ from __future__ import division, print_function, absolute_import
 import warnings
 
 import numpy as np
+from pyir.utils._cupy import get_array_module
 
 __all__ = ['_nufft_samples',
            '_nufft_interp_zn',
@@ -11,7 +12,7 @@ __all__ = ['_nufft_samples',
            ]
 
 
-def _nufft_samples(stype, Nd=None):
+def _nufft_samples(stype, Nd=None, xp=np):
     """  default simple EPI sampling patterns
 
     Parameters
@@ -26,26 +27,26 @@ def _nufft_samples(stype, Nd=None):
     om : array_like
         k-space samples
     """
-
     if isinstance(Nd, int):
-        Nd = np.array([Nd])  # convert to array
+        Nd = xp.array([Nd])  # convert to array
 
-    pi = np.pi
+    pi = xp.pi
+    twopi = 2 * pi
     if stype == 'epi':  # blipped echo-planar cartesian samples
         if len(Nd) == 1:
             Nd = Nd[0]  # convert to int
-            om = 2 * pi * np.arange(-Nd / 2., Nd / 2.) / float(Nd)
+            om = (twopi/ float(Nd)) * xp.arange(-Nd / 2., Nd / 2.)
         elif len(Nd) == 2:
-            o1 = 2 * pi * np.arange(-Nd[0] / 2., Nd[0] / 2.) / float(Nd[0])
-            o2 = 2 * pi * np.arange(-Nd[1] / 2., Nd[1] / 2.) / float(Nd[1])
-            o1 = np.tile(o1, (o2.shape[0], 1)).T
-            o2 = np.tile(o2, (o1.shape[0], 1))  # [o1 o2] = ndgrid(o1, o2)
-            # [o1,o2]=np.meshgrid(o2,o1)
+            o1 = (twopi / float(Nd[0])) * xp.arange(-Nd[0] / 2., Nd[0] / 2.)
+            o2 = (twopi / float(Nd[1])) * xp.arange(-Nd[1] / 2., Nd[1] / 2.)
+            o1 = xp.tile(o1, (o2.shape[0], 1)).T
+            o2 = xp.tile(o2, (o1.shape[0], 1))  # [o1 o2] = ndgrid(o1, o2)
+            # [o1,o2]=xp.meshgrid(o2,o1)
             o1copy = o1.copy()
             # CANNOT DO THIS IN-PLACE, MUST USE THE COPY!!
-            o1[:, 1::2] = np.flipud(o1copy[:, 1::2])
+            o1[:, 1::2] = xp.flipud(o1copy[:, 1::2])
 
-            om = np.zeros((o1.size, 2))
+            om = xp.zeros((o1.size, 2))
             om[:, 0] = o1.T.ravel()
             om[:, 1] = o2.T.ravel()
         else:
@@ -55,7 +56,7 @@ def _nufft_samples(stype, Nd=None):
     return om
 
 
-def _nufft_interp_zn(alist, N, J, K, func, Nmid=None):
+def _nufft_interp_zn(alist, N, J, K, func, Nmid=None, xp=np):
     """ compute the "zn" terms for a conventional "shift-invariant" interpolator
         as described in T-SP paper.  needed for error analysis and for user-
         defined kernels since I don't provide a means to put in an analytical
@@ -82,7 +83,7 @@ def _nufft_interp_zn(alist, N, J, K, func, Nmid=None):
     if not Nmid:
         Nmid = (N - 1) / 2.  # default: old version
 
-    alist = np.atleast_1d(alist)
+    alist = xp.atleast_1d(alist)
     #
     # zn = \sum_{j=-J/2}^{J/2-1} exp(i gam (alf - j) * n) F1(alf - j)
     #    = \sum_{j=-J/2}^{J/2-1} exp(i gam (alf - j) * (n-n0)) F0(alf - j)
@@ -97,34 +98,33 @@ def _nufft_interp_zn(alist, N, J, K, func, Nmid=None):
     # Pfunc = inline('exp(-i * mod0(om,2*pi) * (N-1)/2)', 'om', 'N')
 
     if not np.remainder(J, 2):  # even
-        jlist = np.arange(-J / 2. + 1, J / 2. + 1)
+        jlist = xp.arange(-J / 2. + 1, J / 2. + 1)
     else:  # odd
-        jlist = np.arange(-(J - 1) / 2., (J - 1) / 2. + 1)
+        jlist = xp.arange(-(J - 1) / 2., (J - 1) / 2. + 1)
         alist[alist > 0.5] = 1 - alist[alist > 0.5]
 
     # n0 = (N-1)/2.;
     # nlist0 = np.arange(0,N) - n0;     # include effect of phase shift!
-    n0 = np.arange(0, N) - Nmid
+    n0 = xp.arange(0, N) - Nmid
 
-    # nn0, jj = np.mgrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
-    nn0, jj = np.ogrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
+    nn0, jj = xp.ogrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
 
     # must initialize zn as complex
-    zn = np.zeros((N, len(alist)), dtype=np.complex64)
+    zn = xp.zeros((N, len(alist)), dtype=np.complex64)
 
     for ia, alf in enumerate(alist):
         jarg = alf - jj         # [N,J]
-        e = np.exp(1j * gam * jarg * nn0)       # [N,J]
+        e = xp.exp(1j * gam * jarg * nn0)       # [N,J]
         # TODO: remove need for this try/except
         try:
             F = func(jarg, J)           # [N,J]
         except:
             F = func(jarg)           # [N,J]
-        zn[:, ia] = np.sum(F * e, axis=1)
+        zn[:, ia] = xp.sum(F * e, axis=1)
     return zn
 
 
-def _nufft_offset(om, J, K):
+def _nufft_offset(om, J, K, xp=None):
     """ offset for NUFFT
 
     Parameters
@@ -145,14 +145,16 @@ def _nufft_offset(om, J, K):
     -----
     Matlab version Copyright 2000-1-9, Jeff Fessler, The University of Michigan
     """
-    om = np.asanyarray(om)
+    if xp is None:
+        xp, on_gpu = get_array_module(om)
+    om = xp.asanyarray(om)
     gam = 2 * np.pi / K
-    k0 = np.floor(om / gam - J / 2.)  # new way
+    k0 = xp.floor(om / gam - J / 2.)  # new way
 
     return k0
 
 
-def _nufft_coef(om, J, K, kernel):
+def _nufft_coef(om, J, K, kernel, xp=None):
     """  Make NUFFT interpolation coefficient vector given kernel function.
 
     Parameters
@@ -178,16 +180,22 @@ def _nufft_coef(om, J, K, kernel):
     Matlab version Copyright 2002-4-11, Jeff Fessler, The University of
     Michigan.
     """
+    if xp is None:
+        # TODO: kernel() call below doesn't currently support CuPy
+        xp, on_gpu = get_array_module(om)
+        if xp != np:
+            raise NotImplementedError(
+                "only numpy kernel currently implemented.")
 
-    om = np.atleast_1d(np.squeeze(om))
+    om = xp.atleast_1d(xp.squeeze(om))
     if om.ndim > 1:
         raise ValueError("omega array must be 1D")
     # M = om.shape[0];
     gam = 2 * np.pi / K
-    dk = om / gam - _nufft_offset(om, J, K)     # [M,1]
+    dk = om / gam - _nufft_offset(om, J, K, xp=xp)     # [M,1]
 
     # outer sum via broadcasting
-    arg = -np.arange(1, J + 1)[:, None] + dk[None, :]  # [J,M]
+    arg = -xp.arange(1, J + 1)[:, None] + dk[None, :]  # [J,M]
     try:
         # try calling kernel without J in case it is baked into the kernel
         coef = kernel(arg)
@@ -198,29 +206,31 @@ def _nufft_coef(om, J, K, kernel):
     return (coef, arg)
 
 
-def to_1d_int_array(arr, n=None, dtype_out=np.intp):
+def to_1d_int_array(arr, n=None, dtype_out=np.intp, xp=None):
     """ convert to 1D integer array.  returns an error if the elements of arr
     aren't an integer type or arr has more than one non-singleton dimension.
 
     If `n` is specified, an error is raised if the array doesn't contain
     `n` elements.
     """
-    arr = np.atleast_1d(arr)
+    if xp is None:
+        xp, on_gpu = get_array_module(arr)
+    arr = xp.atleast_1d(arr)
     if arr.ndim > 1:
-        arr = np.squeeze(arr)
+        arr = xp.squeeze(arr)
         if arr.ndim > 1:
             raise ValueError("dimensions of arr cannot exceed 1")
         if arr.ndim == 0:
-            arr = np.atleast_1d(arr)
+            arr = xp.atleast_1d(arr)
     if not issubclass(arr.dtype.type, np.integer):
         # float only OK if values are integers
-        if not np.all(np.mod(arr, 1) == 0):
+        if not xp.all(xp.mod(arr, 1) == 0):
             print("arr = {}".format(arr))
             raise ValueError("arr contains non-integer values")
     if n is not None:
         if arr.size != n:
             if arr.size == 1:
-                arr = np.asarray([arr[0], ] * n)
+                arr = xp.asarray([arr[0], ] * n)
             else:
                 raise ValueError(
                     "array did not have the expected size of {}".format(n))
