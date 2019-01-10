@@ -1,7 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
 import numpy as np
-from numpy.testing import (run_module_suite, assert_raises, assert_)
+from numpy.testing import assert_raises, assert_
 
 from pyir.nufft.nufft import NufftKernel
 
@@ -19,8 +19,8 @@ def test_kernel(show_figure=False):
     assert_raises(ValueError, NufftKernel, 'foo', ndim=2, Jd=4)
 
     if show_figure:
-        axes = d1.plot()
-        d2.plot(axes)
+        d1.plot()
+        d2.plot()
         d3.plot()
 
 
@@ -43,7 +43,3 @@ def test_kernel_range(show_figure=False):
             # 0 outside range of J
             assert_(kernel.kernel[d](np.asarray([Jd[d]/2, ]))[0] == 0)
             assert_(kernel.kernel[d](np.asarray([-Jd[d]/2, ]))[0] == 0)
-
-
-if __name__ == '__main__':
-    run_module_suite()

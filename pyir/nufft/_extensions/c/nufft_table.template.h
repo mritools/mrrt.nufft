@@ -28,7 +28,6 @@ developed for the BSD-licensed PyWavelets project.
 #endif
 
 
-
 /*
 * interp1_table0_complex_per()
 * 1D, 0th order, complex, periodic
@@ -563,13 +562,6 @@ void CAT(TYPE, _interp3_table1_real_per_adj)(
     const TYPE *r_fm,     /* [M,1] out */
     const TYPE *i_fm,
     const int N);
-
-
-// int CAT(TYPE, _downsampling_convolution)(const TYPE * const restrict input, const size_t N,
-//                                          const TYPE * const restrict filter, const size_t F,
-//                                          TYPE * const restrict output, const size_t step,
-//                                          MODE mode);
-
 
 #undef restrict
 #endif /* TYPE */

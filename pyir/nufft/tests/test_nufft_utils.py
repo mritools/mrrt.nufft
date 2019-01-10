@@ -4,7 +4,7 @@ from os.path import join as pjoin
 
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_equal, assert_,
-                           assert_allclose, run_module_suite)
+                           assert_allclose)
 
 from pyir.nufft.nufft_utils import (_nufft_interp_zn,
                                     _nufft_coef,
@@ -163,7 +163,3 @@ def test_nufft_diric(verbose=False):
                 'max %% difference vs scipy.diric = %g' %
                 max_diff)
     return
-
-
-if __name__ == "__main__":
-    run_module_suite()

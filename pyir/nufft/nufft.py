@@ -10,7 +10,6 @@ license for the Matlab code is reproduced below.
     It would also be courteous for you to cite the toolbox and any related
     publications in any papers that present results based on this software.
     UM and the authors make all the usual disclaimers about liability etc.
-
 """
 
 from __future__ import division, print_function, absolute_import
@@ -45,7 +44,6 @@ from pyir.nufft.simple_kernels import _scale_tri
 
 from pyir.utils import (fftn,
                         ifftn,
-                        fast_fft_shape,
                         outer_sum,
                         complexify,
                         is_string_like,
@@ -56,8 +54,12 @@ from pyir.utils import (fftn,
 from ._kernels import NufftKernel
 from pyir.utils._cupy import get_array_module
 
+from pyir.utils import have_cupy
+if have_cupy:
+    import cupy
 
-__all__ = ['NufftBase', 'compute_Q', 'nufft_adj', 'nufft_forward']
+__all__ = ['NufftBase', 'nufft_adj', 'nufft_forward', 'nufft_adj_exact',
+           'nufft_forward_exact']
 
 supported_real_types = [np.float32, np.float64]
 supported_cplx_types = [np.complex64, np.complex128]
@@ -161,16 +163,13 @@ class NufftBase(object):
 
         loc = loc.lower()
         if loc == 'cpu':
-            self.xp = np
-            self.on_gpu = False
+            self.__on_gpu = False
         elif loc == 'gpu':
-            import cupy
-            self.xp = cupy
-            self.on_gpu = True
+            self.__on_gpu = True
         else:
             raise ValueError("loc must be 'cpu' or 'gpu'.")
-        xp = self.xp
 
+        xp = self.xp
         # must set the __ version of these to avoid circular calls by the
         # setters
         self.__Nd = to_1d_int_array(Nd, xp=xp)
@@ -283,6 +282,30 @@ class NufftBase(object):
         if self.verbose:
             print("Exiting NufftBase init")
 
+    @property
+    def on_gpu(self):
+        """Boolean indicating whether the filterbank is a GPU filterbank."""
+        return self.__on_gpu
+
+    @on_gpu.setter
+    def on_gpu(self, on_gpu):
+        if on_gpu in [True, False]:
+            self.__on_gpu = on_gpu
+        else:
+            raise ValueError("on_gpu must be True or False")
+
+    @property
+    def xp(self):
+        """Return the ndarray backend being used."""
+        # Do not store the module as an attribute so pickling is possible.
+        if self.__on_gpu:
+            if not have_cupy:
+                raise ValueError(
+                    "cupy is required for the GPU implementation.")
+            return cupy
+        else:
+            return np
+
     def _nufft_forward(self, x):
         if self.mode == 'exact':
             y = nufft_forward_exact(self, x=x)
@@ -292,7 +315,7 @@ class NufftBase(object):
 
     def _nufft_adj(self, X):
         if self.mode == 'exact':
-            y = nufft_adjoint_exact(self, X=X)
+            y = nufft_adj_exact(self, X=X)
         else:
             y = nufft_adj(self, X=X)
         return y
@@ -726,7 +749,7 @@ class NufftBase(object):
                       '%g GB' % (RAM_GB))
 
         # shape (*Jd, M)
-        mm = np.tile(xp.arange(M), (xp.product(self.Jd), 1))
+        mm = np.tile(xp.arange(M), (np.prod(self.Jd), 1))
 
         self.p = coo_matrix((uu.ravel(order='F'),
                              (mm.ravel(order='F'), kk.ravel(order='F'))),
@@ -848,7 +871,7 @@ class NufftBase(object):
 
 
 @profile
-def _nufft_table_interp(obj, Xk, om=None):
+def _nufft_table_interp(obj, Xk, om=None, xp=None):
     """ Forward NUFFT based on kernel lookup table (image-space to k-space).
 
     Parameters
@@ -872,20 +895,21 @@ def _nufft_table_interp(obj, Xk, om=None):
         om = obj.om
 
     ndim = len(obj.Kd)
+    xp, on_gpu = get_array_module(Xk, xp)
 
-    tm = np.zeros_like(om)
+    tm = xp.zeros_like(om)
     pi = np.pi
     for d in range(0, ndim):
         gam = 2 * pi / obj.Kd[d]
         tm[:, d] = om[:, d] / gam  # t = omega / gamma
 
     if Xk.ndim == 1:
-        Xk = Xk[:, np.newaxis]
+        Xk = Xk[:, xp.newaxis]
     elif Xk.shape[1] > Xk.shape[0]:
         Xk = Xk.T
     nc = Xk.shape[1]
 
-    if Xk.shape[0] != np.product(obj.Kd):
+    if Xk.shape[0] != np.prod(obj.Kd):
         raise ValueError('Xk size problem')
 
     Xk = complexify(Xk, complex_dtype=obj._cplx_dtype)  # force complex
@@ -895,22 +919,32 @@ def _nufft_table_interp(obj, Xk, om=None):
         X = interp1_table(Xk, obj.h[0], *arg)
     elif ndim == 2:
         # Fortran ordering to match Matlab behavior
-        Xk = np.reshape(Xk, np.hstack((obj.Kd, nc)), order='F')
+        Xk = xp.reshape(Xk, tuple(np.hstack((obj.Kd, nc))), order='F')
         X = interp2_table(Xk, obj.h[0], obj.h[1], *arg)
     elif ndim == 3:
         # Fortran ordering to match Matlab behavior
-        Xk = np.reshape(Xk, np.hstack((obj.Kd, nc)), order='F')
+        Xk = xp.reshape(Xk, tuple(np.hstack((obj.Kd, nc))), order='F')
         X = interp3_table(Xk, obj.h[0], obj.h[1], obj.h[2], *arg)
     else:
         raise ValueError('dimensions > 3d not done')
 
+    save_testdata = False
+    if save_testdata:
+        if ndim == 1:
+            np.savez('table1d_forward_data.npz', Xk=Xk, X=X, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        elif ndim == 2:
+            np.savez('table2d_forward_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        elif ndim == 3:
+            np.savez('table3d_forward_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+
+
     # apply phase shift
     if hasattr(obj, 'phase_shift'):
-        if isinstance(obj.phase_shift, (np.ndarray, list)):
+        if isinstance(obj.phase_shift, (xp.ndarray, list)):
             if len(obj.phase_shift) > 0:
                 ph = obj.phase_shift
                 if ph.ndim == 1:
-                    ph = np.reshape(ph, (-1, 1))
+                    ph = xp.reshape(ph, (-1, 1))
                 if X.shape[0] != ph.shape[0] or X.ndim != ph.ndim:
                     raise RuntimeError("dimension mismatch")
                 X *= ph
@@ -919,7 +953,7 @@ def _nufft_table_interp(obj, Xk, om=None):
 
 
 @profile
-def _nufft_table_adj(obj, X, om=None):
+def _nufft_table_adj(obj, X, om=None, xp=None):
     """ Adjoint NUFFT based on kernel lookup table (k-space to image-space).
 
     Parameters
@@ -940,10 +974,11 @@ def _nufft_table_adj(obj, X, om=None):
     order = obj.table_order
     if om is None:
         om = obj.om
+    xp, on_gpu = get_array_module(X, xp)
 
     ndim = len(obj.Kd)
 
-    tm = np.zeros_like(om)
+    tm = xp.zeros_like(om)
     pi = np.pi
     for d in range(0, ndim):
         gam = 2 * pi / obj.Kd[d]
@@ -953,15 +988,15 @@ def _nufft_table_adj(obj, X, om=None):
         raise ValueError('X size problem')
 
     if X.ndim is 1:
-        X = X[:, np.newaxis]
+        X = X[:, xp.newaxis]
 
     # adjoint of phase shift
     if hasattr(obj, 'phase_shift'):
-        if isinstance(obj.phase_shift, (np.ndarray, list)):
+        if isinstance(obj.phase_shift, (xp.ndarray, list)):
             if len(obj.phase_shift) > 0:
                 ph_conj = obj.phase_shift.conj()
                 if ph_conj.ndim == 1:
-                    ph_conj = np.reshape(ph_conj, (-1, 1))
+                    ph_conj = xp.reshape(ph_conj, (-1, 1))
                 if X.shape[0] != ph_conj.shape[0] or X.ndim != ph_conj.ndim:
                     raise RuntimeError("dimension mismatch")
                 X *= ph_conj
@@ -980,22 +1015,32 @@ def _nufft_table_adj(obj, X, om=None):
     else:
         raise ValueError('> 3d not done')
 
+    save_testdata = False
+    if save_testdata:
+        if ndim == 1:
+            np.savez('table1d_adj_data.npz', Xk=Xk, X=X, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        elif ndim == 2:
+            np.savez('table2d_adj_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        elif ndim == 3:
+            np.savez('table3d_adj_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+
     return Xk.astype(X.dtype)
 
 
 @profile
 def _nufft_table_make1(
-        how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={}):
+        how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={},
+        xp=np):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
     nufft_args = dict(Jd=J, n_shift=0, kernel_type=kernel_type,
                       kernel_kwargs=kernel_kwargs,
                       mode='sparse',
                       phasing=phasing,
                       sparse_format='csc')
-    t0 = np.arange(-J * L / 2., J * L / 2. + 1) / L  # [J*L+1]
+    t0 = xp.arange(-J * L / 2., J * L / 2. + 1) / L  # [J*L+1]
     if not t0.size == (J*L + 1):
         raise ValueError("bad t0.size")
-    pi = np.pi
+    pi = xp.pi
     if N % 2 == 0:
         # may be a slight symmetry error for odd N?
         # warnings.warn("odd N in _nufft_table_make1.  even N recommended.")
@@ -1006,23 +1051,23 @@ def _nufft_table_make1(
     if how == 'slow':
         om0 = t0 * 2 * pi / K  # gam
         s1 = NufftBase(om=om0, Nd=N, Kd=K, **nufft_args)
-        h = np.asarray(s1.p[:, 0].todense()).ravel()  # [J*L + 1]
+        h = xp.asarray(s1.p[:, 0].todense()).ravel()  # [J*L + 1]
     # This way is "J times faster" than the slow way, but still not ideal.
     # It works for any user-specified interpolator.
     elif how == 'fast':
         # odd case set to match result of 'slow' above
         if N % 2 == 0:
-            t1 = J / 2. - 1 + np.arange(L) / L  # [L]
+            t1 = J / 2. - 1 + xp.arange(L) / L  # [L]
         else:
-            t1 = J / 2. - 1 + np.arange(1, L+1) / L  # [L]
+            t1 = J / 2. - 1 + xp.arange(1, L+1) / L  # [L]
         om1 = t1 * 2 * pi / K		# * gam
         s1 = NufftBase(om=om1, Nd=N, Kd=K, **nufft_args)
-        h = np.asarray(
-            s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
+        h = xp.asarray(
+            s1.p[:, xp.arange(J - 1, -1, -1)].todense()).ravel(order='F')
         if N % 2 == 0:
-            h = np.concatenate((h, np.asarray([h[0], ])), axis=0)  # [J*L+1,]
+            h = xp.concatenate((h, xp.asarray([h[0], ])), axis=0)  # [J*L+1,]
         else:
-            h = np.concatenate((np.asarray([h[-1], ]), h), axis=0)  # [J*L+1,]
+            h = xp.concatenate((xp.asarray([h[-1], ]), h), axis=0)  # [J*L+1,]
     # This efficient way uses only "J" columns of sparse matrix!
     # The trick to this is to use fake small values for N and K,
     # which works for interpolators that depend only on the ratio K/N.
@@ -1032,22 +1077,22 @@ def _nufft_table_make1(
         if debug:
             print("N={},J={},K={}".format(N, J, K))
             print("Nfake={},Kfake={}".format(Nfake, Kfake))
-        t1 = J / 2. - 1 + np.arange(L) / L  # [L]
+        t1 = J / 2. - 1 + xp.arange(L) / L  # [L]
         om1 = t1 * 2 * pi / Kfake		# gam
         s1 = NufftBase(om=om1, Nd=Nfake, Kd=Kfake, **nufft_args)
-        h = np.asarray(
-            s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
+        h = xp.asarray(
+            s1.p[:, xp.arange(J - 1, -1, -1)].todense()).ravel(order='F')
         # [J*L+1] assuming symmetric
-        h = np.concatenate((h, np.asarray([h[0], ])), axis=0)
+        h = xp.concatenate((h, xp.asarray([h[0], ])), axis=0)
         if phasing == 'complex':
-            h = h * np.exp(1j * pi * t0 * (1 / K - 1 / Kfake))  # fix phase
+            h = h * xp.exp(1j * pi * t0 * (1 / K - 1 / Kfake))  # fix phase
     else:
         raise ValueError("Bad Type: {}".format(type))
     return h, t0
 
 
 @profile
-def nufft_forward(obj, x, copy_x=True):
+def nufft_forward(obj, x, copy_x=True, xp=None):
     """ Forward NUFFT (image-space to k-space).
 
     Parameters
@@ -1067,6 +1112,7 @@ def nufft_forward(obj, x, copy_x=True):
     """
     Nd = obj.Nd
     Kd = obj.Kd
+    xp, on_gpu = get_array_module(x, xp)
     try:
         # collapse all excess dimensions into just one
         data_address_in = get_data_address(x)
@@ -1086,11 +1132,11 @@ def nufft_forward(obj, x, copy_x=True):
     # the usual case is where L=1, i.e., there is just one input signal.
     #
     if obj.sn is not None:
-        x *= obj.sn[..., np.newaxis]		# scaling factors
+        x *= obj.sn[..., xp.newaxis]		# scaling factors
     Xk = fftn(x, Kd, axes=range(x.ndim-1))
     if obj.phase_before is not None:
-        Xk *= obj.phase_before[..., np.newaxis]
-    Xk = Xk.reshape((np.product(Kd), L), order='F')
+        Xk *= obj.phase_before[..., xp.newaxis]
+    Xk = Xk.reshape((np.prod(Kd), L), order='F')
 
     if obj.ortho:
         Xk /= obj.scale_ortho
@@ -1102,7 +1148,7 @@ def nufft_forward(obj, x, copy_x=True):
         # interpolate using precomputed sparse matrix
         X = obj.p * Xk  # [M,*L]
 
-    X = np.reshape(X, (obj.M, L), order='F')
+    X = xp.reshape(X, (obj.M, L), order='F')
 
     if obj.phase_after is not None:
         X *= obj.phase_after[:, None]  # broadcast rather than np.tile
@@ -1115,7 +1161,7 @@ def nufft_forward(obj, x, copy_x=True):
 
 
 @profile
-def nufft_forward_exact(obj, x, copy_x=True):
+def nufft_forward_exact(obj, x, copy_x=True, xp=None):
     """ Brute-force forward DTFT (image-space to k-space).
 
     **Warning:** This is SLOW! Intended primarily for validating NUFFT in
@@ -1137,6 +1183,7 @@ def nufft_forward_exact(obj, x, copy_x=True):
         DTFT coefficients (k-space)
     """
     Nd = obj.Nd
+    xp, on_gpu = get_array_module(x, xp)
 
     try:
         # collapse all excess dimensions into just one
@@ -1154,10 +1201,10 @@ def nufft_forward_exact(obj, x, copy_x=True):
 
     L = x.shape[-1]
 
-    X = np.empty((obj.M, L), dtype=x.dtype, order='F')
+    X = xp.empty((obj.M, L), dtype=x.dtype, order='F')
     for rep in range(L):
         X[..., rep] = dtft(
-            x[:, rep], omega=obj.om, Nd=Nd, n_shift=obj.n_shift)
+            x[:, rep], omega=obj.om, Nd=Nd, n_shift=obj.n_shift, xp=xp)
 
     remove_singleton = True
     if remove_singleton and L == 1:
@@ -1167,7 +1214,7 @@ def nufft_forward_exact(obj, x, copy_x=True):
 
 
 @profile
-def nufft_adj(obj, X, copy_X=True, return_psf=False):
+def nufft_adj(obj, X, copy_X=True, return_psf=False, xp=None):
     """Adjoint NUFFT (k-space to image-space).
 
     Parameters
@@ -1189,11 +1236,12 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
     """
     Nd = obj.Nd
     Kd = obj.Kd
+    xp, on_gpu = get_array_module(X, xp)
     data_address_in = get_data_address(X)
     if X.size % obj.M != 0:
         raise ValueError("invalid size")
     X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
-    X = np.reshape(X, (obj.M, -1), order='F')  # [M,*L]
+    X = xp.reshape(X, (obj.M, -1), order='F')  # [M,*L]
     if copy_X and (data_address_in == get_data_address(X)):
         # ensure input array isn't modified by in-place operations below
         X = X.copy()
@@ -1202,17 +1250,17 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
 
     if obj.phase_after is not None and not return_psf:
         # replaced np.tile() with broadcasting
-        X *= obj.phase_after.conj()[:, np.newaxis]
+        X *= obj.phase_after.conj()[:, xp.newaxis]
 
     if 'table' in obj.mode:
         # interpolate via tabulated interpolator
-        X = X.astype(np.result_type(obj.h[0], X.dtype), copy=False)
+        X = X.astype(xp.result_type(obj.h[0], X.dtype), copy=False)
         Xk_all = obj.interp_table_adj(obj, X)
     else:
         # interpolate using precomputed sparse matrix
         Xk_all = (obj.p.H * X)  # [*Kd, *L]
 
-    x = np.zeros(tuple(Kd) + (nrepetitions,), dtype=X.dtype)
+    x = xp.zeros(tuple(Kd) + (nrepetitions,), dtype=X.dtype)
 
     if Xk_all.ndim == 1:
         Xk_all = Xk_all[:, None]
@@ -1221,11 +1269,11 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
     if return_psf:
         return Xk_all[..., 0]
     if obj.phase_before is not None:
-        Xk_all *= obj.phase_before.conj()[..., np.newaxis]
+        Xk_all *= obj.phase_before.conj()[..., xp.newaxis]
     x = ifftn(Xk_all, axes=range(Xk_all.ndim-1))
 
     # eliminate zero padding from ends
-    subset_slices = [slice(d) for d in Nd] + [slice(None), ]
+    subset_slices = tuple([slice(d) for d in Nd] + [slice(None), ])
     x = x[subset_slices]
 
     if obj.ortho:
@@ -1233,11 +1281,11 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
         x *= (obj.scale_ortho * obj.adjoint_scalefactor)
     else:
         # undo default normalization of ifftn (as in matlab nufft_adj)
-        x *= (np.product(Kd) * obj.adjoint_scalefactor)
+        x *= (np.prod(Kd) * obj.adjoint_scalefactor)
 
     # scaling factors
     if obj.sn is not None:
-        x *= np.conj(obj.sn)[..., np.newaxis]
+        x *= xp.conj(obj.sn)[..., xp.newaxis]
 
     remove_singleton = True
     if remove_singleton and nrepetitions == 1:
@@ -1246,7 +1294,7 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False):
     return x
 
 
-def nufft_adjoint_exact(obj, X, copy_X=True):
+def nufft_adj_exact(obj, X, copy_X=True, xp=None):
     """ Brute-force adjoint NUFFT (k-space to image-space).
 
     **Warning:** This is SLOW! Intended primarily for validating NUFFT in
@@ -1269,19 +1317,20 @@ def nufft_adjoint_exact(obj, X, copy_X=True):
     """
     # extract attributes from structure
     Nd = obj.Nd
+    xp, on_gpu = get_array_module(X, xp)
 
     data_address_in = get_data_address(X)
     if X.size % obj.M != 0:
         raise ValueError("invalid size")
     X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
-    X = np.reshape(X, (obj.M, -1), order='F')  # [M,*L]
+    X = xp.reshape(X, (obj.M, -1), order='F')  # [M,*L]
     if copy_X and (data_address_in == get_data_address(X)):
         # make sure the original array isn't modified!
         X = X.copy()
 
     nrepetitions = X.shape[-1]
 
-    x = np.empty((np.prod(Nd), nrepetitions), dtype=X.dtype, order='F')
+    x = xp.empty((np.prod(Nd), nrepetitions), dtype=X.dtype, order='F')
     for rep in range(nrepetitions):
         x[..., rep] = dtft_adj(X[:, rep], omega=obj.om, Nd=obj.Nd,
                                n_shift=obj.n_shift)

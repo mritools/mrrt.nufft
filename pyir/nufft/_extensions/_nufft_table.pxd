@@ -2,7 +2,7 @@
 The underlying C code for these routines are adapted from C code originally
 developed by Jeff Fessler and his students at the University of Michigan.
 
-OpenMP support and the Cython wrappers were created by Gregory R. Lee
+OpenMP support and the Cython wrappers were added by Gregory R. Lee
 (Cincinnati Childrens Hospital Medical Center).
 
 Note:  For simplicity the adjoint NUFFT is only parallelized across multiple

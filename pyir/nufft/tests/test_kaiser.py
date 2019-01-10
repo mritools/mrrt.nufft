@@ -3,12 +3,12 @@ import functools
 
 import numpy as np
 from numpy.fft import fftshift, fft
-from numpy.testing import dec, assert_array_equal, run_module_suite
+from numpy.testing import assert_array_equal
 
 from pyir.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
 
 
-def test_kaiser_bessel(verbose=False):
+def test_kaiser_bessel(show_figure=False):
     J = 8
     alpha = 2.34 * J
     x = np.linspace(-(J + 1) / 2.0, (J + 1) / 2.0, 1001)
@@ -22,7 +22,8 @@ def test_kaiser_bessel(verbose=False):
         yf = func(x, J)
         assert_array_equal(yf, yy[:, i])
 
-    if verbose:
+    if show_figure:
+        # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
         plt.figure()
         l1, l2, l3, l4 = plt.plot(x, yy[:, 0], 'c-',
@@ -37,7 +38,7 @@ def test_kaiser_bessel(verbose=False):
         plt.show()
 
 
-def test_kaiser_bessel_ft(verbose=False):
+def test_kaiser_bessel_ft(show_figure=False):
     J = 5
     alpha = 6.8
     N = 2 ** 10
@@ -61,7 +62,8 @@ def test_kaiser_bessel_ft(verbose=False):
         Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
         leg.append('m=%d' % kb_m)
 
-    if verbose:
+    if show_figure:
+        # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
         if False:
             plt.figure()
@@ -93,6 +95,3 @@ def test_kaiser_bessel_ft(verbose=False):
         plt.title(r'KB FT: $\alpha$=%g' % alpha)
 
     return
-
-if __name__ == "__main__":
-    run_module_suite()

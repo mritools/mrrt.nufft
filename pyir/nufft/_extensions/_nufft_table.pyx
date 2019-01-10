@@ -2,7 +2,7 @@
 The underlying C code for these routines are adapted from C code originally
 developed by Jeff Fessler and his students at the University of Michigan.
 
-OpenMP support and the Cython wrappers were created by Gregory R. Lee
+OpenMP support and the Cython wrappers were added by Gregory R. Lee
 (Cincinnati Childrens Hospital Medical Center).
 
 Note:  The adjoint NUFFT is only threaded across multiple coils and/or
@@ -117,7 +117,6 @@ def _interp1_table_per(
                 M,
                 <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
                 <double*>cnp.PyArray_DATA(i_fm))
-
         else:
             raise ValueError("invalid algorithm specified")
         fm[:, nn].real = r_fm
@@ -221,7 +220,6 @@ def _interp1_table_adj(
             <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
             <double*>cnp.PyArray_DATA(i_fm),
             N)
-
     else:
         raise ValueError("invalid algorithm specified")
     ck.real = np.asfortranarray(r_ck)
@@ -347,7 +345,6 @@ def _interp2_table_per(
                 M,
                 <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
                 <double*>cnp.PyArray_DATA(i_fm))
-
         else:
             raise ValueError("invalid algorithm specified")
         fm[:, nn].real = r_fm
@@ -479,7 +476,6 @@ def _interp2_table_adj(
             <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
             <double*>cnp.PyArray_DATA(i_fm),
             N)
-
     else:
         raise ValueError("invalid algorithm specified")
     ck.real = np.asfortranarray(r_ck)
@@ -628,7 +624,6 @@ def _interp3_table_per(
                 M,
                 <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
                 <double*>cnp.PyArray_DATA(i_fm))
-
         else:
             raise ValueError("invalid algorithm specified")
         fm[:, nn].real = r_fm
@@ -781,7 +776,6 @@ def _interp3_table_adj(
             <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
             <double*>cnp.PyArray_DATA(i_fm),
             N)
-
     else:
         raise ValueError("invalid algorithm specified")
     ck.real = np.asfortranarray(r_ck)
