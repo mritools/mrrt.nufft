@@ -95,7 +95,7 @@ def test_nufft_adj(mode, phasing, verbose=False):
     xn = nufft_adj(st, XXX)
     if verbose:
         print('nufft vs dtft max%%diff = %g' %
-              max_percent_diff(xd, xn[:, :, -1]))  #TODO
+              max_percent_diff(xd, xn[:, :, -1]))  # TODO
     try:
         assert_almost_equal(
             np.squeeze(xd), np.squeeze(xn[:, :, -1]), decimal=1)
@@ -343,7 +343,7 @@ def test_nufft_table_make1(n, phasing, xp):
                                 phasing=phasing,
                                 kernel_type='kb:beatty',
                                 kernel_kwargs={})
-    assert_almost_equal(h0, h1, decimal=decimal)
-    assert_almost_equal(h0, h2, decimal=decimal)
-    assert_almost_equal(t0, t1, decimal=decimal)
-    assert_almost_equal(t0, t2, decimal=decimal)
+    xp.testing.assert_array_almost_equal(h0, h1, decimal=decimal)
+    xp.testing.assert_array_almost_equal(h0, h2, decimal=decimal)
+    xp.testing.assert_array_almost_equal(t0, t1, decimal=decimal)
+    xp.testing.assert_array_almost_equal(t0, t2, decimal=decimal)

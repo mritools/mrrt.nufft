@@ -108,7 +108,7 @@ if False:
 
     mode = 'table1'
     precision = 'double'
-    phasing = 'real'
+    phasing = 'complex'
     ndim = 1
     for ndim in [1, 2, 3]:
         for mode in ['table0', 'table1']:
@@ -192,8 +192,8 @@ if False:
                     elif ndim == 3:
                         kern_forward(block, grid, (ck, h1, h2, h3, tm, fm))
                     fm_expected = np.asarray(forward_data['X'].squeeze(), dtype=cplx_dtype)
-                    #cupy.testing.assert_allclose(fm_expected, fm, rtol=rtol, atol=atol)
-                    print(np.max(np.abs(fm_expected - fm.get())))
+                    cupy.testing.assert_allclose(fm_expected, fm, rtol=rtol, atol=atol)
+                    # print(np.max(np.abs(fm_expected - fm.get())))
 
                     print("adjoint")
                     ck = cupy.empty(adj_data['Xk'].squeeze().shape, dtype=real_dtype)
@@ -226,5 +226,5 @@ if False:
                     elif ndim == 3:
                         kern_adj(block, grid, (ck, h1, h2, h3, tm, fm))
                     ck_expected = np.asarray(adj_data['Xk'].squeeze(), dtype=cplx_dtype)
-                    # cupy.testing.assert_allclose(ck_expected, ck, rtol=rtol, atol=atol)
-                    print(np.max(np.abs(ck_expected - ck.get())))
+                    cupy.testing.assert_allclose(ck_expected, ck, rtol=rtol, atol=atol)
+                    # print(np.max(np.abs(ck_expected - ck.get())))

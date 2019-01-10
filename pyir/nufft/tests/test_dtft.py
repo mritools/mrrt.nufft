@@ -124,7 +124,7 @@ def test_dtft_adj_3d(xp, verbose=False, test_Cython=False):
 
     Xp = xp.exp(-1j * xp.dot(om, n_shift))
     Xp = X * Xp.reshape(X.shape, order='F')
-    xf = xp.fft.ifftn(Xp) * xp.prod(Nd)
+    xf = xp.fft.ifftn(Xp) * np.prod(Nd)
     xp.testing.assert_allclose(xd, xf, atol=1e-7)
     if verbose:
         print('loop max %% difference = %g' % max_percent_diff(xl, xd))
@@ -170,7 +170,7 @@ def test_dtft_adj_2d(xp, verbose=False):
 
     Xp = xp.exp(-1j * xp.dot(om, n_shift))
     Xp = X * Xp.reshape(X.shape, order='F')
-    xf = xp.fft.ifftn(Xp) * xp.prod(Nd)
+    xf = xp.fft.ifftn(Xp) * np.prod(Nd)
     xp.testing.assert_allclose(xd, xf, atol=1e-7)
     if verbose:
         print('ifft max %% difference = %g' % max_percent_diff(xf, xd))
@@ -195,7 +195,7 @@ def test_dtft_adj_1d(xp, verbose=False):
 
     Xp = xp.exp(-1j * xp.dot(om, n_shift))
     Xp = X * Xp.reshape(X.shape, order='F')
-    xf = xp.fft.ifftn(Xp) * xp.prod(Nd)
+    xf = xp.fft.ifftn(Xp) * np.prod(Nd)
     xp.testing.assert_allclose(xd, xf, atol=1e-7)
     if verbose:
         print('ifft max %% difference = %g' % max_percent_diff(xf, xd))

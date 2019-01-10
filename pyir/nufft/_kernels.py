@@ -94,13 +94,13 @@ class NufftKernel(object):
         for k, v in list(params.items()):
             if k in ['Kd', 'Jd', 'Nd']:
                 params[k] = to_1d_int_array(v, self.ndim)
-            # Nmid is not necessarily an integer, so handle it manually
-            if 'Nmid' in params and len(params['Nmid']) < self.ndim:
-                if len(params['Nmid']) > 1:
-                    raise ValueError("Nmid dimension mismatch")
+            # n_mid is not necessarily an integer, so handle it manually
+            if 'n_mid' in params and len(params['n_mid']) < self.ndim:
+                if len(params['n_mid']) > 1:
+                    raise ValueError("n_mid dimension mismatch")
                 else:
-                    params['Nmid'] = np.asarray(
-                        [params['Nmid'][0], ] * self.ndim)
+                    params['n_mid'] = np.asarray(
+                        [params['n_mid'][0], ] * self.ndim)
 
         ndim = self.ndim  # number of dimensions
         Kd = params.get('Kd', None)  # oversampled image size

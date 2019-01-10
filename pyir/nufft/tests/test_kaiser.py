@@ -2,27 +2,34 @@
 import functools
 
 import numpy as np
-from numpy.fft import fftshift, fft
-from numpy.testing import assert_array_equal
 
 from pyir.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
 
+import pytest
 
-def test_kaiser_bessel(show_figure=False):
+try:
+    import cupy
+    all_xp = [np, cupy]
+except ImportError:
+    all_xp = [np, ]
+
+
+@pytest.mark.parametrize('xp', all_xp)
+def test_kaiser_bessel(xp, show_figure=False):
     J = 8
     alpha = 2.34 * J
-    x = np.linspace(-(J + 1) / 2.0, (J + 1) / 2.0, 1001)
+    x = xp.linspace(-(J + 1) / 2.0, (J + 1) / 2.0, 1001)
     mlist = [-4, 0, 2, 7]
     leg = []
-    yy = np.zeros((len(x), len(mlist)))
+    yy = xp.zeros((len(x), len(mlist)))
     for i, kb_m in enumerate(mlist):
         yy[:, i] = kaiser_bessel(x, J, alpha, kb_m)
         leg.append('m = %d' % kb_m)
         func = functools.partial(kaiser_bessel, alpha=alpha, kb_m=kb_m)
         yf = func(x, J)
-        assert_array_equal(yf, yy[:, i])
+        xp.testing.assert_array_equal(yf, yy[:, i])
 
-    if show_figure:
+    if show_figure and xp == np:  # skip plotting if arrays are on the GPU
         # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
         plt.figure()
@@ -38,31 +45,34 @@ def test_kaiser_bessel(show_figure=False):
         plt.show()
 
 
-def test_kaiser_bessel_ft(show_figure=False):
+@pytest.mark.parametrize('xp', all_xp)
+def test_kaiser_bessel_ft(xp, show_figure=False):
     J = 5
     alpha = 6.8
     N = 2 ** 10
-    x = np.arange(-N / 2., N / 2.) / float(N) * (J + 3) / 2.
+    x = xp.arange(-N / 2., N / 2.) / float(N) * (J + 3) / 2.
     dx = x[1] - x[0]
     du = 1 / float(N) / float(dx)
-    u = np.arange(-N / 2., N / 2.) * du
-    uu = 1.5 * np.linspace(-1, 1, 201)
+    u = xp.arange(-N / 2., N / 2.) * du
+    uu = 1.5 * xp.linspace(-1, 1, 201)
 
     mlist = [-2, 0, 2, 7]
     leg = []
-    yy = np.zeros((len(x), len(mlist)))
-    Yf = np.zeros_like(yy)
-    Y = np.zeros_like(yy)
-    Yu = np.zeros((len(uu), len(mlist)))
+    yy = xp.zeros((len(x), len(mlist)))
+    Yf = xp.zeros_like(yy)
+    Y = xp.zeros_like(yy)
+    Yu = xp.zeros((len(uu), len(mlist)))
+    fftshift = xp.fft.fftshift
+    fft = xp.fft.fft
     for ii, kb_m in enumerate(mlist):
         kb_m = mlist[ii]
         yy[:, ii] = kaiser_bessel(x, J, alpha, kb_m)
-        Yf[:, ii] = np.real(fftshift(fft(fftshift(yy[:, ii])))) * dx
+        Yf[:, ii] = xp.real(fftshift(fft(fftshift(yy[:, ii])))) * dx
         Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
         Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
         leg.append('m=%d' % kb_m)
 
-    if show_figure:
+    if show_figure and xp == np:  # skip plotting if arrays are on the GPU
         # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
         if False:

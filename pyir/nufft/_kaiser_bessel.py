@@ -18,7 +18,7 @@ from __future__ import division, print_function, absolute_import
 import warnings
 import numpy as np
 from scipy.special import iv, jv
-from pyir.utils import reale
+from pyir.utils import reale, get_array_module
 
 __all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
 
@@ -82,7 +82,10 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
       NOTE: Even for the original KB formula, the JOSA FT formula
       is derived only for m > -1 !
     '''
-
+    xp, on_gpu = get_array_module(x)
+    if on_gpu:
+        # ij, jv not implemented in cupy so have to compute on the CPU
+        x = x.get()
     if alpha is None:
         alpha = 2.34 * J
 
@@ -101,10 +104,12 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     kb = np.zeros_like(x)
     kb[ii] = (f ** kb_m * _iv(kb_m_bi, alpha * f, xp=np)) / float(denom)
     kb = kb.real
+    if on_gpu:
+        kb = xp.asarray(kb)
     return kb
 
 
-def kaiser_bessel_ft(u=None, J=6, alpha=None, kb_m=0, d=1):
+def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
     """ Fourier transform of generalized Kaiser-Bessel function, in dimension d
 
     Parameters
@@ -134,7 +139,10 @@ def kaiser_bessel_ft(u=None, J=6, alpha=None, kb_m=0, d=1):
     Matlab ver.Copyright 2001-3-30, Jeff Fessler, The University of Michigan
     Python adaptation:  Gregory Lee
     """
-
+    xp, on_gpu = get_array_module(u)
+    if on_gpu:
+        # ij, jv not implemented in cupy so have to compute on the CPU
+        u = u.get()
     if not alpha:
         alpha = 2.34 * J
 
@@ -159,5 +167,6 @@ def kaiser_bessel_ft(u=None, J=6, alpha=None, kb_m=0, d=1):
     y = (2 * np.pi) ** (d / 2.) * (J / 2.) ** d * alpha ** kb_m \
         / _iv(kb_m, alpha, xp=np) * _jv(nu, z, xp=np) / z ** nu
     y = reale(y.real)
-
+    if on_gpu:
+        y = xp.asarray(y)
     return y

@@ -1,19 +1,49 @@
 from __future__ import division, print_function, absolute_import
+from itertools import product
 
 import numpy as np
-from numpy.testing import assert_raises, assert_
+from numpy.testing import assert_equal, assert_raises, assert_
+import pytest
 
 from pyir.nufft.nufft import NufftKernel
+
+try:
+    import cupy
+    all_xp = [np, cupy]
+except ImportError:
+    all_xp = [np, ]
 
 kernel_types = ['kb:beatty', 'linear', 'diric']
 
 
-def test_kernel(show_figure=False):
+@pytest.mark.parametrize(
+    'xp, dtype',
+    product(
+        all_xp,
+        [np.float32, np.float64],
+    )
+)
+def test_kernel(xp, dtype, show_figure=False):
+
+    J = 4
+    x = xp.linspace(-J / 2, J / 2, 1001, dtype=dtype)
 
     # can call with mixtures of integer, list or array input types
-    d1 = NufftKernel('kb:beatty', Kd=[32, 32], Jd=[4, 4], Nd=[24, 16])
-    d2 = NufftKernel('linear', ndim=2, Jd=4)
+    d1 = NufftKernel('kb:beatty', Kd=[32, 32], Jd=[J, J], Nd=[24, 16])
+    assert_equal(len(d1.kernel), 2)
+    y = d1.kernel[0](x)
+    assert_equal(x.dtype, y.dtype)
+
+    d2 = NufftKernel('linear', ndim=2, Jd=J)
+    assert_equal(len(d2.kernel), 2)
+    y = d2.kernel[0](x)
+    assert_equal(x.dtype, y.dtype)
+
     d3 = NufftKernel('diric', ndim=1, Kd=32, Jd=32, Nd=16)
+    x = xp.linspace(-16, 16, 1001, dtype=dtype)
+    assert_equal(len(d3.kernel), 1)
+    y = d3.kernel[0](x)
+    assert_equal(x.dtype, y.dtype)
 
     # invalid kernel raises ValueError
     assert_raises(ValueError, NufftKernel, 'foo', ndim=2, Jd=4)

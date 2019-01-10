@@ -28,14 +28,14 @@ def _nufft_samples(stype, Nd=None, xp=np):
         k-space samples
     """
     if isinstance(Nd, int):
-        Nd = xp.array([Nd])  # convert to array
+        Nd = np.array([Nd])  # convert to array
 
     pi = xp.pi
     twopi = 2 * pi
     if stype == 'epi':  # blipped echo-planar cartesian samples
         if len(Nd) == 1:
             Nd = Nd[0]  # convert to int
-            om = (twopi/ float(Nd)) * xp.arange(-Nd / 2., Nd / 2.)
+            om = (twopi / float(Nd)) * xp.arange(-Nd / 2., Nd / 2.)
         elif len(Nd) == 2:
             o1 = (twopi / float(Nd[0])) * xp.arange(-Nd[0] / 2., Nd[0] / 2.)
             o2 = (twopi / float(Nd[1])) * xp.arange(-Nd[1] / 2., Nd[1] / 2.)
@@ -56,7 +56,7 @@ def _nufft_samples(stype, Nd=None, xp=np):
     return om
 
 
-def _nufft_interp_zn(alist, N, J, K, func, Nmid=None, xp=np):
+def _nufft_interp_zn(alist, N, J, K, func, n_mid=None, xp=None):
     """ compute the "zn" terms for a conventional "shift-invariant" interpolator
         as described in T-SP paper.  needed for error analysis and for user-
         defined kernels since I don't provide a means to put in an analytical
@@ -80,9 +80,10 @@ def _nufft_interp_zn(alist, N, J, K, func, Nmid=None, xp=np):
 
     Matlab vers:  Copyright 2001-12-11 Jeff Fessler. The University of Michigan
     """
-    if not Nmid:
-        Nmid = (N - 1) / 2.  # default: old version
+    if not n_mid:
+        n_mid = (N - 1) / 2.  # default: old version
 
+    xp, on_gpu = get_array_module(alist, xp)
     alist = xp.atleast_1d(alist)
     #
     # zn = \sum_{j=-J/2}^{J/2-1} exp(i gam (alf - j) * n) F1(alf - j)
@@ -105,7 +106,7 @@ def _nufft_interp_zn(alist, N, J, K, func, Nmid=None, xp=np):
 
     # n0 = (N-1)/2.;
     # nlist0 = np.arange(0,N) - n0;     # include effect of phase shift!
-    n0 = xp.arange(0, N) - Nmid
+    n0 = xp.arange(0, N) - n_mid
 
     nn0, jj = xp.ogrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
 
@@ -183,9 +184,6 @@ def _nufft_coef(om, J, K, kernel, xp=None):
     if xp is None:
         # TODO: kernel() call below doesn't currently support CuPy
         xp, on_gpu = get_array_module(om)
-        if xp != np:
-            raise NotImplementedError(
-                "only numpy kernel currently implemented.")
 
     om = xp.atleast_1d(xp.squeeze(om))
     if om.ndim > 1:

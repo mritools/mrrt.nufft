@@ -3,6 +3,7 @@ for comparison purposes.
 """
 import functools
 import numpy as np
+from math import sqrt
 
 
 __all__ = ['nufft_gauss',
@@ -13,7 +14,7 @@ __all__ = ['nufft_gauss',
            'nufft_diric']
 
 
-def nufft_gauss(J=6, sig=None):
+def nufft_gauss(J=6, sig=None, xp=np):
     """ Gaussian bell kernel functions truncated to support [-J/2,J/2]
         for NUFFT interplation, with width parameter sig
 
@@ -25,6 +26,8 @@ def nufft_gauss(J=6, sig=None):
         interval width
     sig : float
         width parameter
+    xp : {np, cupy}
+        The array backend to use.
 
     Returns
     -------
@@ -38,28 +41,21 @@ def nufft_gauss(J=6, sig=None):
     Matlab vn: Copyright 2002-7-15, Jeff Fessler, The University of Michigan
     """
     if sig is None:
-        sig = 0.78 * np.sqrt(J)
+        sig = 0.78 * sqrt(J)
 
-    if True:
-        def kernel(k, J, sig=sig):
-            """Gaussian kernel"""
-            return np.exp(-(k/sig)**2/2.) * (abs(k) < J/2.)
+    def kernel(k, J=J, sig=sig):
+        """Gaussian kernel"""
+        return xp.exp(-(k/sig)**2/2.) * (abs(k) < J/2.)
 
-        def kernel_ft(t, sig=sig):
-            """FT of Gaussian kernel"""
-            tmp = np.sqrt(2*np.pi)
-            return sig*tmp*np.exp(-np.pi*(t*sig*tmp)**2)
-    else:
-        kernel = 'np.exp(-(k/%g)**2/2.) * (abs(k) < J/2.)' % sig
-        kernel_ft = \
-            '%g*np.sqrt(2*np.pi)*np.exp(-np.pi*(t*%g*np.sqrt(2*np.pi))**2)' % (
-                sig, sig)
-        kernel = eval('lambda k, J: ' + kernel)
-        kernel_ft = eval('lambda t: ' + kernel_ft)
+    def kernel_ft(t, sig=sig):
+        """FT of Gaussian kernel"""
+        tmp = sqrt(2*xp.pi)
+        return sig*tmp*xp.exp(-xp.pi * (t * sig * tmp)**2)
+
     return kernel, kernel_ft
 
 
-def nufft_best_gauss(J, K_N=2, sn_type='ft'):
+def nufft_best_gauss(J, K_N=2, sn_type='ft', xp=np):
     """ Return "sigma" of best (truncated) gaussian for NUFFT with previously
     numerically-optimized width.
 
@@ -139,7 +135,7 @@ def nufft_best_gauss(J, K_N=2, sn_type='ft'):
     else:
         raise ValueError('bad sn_type {}'.format(sn_type))
 
-    [kernel, kernel_ft] = nufft_gauss(J, sig)
+    [kernel, kernel_ft] = nufft_gauss(J, sig, xp=xp)
     return sig, kernel, kernel_ft
 
 
@@ -147,15 +143,15 @@ def linear_kernel(k, J):
     return (1 - abs(k/(J/2.))) * (abs(k) < J/2.)
 
 
-def _scale_tri(N, J, K, Nmid):
+def _scale_tri(N, J, K, n_mid, xp=np):
     """
     scale factors when kernel is 'linear'
     tri(u/J) <-> J sinc^2(J x)
     """
-    nc = np.arange(N, dtype=np.float64) - Nmid
+    nc = xp.arange(N, dtype=np.float64) - n_mid
 
     def fun(x):
-        return J * np.sinc(J * x / K) ** 2
+        return J * xp.sinc(J * x / K) ** 2
 
     cent = fun(nc)
     sn = 1 / cent
@@ -164,18 +160,18 @@ def _scale_tri(N, J, K, Nmid):
     tmp = 0
     LL = 3
     for ll in range(-LL, LL + 1):
-        tmp += np.abs(fun(nc - ll * K)) ** 2
+        tmp += xp.abs(fun(nc - ll * K)) ** 2
     sn = cent / tmp
     return sn
 
 
-def cos3diric_kernel(k, J):
+def cos3diric_kernel(k, J, xp=np):
     from pyir.utils import diric
-    tmp = 2*np.pi*k/J
-    return diric(tmp, J) * np.cos(tmp/2.)**3
+    tmp = 2*xp.pi*k/J
+    return diric(tmp, J) * xp.cos(tmp/2.)**3
 
 
-def nufft_diric(k, N, K, use_true_diric=False):
+def nufft_diric(k, N, K, use_true_diric=False, xp=np):
     ''' "regular fourier" Dirichlet-function WITHOUT phase
 
     Parameters
@@ -203,14 +199,14 @@ def nufft_diric(k, N, K, use_true_diric=False):
     '''
     if use_true_diric:
         # diric version
-        t = (np.pi / K) * k
-        f = np.sin(t)
-        i = np.abs(f) > 1e-12  # nonzero argument
-        f[i] = np.sin(N * t[i]) / (N * f[i])
-        f[~i] = np.sign(np.cos(t[~i] * (N - 1)))
+        t = (xp.pi / K) * k
+        f = xp.sin(t)
+        i = xp.abs(f) > 1e-12  # nonzero argument
+        f[i] = xp.sin(N * t[i]) / (N * f[i])
+        f[~i] = xp.sign(xp.cos(t[~i] * (N - 1)))
     else:
         # sinc version
-        f = np.sinc(k * N / K)
+        f = xp.sinc(k * N / K)
     return f
 
 

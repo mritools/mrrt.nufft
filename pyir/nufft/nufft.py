@@ -57,6 +57,10 @@ from pyir.utils._cupy import get_array_module
 from pyir.utils import have_cupy
 if have_cupy:
     import cupy
+    import cupyx.scipy.sparse
+    from pyir.cuda.CUDA_MRI_cupy import (default_device,
+                                         get_1D_block_table_gridding)
+
 
 __all__ = ['NufftBase', 'nufft_adj', 'nufft_forward', 'nufft_adj_exact',
            'nufft_forward_exact']
@@ -103,7 +107,7 @@ class NufftBase(object):
                  kernel_type='kb:beatty', mode='table0', ortho=False,
                  n_shift=None, phasing='real', sparse_format='CSC',
                  adjoint_scalefactor=1., kernel_kwargs={}, verbose=False,
-                 loc='cpu'):
+                 on_gpu=False):
         """ Initialize NufftBase instance
 
         Parameters
@@ -161,27 +165,16 @@ class NufftBase(object):
             print("Entering NufftBase init")
         self.__init_complete = False  # will be set true after __init__()
 
-        loc = loc.lower()
-        if loc == 'cpu':
-            self.__on_gpu = False
-        elif loc == 'gpu':
-            self.__on_gpu = True
-        else:
-            raise ValueError("loc must be 'cpu' or 'gpu'.")
-
+        self.__on_gpu = on_gpu
+        # get the array module being used (based on state of self.on_gpu)
         xp = self.xp
-        # must set the __ version of these to avoid circular calls by the
-        # setters
-        self.__Nd = to_1d_int_array(Nd, xp=xp)
-        if self.verbose:
-            print("Nd={}".format(Nd))
-            print("self.__Nd={}".format(self.__Nd))
-            print("self.Nd={}".format(self.Nd))
 
+        # set the private version (__Nd not Nd) to avoid circular calls
+        self.__Nd = to_1d_int_array(Nd, xp=xp)
         self.kernel_type = kernel_type
         self.__phasing = phasing
         self.__om = None  # will be set later below
-        self._set_Nmid()
+        self._set_n_mid()
         self.ndim = len(self.Nd)  # number of dimensions
         self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=xp)
 
@@ -223,7 +216,7 @@ class NufftBase(object):
                                   Nd=self.Nd,
                                   Jd=self.Jd,
                                   Kd=self.Kd,
-                                  Nmid=self.Nmid,
+                                  n_mid=self.n_mid,
                                   **kernel_kwargs)
         self._calc_scaling()  # [(Nd)]  scaling factors
         self.M = 0
@@ -268,7 +261,6 @@ class NufftBase(object):
             self.interp_table = _nufft_table_interp  # TODO: remove?
             self.interp_table_adj = _nufft_table_adj  # TODO: remove?
         elif self.mode == 'exact':
-
             # TODO: wrap calls to dtft, dtft_adj
             raise ValueError("not implemented")
             pass
@@ -281,6 +273,31 @@ class NufftBase(object):
         self.__init_complete = True  # TODO: currently unused
         if self.verbose:
             print("Exiting NufftBase init")
+        if self.on_gpu:
+            self._init_gpu()
+
+    def _init_gpu(self):
+        from pyir.cuda.autoinit_cupy import _get_gridding_funcs
+        M = self.om.shape[0]
+        if not len(np.unique(self.Jd)):
+            raise ValueError(
+                "GPU case requires same gridding kernel size on each axis.")
+        if not len(np.unique(self.Ld)):
+            raise ValueError(
+                "GPU case requires same gridding table size on each axis.")
+
+        # compile GPU kernels corresponding to this operator
+        self.kern_forward, self.kern_adj = _get_gridding_funcs(
+            Kd=self.Kd,
+            M=self.M,
+            J=self.Jd[0],
+            L=self.Ld[0],
+            is_complex_kernel=(self.phasing == 'complex'),
+            precision=self.precision)
+
+        # store a block and grid configuration for use with the kernel
+        self.block, self.grid = get_1D_block_table_gridding(
+            M, dev=default_device, kernel=self.kernel_adj)
 
     @property
     def on_gpu(self):
@@ -313,18 +330,18 @@ class NufftBase(object):
             y = nufft_forward(self, x=x)
         return y
 
-    def _nufft_adj(self, X):
+    def _nufft_adj(self, x):
         if self.mode == 'exact':
-            y = nufft_adj_exact(self, X=X)
+            y = nufft_adj_exact(self, x=x)
         else:
-            y = nufft_adj(self, X=X)
+            y = nufft_adj(self, x=x)
         return y
 
     def _set_phase_funcs(self):
         if self.phasing == 'real':
-            self.phase_before = self._phase_before(self.Kd, self.Nmid)
+            self.phase_before = self._phase_before(self.Kd, self.n_mid)
             self.phase_after = self._phase_after(self.om,
-                                                 self.Nmid,
+                                                 self.n_mid,
                                                  self.n_shift)
         elif self.phasing == 'complex':
             # complex kernel incorporates the FFTshift phase
@@ -412,7 +429,7 @@ class NufftBase(object):
                 raise ValueError('omega needs {} columns'.format(self.ndim))
         self.__om = om
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_after = self._phase_after(om, self.Nmid, self.__n_shift)
+            self.phase_after = self._phase_after(om, self.n_mid, self.__n_shift)
         if self.__init_complete:
             self._reinitialize()
 
@@ -430,7 +447,7 @@ class NufftBase(object):
     @phasing.setter
     def phasing(self, phasing):
         self.__phasing = phasing
-        self._set_Nmid()
+        self._set_n_mid()
         self._set_phase_funcs()
 
     @property
@@ -441,7 +458,7 @@ class NufftBase(object):
     def Nd(self, Nd):
         K_N_ratio = self.__Kd / self.__Nd
         self.__Nd = to_1d_int_array(Nd, n=self.ndim)
-        self._set_Nmid()
+        self._set_n_mid()
         # update Kd to maintain approximately the same amount of oversampling
         self.__Kd = np.round(K_N_ratio * self.__Nd).astype(self.__Kd.dtype)
         if self.__init_complete:
@@ -477,7 +494,7 @@ class NufftBase(object):
     def Kd(self, Kd):
         self.__Kd = to_1d_int_array(Kd, n=self.ndim)
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_before = self._phase_before(Kd, self.Nmid)
+            self.phase_before = self._phase_before(Kd, self.n_mid)
         if self.__init_complete:
             self._reinitialize()
 
@@ -499,19 +516,19 @@ class NufftBase(object):
         self.__n_shift = np.asarray(n_shift)
         if self.ndim != n_shift.size:
             raise ValueError('n_shift needs %d columns' % (self.ndim))
-        self.phase_after = self._phase_after(self.__om, self.Nmid, n_shift)
+        self.phase_after = self._phase_after(self.__om, self.n_mid, n_shift)
         if self.__init_complete:
             self._reinitialize()
 
-    def _set_Nmid(self):
+    def _set_n_mid(self):
         # midpoint of scaling factors
         if self.__phasing == 'real':
-            self.Nmid = np.floor(self.Nd / 2.)
+            self.n_mid = np.floor(self.Nd / 2.)
         else:
-            self.Nmid = (self.Nd - 1) / 2.
-        if self.phasing == 'real'and (self.__om is not None):
+            self.n_mid = (self.Nd - 1) / 2.
+        if self.phasing == 'real' and (self.__om is not None):
             self.phase_after = self._phase_after(self.__om,
-                                                 self.Nmid, self.__n_shift)
+                                                 self.n_mid, self.__n_shift)
         if self.__init_complete:
             self._reinitialize()
 
@@ -582,21 +599,21 @@ class NufftBase(object):
                 for h in self.h:
                     h = contig_func(h)
 
-    def _phase_before(self, Kd, Nmid):
+    def _phase_before(self, Kd, n_mid):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
-        phase = 2 * np.pi * np.arange(Kd[0]) / Kd[0] * Nmid[0]
+        phase = 2 * np.pi * np.arange(Kd[0]) / Kd[0] * n_mid[0]
         for d in range(1, Kd.size):
-            tmp = 2 * np.pi * np.arange(Kd[d]) / Kd[d] * Nmid[d]
+            tmp = 2 * np.pi * np.arange(Kd[d]) / Kd[d] * n_mid[d]
             # fast outer sum via broadcasting
             phase = phase.reshape(
                 (phase.shape) + (1,)) + tmp.reshape((1,) * d + (tmp.size,))
         return np.exp(1j * phase).astype(self._cplx_dtype)  # [(Kd)]
 
-    def _phase_after(self, om, Nmid, n_shift):
+    def _phase_after(self, om, n_mid, n_shift):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
-        phase = np.exp(1j * np.dot(om, (n_shift - Nmid).reshape(-1, 1)))
+        phase = np.exp(1j * np.dot(om, (n_shift - n_mid).reshape(-1, 1)))
         return np.squeeze(phase).astype(self._cplx_dtype)  # [M,1]
 
     def _calc_scaling(self):
@@ -615,20 +632,20 @@ class NufftBase(object):
             for d in range(self.ndim):
                 if kernel.is_kaiser_scale:
                     # nc = np.arange(Nd[d])-(Nd[d]-1)/2.  #OLD WAY
-                    nc = np.arange(Nd[d]) - self.Nmid[d]
+                    nc = np.arange(Nd[d]) - self.n_mid[d]
                     tmp = 1 / kaiser_bessel_ft(nc / Kd[d], Jd[d],
                                                kernel.kb_alf[d],
                                                kernel.kb_m[d], 1)
                 elif ktype == 'inline':
                     if self.phasing == 'real':
                         warnings.warn("not sure if this is correct for real "
-                                      "phasing case (Nmid is set differently)")
+                                      "phasing case (n_mid is set differently)")
                     tmp = 1 / _nufft_interp_zn(0, Nd[d], Jd[d], Kd[d],
                                                kernel.kernel[d],
-                                               self.Nmid[d])
+                                               self.n_mid[d])
                 elif ktype == 'linear':
                     # TODO: untested
-                    tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.Nmid[d])
+                    tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.n_mid[d])
                 else:
                     raise ValueError("Unsupported ktype: {}".format(ktype))
                 # tmp = reale(tmp)  #TODO: reale?
@@ -649,17 +666,17 @@ class NufftBase(object):
         kd = {}
         om = self.om
         if om.ndim == 1:
-            om = om[:, np.newaxis]
+            om = om[:, xp.newaxis]
 
         # TODO: kernel() call below doesn't currently support CuPy
         xp, on_gpu = get_array_module(om)
         if on_gpu:
-            coo_matrix = xp.cupyx.scipy.sparse.coo_matrix
+            coo_matrix = cupyx.scipy.sparse.coo_matrix
         else:
             coo_matrix = scipy.sparse.coo_matrix
 
         if self.phasing == 'real':
-            # call again just to be safe in case Kd, Nmid, etc changed?
+            # call again just to be safe in case Kd, n_mid, etc changed?
             self._set_phase_funcs()
 
         for d in range(self.ndim):
@@ -673,15 +690,12 @@ class NufftBase(object):
                 raise ValueError("callable kernel function required")
 
             # [J?,M]
+            # TODO: for now _nufft_coef only supports numpy backend
+            [c, arg] = _nufft_coef(om[:, d].get(), J, K, kernel_func, xp=np)
             if on_gpu:
-                # TODO: for now _nufft_coef only supports numpy backend
-                [c, arg] = _nufft_coef(om[:, d].get(), J, K, kernel_func,
-                                       xp=np)
+                # transfer numpy result to the GPU
                 c = xp.asarray(c)
                 arg = xp.asarray(arg)
-            else:
-                [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func, xp=np)
-            #
             # indices into oversampled FFT components
             #
             # [M,1] to leftmost near nbr
@@ -691,7 +705,7 @@ class NufftBase(object):
             kd[d] = xp.mod(outer_sum(xp.arange(1, J + 1), koff, xp=xp), K)
 
             if self.phasing == 'complex':
-                gam = 2 * np.pi / K
+                gam = 2 * xp.pi / K
                 phase_scale = 1j * gam * (N - 1) / 2.
                 phase = xp.exp(phase_scale * arg)   # [J,M] linear phase
             else:
@@ -764,21 +778,22 @@ class NufftBase(object):
         """
         # for convenience
         ndim = self.ndim
+        xp = self.xp
         # need to strip ndim, Nd, Jd, Kd from local copy of kernel_kwargs
         kernel_kwargs = self.kernel.params.copy()
         kernel_kwargs.pop('ndim', None)
         kernel_kwargs.pop('Nd', None)
         kernel_kwargs.pop('Jd', None)
         kernel_kwargs.pop('Kd', None)
-        kernel_kwargs.pop('Nmid', None)
+        kernel_kwargs.pop('n_mid', None)
         # if ('kb:' in self.kernel.kernel_type):
         # how = 'ratio'  #currently a bug in ratio case for non-integer K/N
         #     else:
         how = 'fast'
         if self.phasing == 'complex' and \
                 np.any(np.asarray(self.n_shift) != 0):
-            self.phase_shift = np.exp(
-                1j * np.dot(self.om, self.n_shift.ravel()))  # [M 1]
+            self.phase_shift = xp.exp(
+                1j * xp.dot(self.om, self.n_shift.ravel()))  # [M 1]
         else:
             self.phase_shift = None  # compute on-the-fly
         if self.Ld is None:
@@ -806,10 +821,11 @@ class NufftBase(object):
                                        K=self.Kd[d], L=self.Ld[d],
                                        phasing=self.phasing,
                                        kernel_type=self.kernel.kernel_type,
-                                       kernel_kwargs=kernel_kwargs)
+                                       kernel_kwargs=kernel_kwargs,
+                                       xp=xp)
 
             if self.phasing == 'complex':
-                if np.isrealobj(h):
+                if xp.isrealobj(h):
                     warnings.warn("Real NUFFT kernel?")
                 h = complexify(h, complex_dtype=self._cplx_dtype)
             # elif self.phasing in ['real', None]:
@@ -831,6 +847,11 @@ class NufftBase(object):
                     attrib,
                     val.dtype,
                     val.shape)
+            elif hasattr(val, '__cupy_array_interface__'):
+                str += "{} = cupy array: dtype={}, shape={}\n".format(
+                    attrib,
+                    val.dtype,
+                    val.shape)
             elif isinstance(val, scipy.sparse.data._data_matrix):
                 str += "{} = {}\n".format(attrib, val.__repr__)
             else:
@@ -848,6 +869,8 @@ class NufftBase(object):
             if self.mode != 'sparse':
                 x = np.linspace(-self.Jd[d]/2, self.Jd[d]/2, self.h[d].size)
                 y = self.h[d]
+                if self.on_gpu:
+                    y = y.get()
             else:
                 if self.kernel.kernel is not None:
                     if with_phasing:
@@ -871,14 +894,14 @@ class NufftBase(object):
 
 
 @profile
-def _nufft_table_interp(obj, Xk, om=None, xp=None):
+def _nufft_table_interp(obj, xk, om=None, xp=None):
     """ Forward NUFFT based on kernel lookup table (image-space to k-space).
 
     Parameters
     ----------
     obj : NufftBase object
         instance of NufftBase (contains k-space locations, kernel, etc.)
-    Xk : array
+    xk : array
         DFT values (images) [npixels, ncoils*nrepetitions]
     copy_x : bool, optional
         make a copy of x internally to avoid potentially modifying the
@@ -886,7 +909,7 @@ def _nufft_table_interp(obj, Xk, om=None, xp=None):
 
     Returns
     -------
-    X : array
+    x : array
         DTFT coefficients (k-space)
     """
     order = obj.table_order
@@ -895,7 +918,16 @@ def _nufft_table_interp(obj, Xk, om=None, xp=None):
         om = obj.om
 
     ndim = len(obj.Kd)
-    xp, on_gpu = get_array_module(Xk, xp)
+    _xp, on_gpu = get_array_module(xk, xp)
+    if obj.on_gpu and not on_gpu:
+        # if GPU-based NUFFT and numpy input we have to transfer x to the GPU
+        xk = obj.xp.asarray(xk)
+        on_gpu = True
+    elif on_gpu and not obj.on_gpu:
+        # if CPU-based NUFFT and cupy input we have to transfer x from the GPU
+        xk = xk.get()
+        on_gpu = False
+    xp = obj.xp
 
     tm = xp.zeros_like(om)
     pi = np.pi
@@ -903,40 +935,49 @@ def _nufft_table_interp(obj, Xk, om=None, xp=None):
         gam = 2 * pi / obj.Kd[d]
         tm[:, d] = om[:, d] / gam  # t = omega / gamma
 
-    if Xk.ndim == 1:
-        Xk = Xk[:, xp.newaxis]
-    elif Xk.shape[1] > Xk.shape[0]:
-        Xk = Xk.T
-    nc = Xk.shape[1]
+    if xk.ndim == 1:
+        xk = xk[:, xp.newaxis]
+    elif xk.shape[1] > xk.shape[0]:
+        xk = xk.T
+    nc = xk.shape[1]
 
-    if Xk.shape[0] != np.prod(obj.Kd):
-        raise ValueError('Xk size problem')
+    if xk.shape[0] != np.prod(obj.Kd):
+        raise ValueError('xk size problem')
 
-    Xk = complexify(Xk, complex_dtype=obj._cplx_dtype)  # force complex
+    xk = complexify(xk, complex_dtype=obj._cplx_dtype)  # force complex
 
-    arg = [obj.Jd, obj.Ld, tm, order]
-    if ndim == 1:
-        X = interp1_table(Xk, obj.h[0], *arg)
-    elif ndim == 2:
-        # Fortran ordering to match Matlab behavior
-        Xk = xp.reshape(Xk, tuple(np.hstack((obj.Kd, nc))), order='F')
-        X = interp2_table(Xk, obj.h[0], obj.h[1], *arg)
-    elif ndim == 3:
-        # Fortran ordering to match Matlab behavior
-        Xk = xp.reshape(Xk, tuple(np.hstack((obj.Kd, nc))), order='F')
-        X = interp3_table(Xk, obj.h[0], obj.h[1], obj.h[2], *arg)
-    else:
-        raise ValueError('dimensions > 3d not done')
-
-    save_testdata = False
-    if save_testdata:
+    if not obj.on_gpu:
+        arg = [obj.Jd, obj.Ld, tm, order]
         if ndim == 1:
-            np.savez('table1d_forward_data.npz', Xk=Xk, X=X, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+            x = interp1_table(xk, obj.h[0], *arg)
         elif ndim == 2:
-            np.savez('table2d_forward_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+            # Fortran ordering to match Matlab behavior
+            xk = xp.reshape(xk, tuple(np.hstack((obj.Kd, nc))), order='F')
+            x = interp2_table(xk, obj.h[0], obj.h[1], *arg)
         elif ndim == 3:
-            np.savez('table3d_forward_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+            # Fortran ordering to match Matlab behavior
+            xk = xp.reshape(xk, tuple(np.hstack((obj.Kd, nc))), order='F')
+            x = interp3_table(xk, obj.h[0], obj.h[1], obj.h[2], *arg)
+        else:
+            raise ValueError('dimensions > 3d not done')
 
+        # save_testdata = False
+        # if save_testdata:
+        #     if ndim == 1:
+        #         np.savez('table1d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #     elif ndim == 2:
+        #         np.savez('table2d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #     elif ndim == 3:
+        #         np.savez('table3d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+
+    else:
+        if ndim == 1:
+            args = (xk, obj.h[0], tm, x)
+        elif ndim == 2:
+            args = (xk, obj.h[0], obj.h[1], tm, x)
+        elif ndim == 3:
+            args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
+        obj.kern_adj(obj.block, obj.grid, args)
 
     # apply phase shift
     if hasattr(obj, 'phase_shift'):
@@ -945,22 +986,22 @@ def _nufft_table_interp(obj, Xk, om=None, xp=None):
                 ph = obj.phase_shift
                 if ph.ndim == 1:
                     ph = xp.reshape(ph, (-1, 1))
-                if X.shape[0] != ph.shape[0] or X.ndim != ph.ndim:
+                if x.shape[0] != ph.shape[0] or x.ndim != ph.ndim:
                     raise RuntimeError("dimension mismatch")
-                X *= ph
+                x *= ph
 
-    return X.astype(Xk.dtype)
+    return x.astype(xk.dtype)
 
 
 @profile
-def _nufft_table_adj(obj, X, om=None, xp=None):
+def _nufft_table_adj(obj, x, om=None, xp=None):
     """ Adjoint NUFFT based on kernel lookup table (k-space to image-space).
 
     Parameters
     ----------
     obj : NufftBase object
         instance of NufftBase (contains k-space locations, kernel, etc.)
-    X : array
+    x : array
         DTFT values (k-space) [nsamples, ncoils*nrepetitions]
     om : ndarray, optional
         Frequency locations corresponding to the samples.  By default this is
@@ -968,13 +1009,22 @@ def _nufft_table_adj(obj, X, om=None, xp=None):
 
     Returns
     -------
-    Xk : array
+    xk : array
         DFT coefficients
     """
     order = obj.table_order
     if om is None:
         om = obj.om
-    xp, on_gpu = get_array_module(X, xp)
+    _xp, on_gpu = get_array_module(x, xp)
+    if obj.on_gpu and not on_gpu:
+        # if GPU-based NUFFT and numpy input we have to transfer x to the GPU
+        x = obj.xp.asarray(x)
+        on_gpu = True
+    elif on_gpu and not obj.on_gpu:
+        # if CPU-based NUFFT and cupy input we have to transfer x from the GPU
+        x = x.get()
+        on_gpu = False
+    xp = obj.xp
 
     ndim = len(obj.Kd)
 
@@ -984,11 +1034,11 @@ def _nufft_table_adj(obj, X, om=None, xp=None):
         gam = 2 * pi / obj.Kd[d]
         tm[:, d] = om[:, d] / gam  # t = omega / gamma
 
-    if X.shape[0] != om.shape[0]:
-        raise ValueError('X size problem')
+    if x.shape[0] != om.shape[0]:
+        raise ValueError('x size problem')
 
-    if X.ndim is 1:
-        X = X[:, xp.newaxis]
+    if x.ndim is 1:
+        x = x[:, xp.newaxis]
 
     # adjoint of phase shift
     if hasattr(obj, 'phase_shift'):
@@ -997,34 +1047,45 @@ def _nufft_table_adj(obj, X, om=None, xp=None):
                 ph_conj = obj.phase_shift.conj()
                 if ph_conj.ndim == 1:
                     ph_conj = xp.reshape(ph_conj, (-1, 1))
-                if X.shape[0] != ph_conj.shape[0] or X.ndim != ph_conj.ndim:
+                if x.shape[0] != ph_conj.shape[0] or x.ndim != ph_conj.ndim:
                     raise RuntimeError("dimension mismatch")
-                X *= ph_conj
+                x *= ph_conj
 
     # force proper complex dtype
-    X = complexify(X, complex_dtype=obj._cplx_dtype)
+    x = complexify(x, complex_dtype=obj._cplx_dtype)
 
-    arg = [obj.Jd, obj.Ld, tm, obj.Kd[0:ndim], order]
+    if not obj.on_gpu:
+        arg = [obj.Jd, obj.Ld, tm, obj.Kd[0:ndim], order]
 
-    if ndim == 1:
-        Xk = interp1_table_adj(X, obj.h[0], *arg)
-    elif ndim == 2:
-        Xk = interp2_table_adj(X, obj.h[0], obj.h[1], *arg)
-    elif ndim == 3:
-        Xk = interp3_table_adj(X, obj.h[0], obj.h[1], obj.h[2], *arg)
-    else:
-        raise ValueError('> 3d not done')
-
-    save_testdata = False
-    if save_testdata:
         if ndim == 1:
-            np.savez('table1d_adj_data.npz', Xk=Xk, X=X, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+            xk = interp1_table_adj(x, obj.h[0], *arg)
         elif ndim == 2:
-            np.savez('table2d_adj_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+            xk = interp2_table_adj(x, obj.h[0], obj.h[1], *arg)
         elif ndim == 3:
-            np.savez('table3d_adj_data.npz', Xk=Xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+            xk = interp3_table_adj(x, obj.h[0], obj.h[1], obj.h[2], *arg)
+        else:
+            raise ValueError('> 3d not done')
 
-    return Xk.astype(X.dtype)
+        # save_testdata = False
+        # if save_testdata:
+        #     if ndim == 1:
+        #         np.savez('table1d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #     elif ndim == 2:
+        #         np.savez('table2d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #     elif ndim == 3:
+        #         np.savez('table3d_adj_data.npz', Xk=xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+
+    else:
+        # kern_forward(block, grid, (ck, h1, tm, fm))
+        if ndim == 1:
+            args = (xk, obj.h[0], tm, x)
+        elif ndim == 2:
+            args = (xk, obj.h[0], obj.h[1], tm, x)
+        elif ndim == 3:
+            args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
+        obj.kern_forward(obj.block, obj.grid, args)
+
+    return xk.astype(x.dtype)
 
 
 @profile
@@ -1107,7 +1168,7 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
 
     Returns
     -------
-    X : array
+    xk : array
         DTFT coefficients (k-space)
     """
     Nd = obj.Nd
@@ -1133,31 +1194,31 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
     #
     if obj.sn is not None:
         x *= obj.sn[..., xp.newaxis]		# scaling factors
-    Xk = fftn(x, Kd, axes=range(x.ndim-1))
+    xk = fftn(x, Kd, axes=range(x.ndim-1))
     if obj.phase_before is not None:
-        Xk *= obj.phase_before[..., xp.newaxis]
-    Xk = Xk.reshape((np.prod(Kd), L), order='F')
+        xk *= obj.phase_before[..., xp.newaxis]
+    xk = xk.reshape((np.prod(Kd), L), order='F')
 
     if obj.ortho:
-        Xk /= obj.scale_ortho
+        xk /= obj.scale_ortho
 
     if 'table' in obj.mode:
         # interpolate via tabulated interpolator
-        X = obj.interp_table(obj, Xk)
+        x = obj.interp_table(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        X = obj.p * Xk  # [M,*L]
+        x = obj.p * xk  # [M,*L]
 
-    X = xp.reshape(X, (obj.M, L), order='F')
+    x = xp.reshape(x, (obj.M, L), order='F')
 
     if obj.phase_after is not None:
-        X *= obj.phase_after[:, None]  # broadcast rather than np.tile
+        x *= obj.phase_after[:, None]  # broadcast rather than np.tile
 
     remove_singleton = True
     if remove_singleton and L == 1:
-        X = X[..., 0]
+        x = x[..., 0]
 
-    return X
+    return x
 
 
 @profile
@@ -1179,7 +1240,7 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
 
     Returns
     -------
-    X : array
+    xk : array
         DTFT coefficients (k-space)
     """
     Nd = obj.Nd
@@ -1201,30 +1262,30 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
 
     L = x.shape[-1]
 
-    X = xp.empty((obj.M, L), dtype=x.dtype, order='F')
+    xk = xp.empty((obj.M, L), dtype=x.dtype, order='F')
     for rep in range(L):
-        X[..., rep] = dtft(
+        xk[..., rep] = dtft(
             x[:, rep], omega=obj.om, Nd=Nd, n_shift=obj.n_shift, xp=xp)
 
     remove_singleton = True
     if remove_singleton and L == 1:
-        X = X[..., 0]
+        xk = xk[..., 0]
 
-    return X
+    return xk
 
 
 @profile
-def nufft_adj(obj, X, copy_X=True, return_psf=False, xp=None):
+def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
     """Adjoint NUFFT (k-space to image-space).
 
     Parameters
     ----------
     obj : NufftBase object
         instance of NufftBase (contains k-space locations, kernel, etc.)
-    X : array
+    xk : array
         DTFT values (k-space) [nsamples, ncoils*nrepetitions]
-    copy_X : bool, optional
-        make a copy of x internally to avoid potentially modifying the
+    copy : bool, optional
+        make a copy of ``xk`` internally to avoid potentially modifying the
         original array.
     return_psf : bool, optional
         EXPERIMENTAL
@@ -1236,41 +1297,41 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False, xp=None):
     """
     Nd = obj.Nd
     Kd = obj.Kd
-    xp, on_gpu = get_array_module(X, xp)
-    data_address_in = get_data_address(X)
-    if X.size % obj.M != 0:
+    xp, on_gpu = get_array_module(xk, xp)
+    data_address_in = get_data_address(xk)
+    if xk.size % obj.M != 0:
         raise ValueError("invalid size")
-    X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
-    X = xp.reshape(X, (obj.M, -1), order='F')  # [M,*L]
-    if copy_X and (data_address_in == get_data_address(X)):
+    xk = complexify(xk, complex_dtype=obj._cplx_dtype)  # force complex
+    xk = xp.reshape(xk, (obj.M, -1), order='F')  # [M,*L]
+    if copy and (data_address_in == get_data_address(xk)):
         # ensure input array isn't modified by in-place operations below
-        X = X.copy()
+        xk = xk.copy()
 
-    nrepetitions = X.shape[-1]
+    nrepetitions = xk.shape[-1]
 
     if obj.phase_after is not None and not return_psf:
         # replaced np.tile() with broadcasting
-        X *= obj.phase_after.conj()[:, xp.newaxis]
+        xk *= obj.phase_after.conj()[:, xp.newaxis]
 
     if 'table' in obj.mode:
         # interpolate via tabulated interpolator
-        X = X.astype(xp.result_type(obj.h[0], X.dtype), copy=False)
-        Xk_all = obj.interp_table_adj(obj, X)
+        xk = xk.astype(xp.result_type(obj.h[0], xk.dtype), copy=False)
+        xk_all = obj.interp_table_adj(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        Xk_all = (obj.p.H * X)  # [*Kd, *L]
+        xk_all = (obj.p.H * xk)  # [*Kd, *L]
 
-    x = xp.zeros(tuple(Kd) + (nrepetitions,), dtype=X.dtype)
+    x = xp.zeros(tuple(Kd) + (nrepetitions,), dtype=xk.dtype)
 
-    if Xk_all.ndim == 1:
-        Xk_all = Xk_all[:, None]
+    if xk_all.ndim == 1:
+        xk_all = xk_all[:, None]
 
-    Xk_all = Xk_all.reshape(tuple(Kd) + (nrepetitions, ), order='F')
+    xk_all = xk_all.reshape(tuple(Kd) + (nrepetitions, ), order='F')
     if return_psf:
-        return Xk_all[..., 0]
+        return xk_all[..., 0]
     if obj.phase_before is not None:
-        Xk_all *= obj.phase_before.conj()[..., xp.newaxis]
-    x = ifftn(Xk_all, axes=range(Xk_all.ndim-1))
+        xk_all *= obj.phase_before.conj()[..., xp.newaxis]
+    x = ifftn(xk_all, axes=range(xk_all.ndim-1))
 
     # eliminate zero padding from ends
     subset_slices = tuple([slice(d) for d in Nd] + [slice(None), ])
@@ -1294,7 +1355,7 @@ def nufft_adj(obj, X, copy_X=True, return_psf=False, xp=None):
     return x
 
 
-def nufft_adj_exact(obj, X, copy_X=True, xp=None):
+def nufft_adj_exact(obj, xk, copy=True, xp=None):
     """ Brute-force adjoint NUFFT (k-space to image-space).
 
     **Warning:** This is SLOW! Intended primarily for validating NUFFT in
@@ -1304,10 +1365,10 @@ def nufft_adj_exact(obj, X, copy_X=True, xp=None):
     ----------
     obj : NufftBase object
         instance of NufftBase (contains k-space locations, kernel, etc.)
-    X : array
+    xk : array
         DTFT values (k-space) [nsamples, ncoils*nrepetitions]
-    copy_x : bool, optional
-        make a copy of x internally to avoid potentially modifying the
+    copy : bool, optional
+        make a copy of ``xk`` internally to avoid potentially modifying the
         original array.
 
     Returns
@@ -1317,22 +1378,22 @@ def nufft_adj_exact(obj, X, copy_X=True, xp=None):
     """
     # extract attributes from structure
     Nd = obj.Nd
-    xp, on_gpu = get_array_module(X, xp)
+    xp, on_gpu = get_array_module(xk, xp)
 
-    data_address_in = get_data_address(X)
-    if X.size % obj.M != 0:
+    data_address_in = get_data_address(xk)
+    if xk.size % obj.M != 0:
         raise ValueError("invalid size")
-    X = complexify(X, complex_dtype=obj._cplx_dtype)  # force complex
-    X = xp.reshape(X, (obj.M, -1), order='F')  # [M,*L]
-    if copy_X and (data_address_in == get_data_address(X)):
+    xk = complexify(xk, complex_dtype=obj._cplx_dtype)  # force complex
+    xk = xp.reshape(xk, (obj.M, -1), order='F')  # [M,*L]
+    if copy and (data_address_in == get_data_address(xk)):
         # make sure the original array isn't modified!
-        X = X.copy()
+        xk = xk.copy()
 
-    nrepetitions = X.shape[-1]
+    nrepetitions = xk.shape[-1]
 
-    x = xp.empty((np.prod(Nd), nrepetitions), dtype=X.dtype, order='F')
+    x = xp.empty((np.prod(Nd), nrepetitions), dtype=xk.dtype, order='F')
     for rep in range(nrepetitions):
-        x[..., rep] = dtft_adj(X[:, rep], omega=obj.om, Nd=obj.Nd,
+        x[..., rep] = dtft_adj(xk[:, rep], omega=obj.om, Nd=obj.Nd,
                                n_shift=obj.n_shift)
 
     if obj.ortho:
