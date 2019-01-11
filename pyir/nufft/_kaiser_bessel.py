@@ -12,33 +12,70 @@ license for the Matlab code is reproduced below.
     publications in any papers that present results based on this software.
     UM and the authors make all the usual disclaimers about liability etc.
 
+Python translation and GPU support was added by Gregory R. Lee
+
+Notes:
+1.) For speed, call ``i0`` and ``j0`` instead of ``iv``, ``jv`` when order = 0.
+2.) CuPy-based GPU support added. If ``order != 0``, we currently have
+to compute the kernels on the CPU due to lack of an ``iv`` or ``jv``
+implementation there.
+
 """
 from __future__ import division, print_function, absolute_import
 
 import warnings
 import numpy as np
-from scipy.special import iv, jv
-from pyir.utils import reale, get_array_module
+from scipy.special import iv, jv, i0, j0
+from pyir.utils import reale, get_array_module, have_cupy, profile
+if have_cupy:
+    from cupyx.scipy.special import j0 as j0_cupy, i0 as i0_cupy
 
 __all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
 
 
+def _i0(x, xp):
+    """Wrapper for i0 that calls either the CPU or GPU implementation."""
+    if xp == np:
+        return i0(x)
+    else:
+        return i0_cupy(x)
+
+
+def _j0(x, xp):
+    """Wrapper for j0 that calls either the CPU or GPU implementation."""
+    if xp == np:
+        return j0(x)
+    else:
+        return j0_cupy(x)
+
+
 def _iv(x1, x2, xp):
-    # no iv function in CUDA math library, so must compute on the CPU
+    """Wrapper for iv that can accept x1 and/or x2 as CuPy or numpy arrays."""
     if xp != np:
-        return xp.asarray(iv(x1.get(), x2.get()))
+        # no iv function in CUDA math library, so must compute on the CPU
+        if not xp.isscalar(x1):
+            x1 = x1.get()
+        if not xp.isscalar(x2):
+            x2 = x2.get()
+        return xp.asarray(iv(x1, x2))
     return iv(x1, x2)
 
 
 def _jv(x1, x2, xp):
-    # no jv function in CUDA math library, so must compute on the CPU
+    """Wrapper for jv that can accept x1 and/or x2 as CuPy or numpy arrays."""
     if xp != np:
-        return xp.asarray(jv(x1.get(), x2.get()))
+        # no jv function in CUDA math library, so must compute on the CPU
+        if not xp.isscalar(x1):
+            x1 = x1.get()
+        if not xp.isscalar(x2):
+            x2 = x2.get()
+        return xp.asarray(jv(x1, x2))
     return jv(x1, x2)
 
 
+@profile
 def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
-    '''  generalized Kaiser-Bessel function for x in support [-J/2,J/2]
+    '''Generalized Kaiser-Bessel function for x in support [-J/2,J/2].
 
     Parameters
     ----------
@@ -83,9 +120,6 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
       is derived only for m > -1 !
     '''
     xp, on_gpu = get_array_module(x)
-    if on_gpu:
-        # ij, jv not implemented in cupy so have to compute on the CPU
-        x = x.get()
     if alpha is None:
         alpha = 2.34 * J
 
@@ -97,25 +131,31 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     kb_m_bi = abs(kb_m)		# modified "kb_m" as described above
     ii = (2 * np.abs(x) < J).nonzero()
     tmp = (2 * x[ii] / J)
-    f = np.sqrt(1 - tmp * tmp)
-    denom = _iv(kb_m_bi, alpha, xp=np)
+    tmp *= tmp
+    f = np.sqrt(1 - tmp)
+    if kb_m_bi != 0:
+        denom = _iv(kb_m_bi, alpha, xp=xp)
+    else:
+        denom = _i0(alpha, xp=xp)
     if denom == 0:
         print('m=%g alpha=%g' % (kb_m, alpha))
-    kb = np.zeros_like(x)
-    kb[ii] = (f ** kb_m * _iv(kb_m_bi, alpha * f, xp=np)) / float(denom)
+    kb = xp.zeros_like(x)
+    if kb_m_bi != 0:
+        kb[ii] = (f ** kb_m * _iv(kb_m_bi, alpha * f, xp=xp)) / float(denom)
+    else:
+        kb[ii] = _i0(alpha*f, xp=xp) / float(denom)
     kb = kb.real
-    if on_gpu:
-        kb = xp.asarray(kb)
     return kb
 
 
+@profile
 def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
-    """ Fourier transform of generalized Kaiser-Bessel function, in dimension d
+    """Fourier transform of generalized Kaiser-Bessel function, in dimension d.
 
     Parameters
     ----------
     u : array_like
-        [M,1]	frequency arguments
+        [M,1]   frequency arguments
     J : int, optional
         kernel size in each dimension
     alpha : float, optional
@@ -140,33 +180,48 @@ def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
     Python adaptation:  Gregory Lee
     """
     xp, on_gpu = get_array_module(u)
-    if on_gpu:
-        # ij, jv not implemented in cupy so have to compute on the CPU
-        u = u.get()
     if not alpha:
         alpha = 2.34 * J
 
     # persistent warned  #TODO
     if (kb_m < -1):  # Check for validity of FT formula
-        # if isempty(warned)	% only print this reminder the first time
+        # if isempty(warned)    % only print this reminder the first time
         wstr = 'kb_m=%g < -1' % (kb_m)
         wstr += ' in kaiser_bessel_ft()\n'
         wstr += ' - validity of FT formula uncertain for kb_m < -1\n'
         warnings.warn(wstr)
     elif (kb_m < 0) & ((np.abs(np.round(kb_m) - kb_m)) > np.finfo(float).eps):
-        # if isempty(warned)	% only print this reminder the first time
+        # if isempty(warned)    % only print this reminder the first time
         wstr = '\nNeg NonInt kb_m=%g in ' % (kb_m)
         wstr += 'kaiser_bessel_ft()\n\t- validity of FT formula uncertain\n'
         warnings.warn(wstr)
 
     # trick: scipy.special.jv can handle complex args
-    tmp = (np.pi * J * u)
-    # lib.scimath.sqrt gives complex values instead of NaN for negative inputs
-    z = np.lib.scimath.sqrt(tmp * tmp - alpha * alpha)
+    tmp = (np.pi * J) * u
+    tmp *= tmp
+    tmp -= alpha * alpha
+    if xp == np:
+        # lib.scimath.sqrt gives complex value instead of NaN for negative
+        # inputs
+        z = np.lib.scimath.sqrt(tmp)
+    else:
+        # no cupy.lib.scimath.sqrt, but it is just equivalent to:
+        # convert tmp to complex dtype before calling xp.sqrt
+        tmp_cplx = tmp.astype(xp.result_type(tmp.dtype, xp.complex64),
+                              copy=False)
+        z = xp.sqrt(tmp_cplx)
+
     nu = d / 2. + kb_m
-    y = (2 * np.pi) ** (d / 2.) * (J / 2.) ** d * alpha ** kb_m \
-        / _iv(kb_m, alpha, xp=np) * _jv(nu, z, xp=np) / z ** nu
+    const1 = (2 * np.pi) ** (d / 2.) * (J / 2.) ** d * alpha ** kb_m
+    if kb_m == 0:
+        const1 /= _i0(alpha, xp=xp)
+    else:
+        const1 /= _iv(kb_m, alpha, xp=xp)
+    if nu == 0:
+        y = const1 * _j0(z, xp=xp)
+        y /= z
+    else:
+        y = const1 * _jv(nu, z, xp=xp)
+        y /= z ** nu
     y = reale(y.real)
-    if on_gpu:
-        y = xp.asarray(y)
     return y

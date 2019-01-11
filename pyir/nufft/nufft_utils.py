@@ -4,6 +4,7 @@ import warnings
 
 import numpy as np
 from pyir.utils._cupy import get_array_module
+from pyir.utils import profile
 
 __all__ = ['_nufft_samples',
            '_nufft_interp_zn',
@@ -12,6 +13,7 @@ __all__ = ['_nufft_samples',
            ]
 
 
+@profile
 def _nufft_samples(stype, Nd=None, xp=np):
     """  default simple EPI sampling patterns
 
@@ -125,6 +127,7 @@ def _nufft_interp_zn(alist, N, J, K, func, n_mid=None, xp=None):
     return zn
 
 
+@profile
 def _nufft_offset(om, J, K, xp=None):
     """ offset for NUFFT
 
@@ -155,6 +158,7 @@ def _nufft_offset(om, J, K, xp=None):
     return k0
 
 
+@profile
 def _nufft_coef(om, J, K, kernel, xp=None):
     """  Make NUFFT interpolation coefficient vector given kernel function.
 

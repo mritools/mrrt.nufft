@@ -16,6 +16,7 @@ from __future__ import division, print_function, absolute_import
 
 import collections
 import warnings
+from math import sqrt
 
 from time import time
 import numpy as np
@@ -167,24 +168,24 @@ class NufftBase(object):
 
         self.__on_gpu = on_gpu
         # get the array module being used (based on state of self.on_gpu)
-        xp = self.xp
 
         # set the private version (__Nd not Nd) to avoid circular calls
-        self.__Nd = to_1d_int_array(Nd, xp=xp)
+        # also Nd, Kd, Jd, etc. should be on the CPU
+        self.__Nd = to_1d_int_array(Nd, xp=np)
         self.kernel_type = kernel_type
         self.__phasing = phasing
         self.__om = None  # will be set later below
         self._set_n_mid()
         self.ndim = len(self.Nd)  # number of dimensions
-        self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=xp)
+        self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=np)
 
         if Kd is None:
             Kd = 2 * self.__Nd
-        self.__Kd = to_1d_int_array(Kd, n=self.ndim, xp=xp)
+        self.__Kd = to_1d_int_array(Kd, n=self.ndim, xp=np)
 
         self.ortho = ortho  # normalization for orthogonal FFT
         if self.ortho:
-            self.scale_ortho = xp.sqrt(self.__Kd.prod())
+            self.scale_ortho = sqrt(self.__Kd.prod())
         else:
             self.scale_ortho = 1
 
@@ -199,7 +200,8 @@ class NufftBase(object):
         self._cplx_dtype = None
         self._real_dtype = None
 
-        self.om = om
+        self.om = om  # TODO: force om to be an array. don't allow 'epi', etc.
+
         self.precision = precision
         self.__mode = None  # set below by mode.setter()
         self._forw = None
@@ -235,7 +237,7 @@ class NufftBase(object):
         self._make_arrays_contiguous(order='F')
         # TODO: cleanup how initialization is done
         self.__sparse_format = None
-        self.__Ld = None
+        self.__Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
         if self.mode == 'sparse':
             self._init_sparsemat()  # create COO matrix
             # convert to other format if specified
@@ -245,10 +247,10 @@ class NufftBase(object):
                 self.sparse_format = sparse_format
         elif 'table' in self.mode:
             # TODO: change name of Ld to table_oversampling
-            self.Ld = to_1d_int_array(Ld, n=self.ndim, xp=xp)
-            odd_L = xp.mod(self.Ld, 2) == 1
-            odd_J = xp.mod(self.Jd, 2) == 1
-            if np.any(xp.logical_and(odd_L, odd_J)):
+            self.Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
+            odd_L = np.mod(self.Ld, 2) == 1
+            odd_J = np.mod(self.Jd, 2) == 1
+            if np.any(np.logical_and(odd_L, odd_J)):
                 warnings.warn(
                     "accuracy may be compromised when L and J are both odd")
             if self.mode == 'table0':
@@ -297,7 +299,7 @@ class NufftBase(object):
 
         # store a block and grid configuration for use with the kernel
         self.block, self.grid = get_1D_block_table_gridding(
-            M, dev=default_device, kernel=self.kernel_adj)
+            M, dev=default_device, kernel=self.kern_adj)
 
     @property
     def on_gpu(self):
@@ -413,11 +415,12 @@ class NufftBase(object):
 
     @om.setter
     def om(self, om):
+        xp = self.xp
         if om is not None:
             if is_string_like(om):
                 # special test cases of input sampling pattern
-                om = _nufft_samples(om, self.Nd)
-            om = np.asarray(om)
+                om = _nufft_samples(om, self.Nd, xp=xp)
+            om = self.xp.asarray(om)
             if om.ndim == 1:
                 om = om[:, np.newaxis]
             if om.shape[1] != self.ndim:
@@ -429,7 +432,8 @@ class NufftBase(object):
                 raise ValueError('omega needs {} columns'.format(self.ndim))
         self.__om = om
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_after = self._phase_after(om, self.n_mid, self.__n_shift)
+            self.phase_after = self._phase_after(om, self.n_mid,
+                                                 self.__n_shift)
         if self.__init_complete:
             self._reinitialize()
 
@@ -457,7 +461,7 @@ class NufftBase(object):
     @Nd.setter
     def Nd(self, Nd):
         K_N_ratio = self.__Kd / self.__Nd
-        self.__Nd = to_1d_int_array(Nd, n=self.ndim)
+        self.__Nd = to_1d_int_array(Nd, n=self.ndim, xp=np)
         self._set_n_mid()
         # update Kd to maintain approximately the same amount of oversampling
         self.__Kd = np.round(K_N_ratio * self.__Nd).astype(self.__Kd.dtype)
@@ -470,7 +474,7 @@ class NufftBase(object):
 
     @Jd.setter
     def Jd(self, Jd):
-        self._Jd = to_1d_int_array(Jd, n=self.ndim)
+        self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=np)
         if self.__init_complete:
             self._reinitialize()
 
@@ -480,7 +484,7 @@ class NufftBase(object):
 
     @Ld.setter
     def Ld(self, Ld):
-        self.__Ld = to_1d_int_array(Ld, n=self.ndim)
+        self.__Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
         if 'table' not in self.mode:
             warnings.warn("Ld is ignored for mode = {}".format(self.mode))
         elif self.__init_complete:
@@ -492,7 +496,7 @@ class NufftBase(object):
 
     @Kd.setter
     def Kd(self, Kd):
-        self.__Kd = to_1d_int_array(Kd, n=self.ndim)
+        self.__Kd = to_1d_int_array(Kd, n=self.ndim, xp=np)
         if isinstance(self.phase_before, np.ndarray):
             self.phase_before = self._phase_before(Kd, self.n_mid)
         if self.__init_complete:
@@ -532,9 +536,9 @@ class NufftBase(object):
         if self.__init_complete:
             self._reinitialize()
 
-    def _update_dtype(self, arr, mode=None):
+    def _update_dtype(self, arr, mode=None, xp=np):
         if mode is None:
-            if np.iscomplexobj(arr):
+            if xp.iscomplexobj(arr):
                 if arr.dtype != self._cplx_dtype:
                     arr = arr.astype(self._cplx_dtype)
             else:
@@ -553,86 +557,97 @@ class NufftBase(object):
     def _update_array__precision(self):
         # update the data types of other members
         # TODO: warn if losing precision during conversion?
-        if isinstance(self.__om, np.ndarray):
-            self.__om = self._update_dtype(self.om, 'real')
+        xp = self.xp
+        if isinstance(self.__om, xp.ndarray):
+            self.__om = self._update_dtype(self.om, 'real', xp=xp)
         if isinstance(self.__n_shift, np.ndarray):
-            self.__n_shift = self._update_dtype(self.__n_shift, 'real')
-        if isinstance(self.phase_before, np.ndarray):
+            self.__n_shift = self._update_dtype(self.__n_shift, 'real', xp=np)
+        if isinstance(self.phase_before, xp.ndarray):
             self.phase_before = self._update_dtype(
-                self.phase_before, 'complex')
-        if isinstance(self.phase_after, np.ndarray):
-            self.phase_after = self._update_dtype(self.phase_after, 'complex')
-        if hasattr(self, 'sn') and isinstance(self.sn, np.ndarray):
-            self.sn = self._update_dtype(self.sn)
+                self.phase_before, 'complex', xp=xp)
+        if isinstance(self.phase_after, xp.ndarray):
+            self.phase_after = self._update_dtype(self.phase_after, 'complex',
+                                                  xp=xp)
+        if hasattr(self, 'sn') and isinstance(self.sn, xp.ndarray):
+            self.sn = self._update_dtype(self.sn, xp=xp)
         if self.mode == 'sparse':
             if hasattr(self, 'p') and self.p is not None:
-                self.p = self._update_dtype(self.p, self.phasing)
+                self.p = self._update_dtype(self.p, self.phasing, xp=xp)
         elif 'table' in self.mode:
             if hasattr(self, 'h') and self.h is not None:
                 for idx, h in enumerate(self.h):
-                    self.h[idx] = self._update_dtype(h, self.phasing)
+                    self.h[idx] = self._update_dtype(h, self.phasing, xp=xp)
         else:
             raise ValueError("unknown mode")
 
     def _make_arrays_contiguous(self, order='F'):
+        xp = self.xp
+        # arrays potentially stored on the GPU use contig_func_xp
         if order == 'F':
             contig_func = np.asfortranarray
+            contig_func_xp = xp.asfortranarray
         elif order == 'C':
-            contig_func = np.ascontiguousarray
+            contig_func = np.asfortranarray
+            contig_func_xp = xp.ascontiguousarray
         else:
             raise ValueError("order must be 'F' or 'C'")
-        self.__om = contig_func(self.__om)
+        self.__om = contig_func_xp(self.__om)
         self.__Kd = contig_func(self.__Kd)
         self.__Nd = contig_func(self.__Nd)
         self._Jd = contig_func(self._Jd)
         self.__n_shift = contig_func(self.__n_shift)
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_before = contig_func(self.phase_before)
+            self.phase_before = contig_func_xp(self.phase_before)
         if isinstance(self.phase_after, np.ndarray):
-            self.phase_after = contig_func(self.phase_after)
+            self.phase_after = contig_func_xp(self.phase_after)
         if hasattr(self, 'sn') and self.sn is not None:
-            self.sn = contig_func(self.sn)
+            self.sn = contig_func_xp(self.sn)
         if self.mode == 'sparse':
             pass
         if 'table' in self.mode:
             if hasattr(self, 'h') and self.h is not None:
                 for h in self.h:
-                    h = contig_func(h)
+                    h = contig_func_xp(h)
 
     def _phase_before(self, Kd, n_mid):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
-        phase = 2 * np.pi * np.arange(Kd[0]) / Kd[0] * n_mid[0]
+        xp = self.xp
+        phase = 2 * np.pi * xp.arange(Kd[0]) / Kd[0] * n_mid[0]
         for d in range(1, Kd.size):
-            tmp = 2 * np.pi * np.arange(Kd[d]) / Kd[d] * n_mid[d]
+            tmp = 2 * np.pi * xp.arange(Kd[d]) / Kd[d] * n_mid[d]
             # fast outer sum via broadcasting
             phase = phase.reshape(
                 (phase.shape) + (1,)) + tmp.reshape((1,) * d + (tmp.size,))
-        return np.exp(1j * phase).astype(self._cplx_dtype)  # [(Kd)]
+        return xp.exp(1j * phase).astype(self._cplx_dtype)  # [(Kd)]
 
     def _phase_after(self, om, n_mid, n_shift):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
-        phase = np.exp(1j * np.dot(om, (n_shift - n_mid).reshape(-1, 1)))
-        return np.squeeze(phase).astype(self._cplx_dtype)  # [M,1]
+        xp = self.xp
+        phase = xp.exp(1j * xp.dot(om,
+                                   xp.asarray(n_shift - n_mid).reshape(-1, 1))
+                       )
+        return xp.squeeze(phase).astype(self._cplx_dtype)  # [M,1]
 
     def _calc_scaling(self):
         """image domain scaling factors to account for the finite NUFFT
         kernel.  (i.e. intensity rolloff correction)
         """
+        xp = self.xp
         kernel = self.kernel
         Nd = self.Nd
         Kd = self.Kd
         Jd = self.Jd
         ktype = kernel.kernel_type.lower()
         if ktype == 'diric':
-            self.sn = np.ones(Nd)
+            self.sn = xp.ones(Nd)
         else:
-            self.sn = np.array([1.])
+            self.sn = xp.array([1.])
             for d in range(self.ndim):
                 if kernel.is_kaiser_scale:
                     # nc = np.arange(Nd[d])-(Nd[d]-1)/2.  #OLD WAY
-                    nc = np.arange(Nd[d]) - self.n_mid[d]
+                    nc = xp.arange(Nd[d]) - self.n_mid[d]
                     tmp = 1 / kaiser_bessel_ft(nc / Kd[d], Jd[d],
                                                kernel.kb_alf[d],
                                                kernel.kb_m[d], 1)
@@ -642,15 +657,16 @@ class NufftBase(object):
                                       "phasing case (n_mid is set differently)")
                     tmp = 1 / _nufft_interp_zn(0, Nd[d], Jd[d], Kd[d],
                                                kernel.kernel[d],
-                                               self.n_mid[d])
+                                               self.n_mid[d], xp=xp)
                 elif ktype == 'linear':
                     # TODO: untested
-                    tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.n_mid[d])
+                    tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.n_mid[d],
+                                     xp=xp)
                 else:
                     raise ValueError("Unsupported ktype: {}".format(ktype))
                 # tmp = reale(tmp)  #TODO: reale?
                 # TODO: replace outer with broadcasting?
-                self.sn = np.outer(self.sn.ravel(), tmp.conj())
+                self.sn = xp.outer(self.sn.ravel(), tmp.conj())
         if len(Nd) > 1:
             self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
         else:
@@ -690,7 +706,6 @@ class NufftBase(object):
                 raise ValueError("callable kernel function required")
 
             # [J?,M]
-            # TODO: for now _nufft_coef only supports numpy backend
             [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func, xp=xp)
 
             # indices into oversampled FFT components
@@ -702,7 +717,7 @@ class NufftBase(object):
             kd[d] = xp.mod(outer_sum(xp.arange(1, J + 1), koff, xp=xp), K)
 
             if self.phasing == 'complex':
-                gam = 2 * xp.pi / K
+                gam = 2 * np.pi / K
                 phase_scale = 1j * gam * (N - 1) / 2.
                 phase = xp.exp(phase_scale * arg)   # [J,M] linear phase
             else:
@@ -760,7 +775,7 @@ class NufftBase(object):
                       '%g GB' % (RAM_GB))
 
         # shape (*Jd, M)
-        mm = np.tile(xp.arange(M), (np.prod(self.Jd), 1))
+        mm = xp.tile(xp.arange(M), (np.prod(self.Jd), 1))
 
         self.p = coo_matrix((uu.ravel(order='F'),
                              (mm.ravel(order='F'), kk.ravel(order='F'))),
@@ -1094,7 +1109,8 @@ def _nufft_table_make1(
                       kernel_kwargs=kernel_kwargs,
                       mode='sparse',
                       phasing=phasing,
-                      sparse_format='csc')
+                      sparse_format='csc',
+                      on_gpu=(xp != np))
     t0 = xp.arange(-J * L / 2., J * L / 2. + 1) / L  # [J*L+1]
     if not t0.size == (J*L + 1):
         raise ValueError("bad t0.size")
@@ -1120,12 +1136,17 @@ def _nufft_table_make1(
             t1 = J / 2. - 1 + xp.arange(1, L+1) / L  # [L]
         om1 = t1 * 2 * pi / K		# * gam
         s1 = NufftBase(om=om1, Nd=N, Kd=K, **nufft_args)
-        h = xp.asarray(
-            s1.p[:, xp.arange(J - 1, -1, -1)].todense()).ravel(order='F')
+        try:
+            h = xp.asarray(
+                s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
+        except ValueError:
+            # fall back to alternate slicing for CuPy
+            h = xp.asarray(
+                s1.p[:, slice(0, J)].todense()[:, ::-1]).ravel(order='F')
         if N % 2 == 0:
-            h = xp.concatenate((h, xp.asarray([h[0], ])), axis=0)  # [J*L+1,]
+            h = xp.concatenate((h, xp.atleast_1d(h[0])), axis=0)  # [J*L+1,]
         else:
-            h = xp.concatenate((xp.asarray([h[-1], ]), h), axis=0)  # [J*L+1,]
+            h = xp.concatenate((xp.atleast_1d(h[-1]), h), axis=0)  # [J*L+1,]
     # This efficient way uses only "J" columns of sparse matrix!
     # The trick to this is to use fake small values for N and K,
     # which works for interpolators that depend only on the ratio K/N.
@@ -1138,8 +1159,13 @@ def _nufft_table_make1(
         t1 = J / 2. - 1 + xp.arange(L) / L  # [L]
         om1 = t1 * 2 * pi / Kfake		# gam
         s1 = NufftBase(om=om1, Nd=Nfake, Kd=Kfake, **nufft_args)
-        h = xp.asarray(
-            s1.p[:, xp.arange(J - 1, -1, -1)].todense()).ravel(order='F')
+        try:
+            h = xp.asarray(
+                s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(order='F')
+        except ValueError:
+            # fall back to alternate slicing for CuPy
+            h = xp.asarray(
+                s1.p[:, slice(0, J)].todense()[:, ::-1]).ravel(order='F')
         # [J*L+1] assuming symmetric
         h = xp.concatenate((h, xp.asarray([h[0], ])), axis=0)
         if phasing == 'complex':
