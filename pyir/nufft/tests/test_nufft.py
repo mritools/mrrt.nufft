@@ -15,6 +15,9 @@ from pyir.nufft.nufft import NufftBase, nufft_adj
 from pyir.nufft.nufft import _nufft_table_make1
 from pyir.nufft.tests.test_dtft import _uniform_freqs
 
+# TODO: test CuPy cases
+# TODO: test batch transform
+
 
 def _perturbed_gridpoints(Nd, rel_std=0.5, seed=1234, xp=np):
     """Generate a uniform cartesian frequency grid of shape Nd and then
