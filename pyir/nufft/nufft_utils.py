@@ -181,9 +181,7 @@ def _nufft_coef(om, J, K, kernel, xp=None):
     Matlab version Copyright 2002-4-11, Jeff Fessler, The University of
     Michigan.
     """
-    if xp is None:
-        # TODO: kernel() call below doesn't currently support CuPy
-        xp, on_gpu = get_array_module(om)
+    xp, on_gpu = get_array_module(om, xp)
 
     om = xp.atleast_1d(xp.squeeze(om))
     if om.ndim > 1:

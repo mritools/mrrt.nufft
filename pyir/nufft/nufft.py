@@ -332,9 +332,9 @@ class NufftBase(object):
 
     def _nufft_adj(self, x):
         if self.mode == 'exact':
-            y = nufft_adj_exact(self, x=x)
+            y = nufft_adj_exact(self, xk=x)
         else:
-            y = nufft_adj(self, x=x)
+            y = nufft_adj(self, xk=x)
         return y
 
     def _set_phase_funcs(self):
@@ -666,7 +666,7 @@ class NufftBase(object):
         kd = {}
         om = self.om
         if om.ndim == 1:
-            om = om[:, xp.newaxis]
+            om = om[:, np.newaxis]
 
         # TODO: kernel() call below doesn't currently support CuPy
         xp, on_gpu = get_array_module(om)
@@ -691,11 +691,8 @@ class NufftBase(object):
 
             # [J?,M]
             # TODO: for now _nufft_coef only supports numpy backend
-            [c, arg] = _nufft_coef(om[:, d].get(), J, K, kernel_func, xp=np)
-            if on_gpu:
-                # transfer numpy result to the GPU
-                c = xp.asarray(c)
-                arg = xp.asarray(arg)
+            [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func, xp=xp)
+
             # indices into oversampled FFT components
             #
             # [M,1] to leftmost near nbr
