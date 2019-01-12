@@ -3,8 +3,8 @@ import os
 from os.path import join as pjoin
 
 import numpy as np
-from numpy.testing import (assert_array_almost_equal, assert_equal, assert_,
-                           assert_allclose)
+from numpy.testing import assert_equal, assert_
+import pytest
 
 from pyir.nufft.nufft_utils import (_nufft_interp_zn,
                                     _nufft_coef,
@@ -14,26 +14,20 @@ from pyir.nufft.nufft_utils import (_nufft_interp_zn,
 from pyir.nufft.simple_kernels import (linear_kernel,
                                        nufft_diric,
                                        nufft_gauss)
-from pyir.utils import max_percent_diff, reale
+from pyir.utils import max_percent_diff, reale, have_cupy
 from scipy.special import diric
-import pytest
 
 # some tests load results from Fessler's Matlab implementation for comparison
 import pyir.nufft
 
-try:
+if have_cupy:
     import cupy
     all_xp = [np, cupy]
-except ImportError:
+else:
     all_xp = [np, ]
 
 pkg_dir = os.path.dirname(os.path.realpath(pyir.nufft.__file__))
 data_dir = pjoin(pkg_dir, 'tests', 'data')
-
-__all__ = ['test_nufft_gauss',
-           'test_nufft_samples',
-           'test_nufft_interp_zn',
-           'test_nufft_diric']
 
 
 def test_nufft_offset():

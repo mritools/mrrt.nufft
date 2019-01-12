@@ -6,11 +6,12 @@ from numpy.testing import assert_equal, assert_raises, assert_
 import pytest
 
 from pyir.nufft.nufft import NufftKernel
+from pyir.utils import have_cupy
 
-try:
+if have_cupy:
     import cupy
     all_xp = [np, cupy]
-except ImportError:
+else:
     all_xp = [np, ]
 
 kernel_types = ['kb:beatty', 'linear', 'diric']

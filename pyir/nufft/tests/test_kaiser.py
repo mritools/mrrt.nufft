@@ -2,15 +2,15 @@
 import functools
 
 import numpy as np
-
-from pyir.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
-
 import pytest
 
-try:
+from pyir.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
+from pyir.utils import have_cupy
+
+if have_cupy:
     import cupy
     all_xp = [np, cupy]
-except ImportError:
+else:
     all_xp = [np, ]
 
 

@@ -8,12 +8,18 @@ from numpy.testing import (assert_almost_equal,
                            assert_equal,
                            assert_)
 import pytest
-from pyir.utils import max_percent_diff
+from pyir.utils import max_percent_diff, have_cupy
 
 from pyir.nufft import dtft, dtft_adj
 from pyir.nufft.nufft import NufftBase, nufft_adj
 from pyir.nufft.nufft import _nufft_table_make1
 from pyir.nufft.tests.test_dtft import _uniform_freqs
+
+if have_cupy:
+    import cupy
+    all_xp = [np, cupy]
+else:
+    all_xp = [np, ]
 
 # TODO: test CuPy cases
 # TODO: test batch transform
@@ -59,9 +65,10 @@ def _randomized_gridpoints(Nd, rel_std=0.5, seed=1234, xp=np):
     return omegas.reshape((-1, ndim), order='F')
 
 
-def test_nufft_init(show_figure=False):
+@pytest.mark.parametrize('xp', all_xp)
+def test_nufft_init(xp, show_figure=False):
     Nd = np.array([20, 10])
-    st = NufftBase(om='epi', Nd=Nd, Jd=[5, 5], Kd=2 * Nd)
+    st = NufftBase(om='epi', Nd=Nd, Jd=[5, 5], Kd=2 * Nd, on_gpu=(xp != np))
     om = st.om
     if show_figure:
         from matplotlib import pyplot as plt

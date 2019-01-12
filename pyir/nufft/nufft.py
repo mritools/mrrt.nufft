@@ -775,11 +775,11 @@ class NufftBase(object):
                       '%g GB' % (RAM_GB))
 
         # shape (*Jd, M)
-        mm = xp.tile(xp.arange(M), (np.prod(self.Jd), 1))
+        mm = xp.tile(xp.arange(M), (int(np.prod(self.Jd)), 1))
 
         self.p = coo_matrix((uu.ravel(order='F'),
                              (mm.ravel(order='F'), kk.ravel(order='F'))),
-                            shape=(M, self.Kd.prod()), dtype=sparse_dtype)
+                            shape=(M, int(self.Kd.prod())), dtype=sparse_dtype)
         tend2 = time()
         if self.verbose:
             print("Sparse init stage 2 duration = {} s".format(tend2-tend1))

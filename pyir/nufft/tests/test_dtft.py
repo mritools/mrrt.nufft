@@ -2,15 +2,15 @@
 
 # -*- coding: utf-8 -*-
 import numpy as np
-from pyir.nufft import dtft, dtft_adj
-from pyir.utils import max_percent_diff
-
 import pytest
 
-try:
+from pyir.nufft import dtft, dtft_adj
+from pyir.utils import max_percent_diff, have_cupy
+
+if have_cupy:
     import cupy
     all_xp = [np, cupy]
-except ImportError:
+else:
     all_xp = [np, ]
 
 
