@@ -61,12 +61,12 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
         print('bad input signal size')
 
     if n_shift is None:
-        n_shift = xp.zeros(dd)
-    n_shift = xp.atleast_1d(xp.squeeze(n_shift))
+        n_shift = np.zeros(dd)
+    n_shift = np.atleast_1d(np.squeeze(n_shift))
     if len(n_shift) != dd:
         raise ValueError("must specify one shift per axis")
 
-    if xp.any(n_shift != 0):
+    if np.any(n_shift != 0):
         nng = []
         for d in range(dd):
             nng.append(xp.arange(0, Nd[d]) - n_shift[d])
@@ -155,12 +155,12 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False, xp=None):
         raise ValueError("length of Nd must match number of columns in omega")
 
     if n_shift is None:
-        n_shift = xp.zeros(dd)
-    n_shift = xp.atleast_1d(xp.squeeze(n_shift))
+        n_shift = np.zeros(dd)
+    n_shift = np.atleast_1d(np.squeeze(n_shift))
     if len(n_shift) != dd:
         raise ValueError("must specify one shift per axis")
 
-    if xp.any(n_shift != 0):
+    if np.any(n_shift != 0):
         nn = []
         for id in range(dd):
             nn.append(xp.arange(0, Nd[id]) - n_shift[id])

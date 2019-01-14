@@ -69,6 +69,8 @@ __all__ = ['NufftBase', 'nufft_adj', 'nufft_forward', 'nufft_adj_exact',
 supported_real_types = [np.float32, np.float64]
 supported_cplx_types = [np.complex64, np.complex128]
 
+# TODO: for CuPy case need to check that len(set(Jd)) = 1, etc.
+
 
 def _get_legend_text(ax):
     l = ax.get_legend()
@@ -475,6 +477,8 @@ class NufftBase(object):
     @Jd.setter
     def Jd(self, Jd):
         self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=np)
+        if self.on_gpu and len(set(self._Jd)) > 1:
+            raise ValueError("per-axis Jd not supported on the GPU")
         if self.__init_complete:
             self._reinitialize()
 
@@ -487,6 +491,8 @@ class NufftBase(object):
         self.__Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
         if 'table' not in self.mode:
             warnings.warn("Ld is ignored for mode = {}".format(self.mode))
+        elif self.on_gpu and len(set(self.__Ld)) > 1:
+            raise ValueError("per-axis Ld not supported on the GPU")
         elif self.__init_complete:
             self._reinitialize()
 
@@ -900,7 +906,7 @@ class NufftBase(object):
                 axes[d].plot(x, y.imag, 'k:', label='imag')
                 axes[d].legend()
             axes[d].set_ylabel('axis %d' % d)
-            if d == self.ndim-1:
+            if d == self.ndim - 1:
                 axes[d].set_xlabel('oversampled grid offset')
         return fig, axes
 
@@ -983,13 +989,14 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
         #         np.savez('table3d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
 
     else:
+        x = xp.zeros((obj.M, xk.shape[-1]), dtype=obj._cplx_dtype, order='F')
         if ndim == 1:
             args = (xk, obj.h[0], tm, x)
         elif ndim == 2:
             args = (xk, obj.h[0], obj.h[1], tm, x)
         elif ndim == 3:
             args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
-        obj.kern_adj(obj.block, obj.grid, args)
+        obj.kern_forward(obj.block, obj.grid, args)
 
     # apply phase shift
     if hasattr(obj, 'phase_shift'):
@@ -1089,13 +1096,26 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
 
     else:
         # kern_forward(block, grid, (ck, h1, tm, fm))
-        if ndim == 1:
-            args = (xk, obj.h[0], tm, x)
-        elif ndim == 2:
-            args = (xk, obj.h[0], obj.h[1], tm, x)
-        elif ndim == 3:
-            args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
-        obj.kern_forward(obj.block, obj.grid, args)
+        nreps = x.shape[-1]
+        xk = xp.zeros((int(np.prod(obj.Kd)), nreps),
+                      dtype=obj._cplx_dtype, order='F')
+        if nreps == 1:
+            if ndim == 1:
+                args = (xk, obj.h[0], tm, x)
+            elif ndim == 2:
+                args = (xk, obj.h[0], obj.h[1], tm, x)
+            elif ndim == 3:
+                args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
+            obj.kern_adj(obj.block, obj.grid, args)
+        else:
+            for r in range(nreps):
+                if ndim == 1:
+                    args = (xk[:, r], obj.h[0], tm, x)
+                elif ndim == 2:
+                    args = (xk[:, r], obj.h[0], obj.h[1], tm, x)
+                elif ndim == 3:
+                    args = (xk[:, r], obj.h[0], obj.h[1], obj.h[2], tm, x)
+                obj.kern_adj(obj.block, obj.grid, args)
 
     return xk.astype(x.dtype)
 
@@ -1217,7 +1237,12 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
     #
     if obj.sn is not None:
         x *= obj.sn[..., xp.newaxis]		# scaling factors
-    xk = fftn(x, Kd, axes=range(x.ndim-1))
+    # TODO: cache FFT plans
+    if xp == np:
+        xk = fftn(x, tuple(Kd), axes=range(x.ndim - 1))
+    else:
+        xk = xp.fft.fftn(x, tuple(Kd), axes=tuple(range(x.ndim - 1)))
+        
     if obj.phase_before is not None:
         xk *= obj.phase_before[..., xp.newaxis]
     xk = xk.reshape((np.prod(Kd), L), order='F')
@@ -1344,7 +1369,7 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
         # interpolate using precomputed sparse matrix
         xk_all = (obj.p.H * xk)  # [*Kd, *L]
 
-    x = xp.zeros(tuple(Kd) + (nrepetitions,), dtype=xk.dtype)
+    # x = xp.zeros(tuple(Kd) + (nrepetitions,), dtype=xk.dtype)
 
     if xk_all.ndim == 1:
         xk_all = xk_all[:, None]
@@ -1354,7 +1379,11 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
         return xk_all[..., 0]
     if obj.phase_before is not None:
         xk_all *= obj.phase_before.conj()[..., xp.newaxis]
-    x = ifftn(xk_all, axes=range(xk_all.ndim-1))
+    # TODO: cache FFT plans
+    if xp == np:
+        x = ifftn(xk_all, axes=range(xk_all.ndim - 1))
+    else:
+        x = xp.fft.ifftn(xk_all, axes=tuple(range(xk_all.ndim - 1)))
 
     # eliminate zero padding from ends
     subset_slices = tuple([slice(d) for d in Nd] + [slice(None), ])

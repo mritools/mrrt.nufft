@@ -3,10 +3,7 @@ from __future__ import division, print_function, absolute_import
 from itertools import product
 
 import numpy as np
-from numpy.testing import (assert_almost_equal,
-                           assert_allclose,
-                           assert_equal,
-                           assert_)
+from numpy.testing import assert_equal, assert_
 import pytest
 from pyir.utils import max_percent_diff, have_cupy
 
@@ -87,27 +84,29 @@ def test_nufft_init(xp, show_figure=False):
 )
 def test_nufft_adj(mode, phasing, verbose=False):
     """ test nufft_adj() """
+    xp = np
     N1 = 4
     N2 = 8
     n_shift = [2.7, 3.1]    # random shifts to stress it
-    o1 = 2 * np.pi * np.array([0.0, 0.1, 0.3, 0.4, 0.7, 0.9])
-    o2 = np.flipud(o1)
-    om = np.vstack((o1.ravel(), o2.ravel())).T
-    st = NufftBase(om=om, Nd=np.array([N1, N2]), Jd=[4, 6],
+    o1 = 2 * np.pi * xp.array([0.0, 0.1, 0.3, 0.4, 0.7, 0.9])
+    o2 = o1[::-1].copy()
+    om = xp.vstack((o1.ravel(), o2.ravel())).T
+    st = NufftBase(om=om, Nd=np.array([N1, N2]), Jd=[4, 4],
                    Kd=2 * np.array([N1, N2]), n_shift=n_shift,
                    kernel_type='kb:beatty',
                    phasing=phasing,
-                   mode=mode)
+                   mode=mode,
+                   on_gpu=xp != np)
 
-    X = np.arange(1, o1.size + 1).ravel() ** 2    # test spectrum
+    X = xp.arange(1, o1.size + 1).ravel() ** 2    # test spectrum
     xd = dtft_adj(X, om, Nd=[N1, N2], n_shift=n_shift)  # TODO...
-    XXX = np.vstack((X, X, X)).T
+    XXX = xp.vstack((X, X, X)).T
     xn = nufft_adj(st, XXX)
     if verbose:
         print('nufft vs dtft max%%diff = %g' %
               max_percent_diff(xd, xn[:, :, -1]))  # TODO
     try:
-        assert_almost_equal(
+        xp.testing.assert_almost_equal(
             np.squeeze(xd), np.squeeze(xn[:, :, -1]), decimal=1)
         if verbose:
             print("Success for mode: {}, {}".format(mode, phasing))
@@ -118,22 +117,23 @@ def test_nufft_adj(mode, phasing, verbose=False):
 
 
 @pytest.mark.parametrize(
-    'mode, precision, phasing, kernel_type',
+    'xp, mode, precision, phasing, kernel_type',
     product(
+        all_xp,
         ['sparse', 'table1', 'table0'],
         ['single', 'double'],
         ['real', 'complex'],
         ['kb:beatty', ]
     )
 )
-def test_nufft_1d(mode, precision, phasing, kernel_type):
+def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     Nd = 64
     Kd = 128
     Jd = 6
     Ld_table1 = 512
     n_shift = Nd // 2
-    om = _perturbed_gridpoints(Nd)
-    rstate = np.random.RandomState(1234)
+    om = _perturbed_gridpoints(Nd, xp=xp)
+    rstate = xp.random.RandomState(1234)
 
     rtol = 1e-3
     atol = 1e-5
@@ -147,17 +147,18 @@ def test_nufft_1d(mode, precision, phasing, kernel_type):
                   mode=mode, Ld=Ld,
                   kernel_type=kernel_type,
                   precision=precision,
-                  phasing=phasing)  # TODO:  'table' case
+                  phasing=phasing,
+                  on_gpu=xp != np)  # TODO:  'table' case
 
     x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
     y = A._nufft_forward(x)
 
     y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
-    assert_allclose(y, y2, rtol=rtol, atol=atol)
+    xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
 
     x_adj = A._nufft_adj(y)
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
-    assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
+    xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
     maxdiff_forward[
         (kernel_type, mode, precision, phasing)] = \
@@ -169,23 +170,24 @@ def test_nufft_1d(mode, precision, phasing, kernel_type):
 
 
 @pytest.mark.parametrize(
-    'mode, precision, phasing, kernel_type',
+    'xp, mode, precision, phasing, kernel_type',
     product(
+        all_xp,
         ['sparse', 'table1', 'table0'],
         ['single', 'double'],
         ['real', 'complex'],
         ['kb:beatty', ]
     )
 )
-def test_nufft_2d(mode, precision, phasing, kernel_type):
+def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
     ndim = 2
     Nd = [16, ] * ndim
     Kd = [32, ] * ndim
     Jd = [6, ] * ndim
     Ld_table1 = 512
     n_shift = np.asarray(Nd) / 2
-    om = _perturbed_gridpoints(Nd)
-    rstate = np.random.RandomState(1234)
+    om = _perturbed_gridpoints(Nd, xp=xp)
+    rstate = xp.random.RandomState(1234)
 
     rtol = 1e-3
     atol = 1e-5
@@ -199,18 +201,19 @@ def test_nufft_2d(mode, precision, phasing, kernel_type):
                   mode=mode, Ld=Ld,
                   kernel_type=kernel_type,
                   precision=precision,
-                  phasing=phasing)  # TODO:  'table' case
+                  phasing=phasing,
+                  on_gpu=xp != np)  # TODO:  'table' case
     x = rstate.standard_normal(Nd)
     x = x + 1j * rstate.standard_normal(Nd)
     y = A._nufft_forward(x)
     y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
 
     # max_percent_diff(y, y2[:, 0])
-    assert_allclose(y, y2, rtol=rtol, atol=atol)
+    xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
 
     x_adj = A._nufft_adj(y)
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
-    assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
+    xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
     maxdiff_forward[
         (kernel_type, mode, precision, phasing)] = \
@@ -222,26 +225,27 @@ def test_nufft_2d(mode, precision, phasing, kernel_type):
 
 
 @pytest.mark.parametrize(
-    'mode, precision, phasing, kernel_type',
+    'xp, mode, precision, phasing, kernel_type',
     product(
+        all_xp,
         ['sparse', 'table1', 'table0'],
         ['single', 'double'],
         ['real', 'complex'],
         ['kb:beatty', ]
     )
 )
-def test_nufft_3d(mode, precision, phasing, kernel_type):
+def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
     ndim = 3
     Nd = [8, ] * ndim
     Kd = [16, ] * ndim
     Jd = [5, ] * ndim  # use odd kernel for variety (even in 1D, 2D tests)
     Ld_table1 = 512
     n_shift = np.asarray(Nd) / 2
-    om = _perturbed_gridpoints(Nd)
+    om = _perturbed_gridpoints(Nd, xp=xp)
 
     maxdiff_forward = {}
     maxdiff_adjoint = {}
-    rstate = np.random.RandomState(1234)
+    rstate = xp.random.RandomState(1234)
     if mode == 'table0':
         Ld = Ld_table1 * 100
     else:
@@ -250,7 +254,8 @@ def test_nufft_3d(mode, precision, phasing, kernel_type):
                   mode=mode, Ld=Ld,
                   kernel_type=kernel_type,
                   precision=precision,
-                  phasing=phasing)  # TODO:  'table' case
+                  phasing=phasing,
+                  on_gpu=xp != np)  # TODO:  'table' case
     x = rstate.standard_normal(Nd)
     x = x + 1j * rstate.standard_normal(Nd)
     y = A._nufft_forward(x)
@@ -286,14 +291,15 @@ def test_nufft_dtypes(precision, xp):
     Jd = 6
     Ld = 4096
     n_shift = Nd // 2
-    om = _perturbed_gridpoints(Nd)
+    om = _perturbed_gridpoints(Nd, xp=xp)
 
     kernel_type = 'kb:beatty'
     mode = 'table1'
     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                   mode=mode, Ld=Ld,
                   kernel_type=kernel_type,
-                  precision=precision)  # TODO:  'table' case
+                  precision=precision,
+                  on_gpu=xp != np)  # TODO:  'table' case
 
     if precision == 'single':
         assert_equal(A._cplx_dtype, np.complex64)
@@ -307,7 +313,8 @@ def test_nufft_dtypes(precision, xp):
                    Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                    mode=mode, Ld=Ld,
                    precision=None,
-                   kernel_type=kernel_type)  # TODO:  'table' case
+                   kernel_type=kernel_type,
+                   on_gpu=xp != np)  # TODO:  'table' case
 
     if precision == 'single':
         assert_equal(A2._cplx_dtype, np.complex64)
@@ -316,7 +323,7 @@ def test_nufft_dtypes(precision, xp):
         assert_equal(A2._cplx_dtype, np.complex128)
         assert_equal(A2._real_dtype, np.float64)
 
-    x = np.random.randn(Nd) + 1j * np.random.randn(Nd)
+    x = xp.random.randn(Nd) + 1j * xp.random.randn(Nd)
 
     # output matches operator dtype regardless of input dtype
     y = A._nufft_forward(x.astype(np.complex64))
@@ -334,12 +341,12 @@ def test_nufft_dtypes(precision, xp):
 @pytest.mark.parametrize(
     'n, phasing, xp',
     product(
+        all_xp,
         [64, ],  # [33, 64]:  # TODO: odd case doesn't pass
         ['real', 'complex'],
-        [np, ]
     )
 )
-def test_nufft_table_make1(n, phasing, xp):
+def test_nufft_table_make1(xp, n, phasing):
     decimal = 6
     h0, t0 = _nufft_table_make1(how='slow', N=n, J=6, K=2 * n, L=2048,
                                 phasing=phasing,
