@@ -40,7 +40,7 @@ def _uniform_freqs(Nd, xp=np):
 def test_dtft_3d(xp, verbose=False):
     """ function dtft_test() """
     Nd = (8, 12, 10)
-    n_shift = xp.asarray([1, 3, 2]).reshape(3, 1)
+    n_shift = np.asarray([1, 3, 2]).reshape(3, 1)
     rstate = xp.random.RandomState(1234)
     x = rstate.standard_normal(Nd)  # test signal
 
@@ -53,7 +53,7 @@ def test_dtft_3d(xp, verbose=False):
     # compare to FFT-based result
     Xf = xp.fft.fftn(x)
     # add phase shift to the numpy fft
-    Xf = Xf.ravel(order='F') * xp.exp(1j * (xp.dot(om, n_shift)))[:, 0]
+    Xf = Xf.ravel(order='F') * xp.exp(1j * (xp.dot(om, xp.asarray(n_shift))))[:, 0]
 
     xp.testing.assert_allclose(xp.squeeze(Xd), Xf, atol=1e-12)
 
@@ -62,7 +62,7 @@ def test_dtft_3d(xp, verbose=False):
 def test_dtft_2d(xp, verbose=False):
     """ function dtft_test() """
     Nd = (8, 12)
-    n_shift = xp.asarray([1, 3]).reshape(2, 1)
+    n_shift = np.asarray([1, 3]).reshape(2, 1)
     rstate = xp.random.RandomState(1234)
     x = rstate.standard_normal(Nd)  # test signal
     # test with uniform frequency locations
@@ -74,7 +74,7 @@ def test_dtft_2d(xp, verbose=False):
     # compare to FFT-based result
     Xf = xp.fft.fftn(x)
     # phase shift
-    Xf = Xf.ravel(order='F') * xp.exp(1j * (xp.dot(om, n_shift)))[:, 0]
+    Xf = Xf.ravel(order='F') * xp.exp(1j * (xp.dot(om, xp.asarray(n_shift))))[:, 0]
 
     xp.testing.assert_allclose(xp.squeeze(Xd), Xf, atol=1e-12)
     if verbose:
@@ -86,7 +86,7 @@ def test_dtft_2d(xp, verbose=False):
 def test_dtft_1d(xp, verbose=False):
     """ function dtft_test() """
     Nd = (16, )
-    n_shift = xp.asarray([5, ]).reshape(1, 1)
+    n_shift = np.asarray([5, ]).reshape(1, 1)
     rstate = xp.random.RandomState(1234)
     x = rstate.standard_normal(Nd)  # test signal
     # test with uniform frequency locations
@@ -98,7 +98,7 @@ def test_dtft_1d(xp, verbose=False):
     # compare to FFT-based result
     Xf = xp.fft.fftn(x)
     # phase shift
-    Xf = Xf.ravel(order='F') * xp.exp(1j * (xp.dot(om, n_shift)))[:, 0]
+    Xf = Xf.ravel(order='F') * xp.exp(1j * (xp.dot(om, xp.asarray(n_shift))))[:, 0]
 
     xp.testing.assert_allclose(xp.squeeze(Xd), Xf, atol=1e-12)
     if verbose:
@@ -109,7 +109,7 @@ def test_dtft_1d(xp, verbose=False):
 @pytest.mark.parametrize('xp', all_xp)
 def test_dtft_adj_3d(xp, verbose=False, test_Cython=False):
     Nd = (32, 16, 2)
-    n_shift = xp.asarray([2, 1, 3]).reshape(3, 1)
+    n_shift = np.asarray([2, 1, 3]).reshape(3, 1)
 
     rstate = xp.random.RandomState(1234)
     X = rstate.standard_normal(Nd)  # test signal
@@ -122,7 +122,7 @@ def test_dtft_adj_3d(xp, verbose=False, test_Cython=False):
     xl = dtft_adj(X, om, Nd, n_shift, useloop=True)
     xp.testing.assert_allclose(xd, xl, atol=1e-7)
 
-    Xp = xp.exp(-1j * xp.dot(om, n_shift))
+    Xp = xp.exp(-1j * xp.dot(om, xp.asarray(n_shift)))
     Xp = X * Xp.reshape(X.shape, order='F')
     xf = xp.fft.ifftn(Xp) * np.prod(Nd)
     xp.testing.assert_allclose(xd, xf, atol=1e-7)
@@ -140,11 +140,11 @@ def test_dtft_adj_3d(xp, verbose=False, test_Cython=False):
 
         X_16rep = xp.tile(X.ravel(order='F')[:, None], (1, 16))
         t_start = time.time()
-        xc16 = cy_dtft_adj(X_16rep, om, Nd, n_shift)
+        xc16 = cy_dtft_adj(X_16rep, om, Nd, xp.asarray(n_shift))
         print("duration (16 reps) = {}".format(time.time()-t_start))
         t_start = time.time()
         X_64rep = xp.tile(X.ravel(order='F')[:, None], (1, 64))
-        xc64 = cy_dtft_adj(X_64rep, om, Nd, n_shift)
+        xc64 = cy_dtft_adj(X_64rep, om, Nd, xp.asarray(n_shift))
         max_percent_diff(xf, xc64[..., -1])
         print("duration (64 reps) = {}".format(time.time()-t_start))
 #        %timeit xd = dtft_adj(X_16rep, om, Nd, n_shift);
@@ -155,7 +155,7 @@ def test_dtft_adj_3d(xp, verbose=False, test_Cython=False):
 @pytest.mark.parametrize('xp', all_xp)
 def test_dtft_adj_2d(xp, verbose=False):
     Nd = (4, 6)
-    n_shift = xp.asarray([2, 1]).reshape(2, 1)
+    n_shift = np.asarray([2, 1]).reshape(2, 1)
 
     rstate = xp.random.RandomState(1234)
     X = rstate.standard_normal(Nd)  # test signal
@@ -168,7 +168,7 @@ def test_dtft_adj_2d(xp, verbose=False):
     xl = dtft_adj(X, om, Nd, n_shift, useloop=True)
     xp.testing.assert_allclose(xd, xl, atol=1e-7)
 
-    Xp = xp.exp(-1j * xp.dot(om, n_shift))
+    Xp = xp.exp(-1j * xp.dot(om, xp.asarray(n_shift)))
     Xp = X * Xp.reshape(X.shape, order='F')
     xf = xp.fft.ifftn(Xp) * np.prod(Nd)
     xp.testing.assert_allclose(xd, xf, atol=1e-7)
@@ -180,7 +180,7 @@ def test_dtft_adj_2d(xp, verbose=False):
 @pytest.mark.parametrize('xp', all_xp)
 def test_dtft_adj_1d(xp, verbose=False):
     Nd = (16, )
-    n_shift = xp.asarray([2, ]).reshape(1, 1)
+    n_shift = np.asarray([2, ]).reshape(1, 1)
 
     rstate = xp.random.RandomState(1234)
     X = rstate.standard_normal(Nd)  # test signal
@@ -193,7 +193,7 @@ def test_dtft_adj_1d(xp, verbose=False):
     xl = dtft_adj(X, om, Nd, n_shift, useloop=True)
     xp.testing.assert_allclose(xd, xl, atol=1e-7)
 
-    Xp = xp.exp(-1j * xp.dot(om, n_shift))
+    Xp = xp.exp(-1j * xp.dot(om, xp.asarray(n_shift)))
     Xp = X * Xp.reshape(X.shape, order='F')
     xf = xp.fft.ifftn(Xp) * np.prod(Nd)
     xp.testing.assert_allclose(xd, xf, atol=1e-7)

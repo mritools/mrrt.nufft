@@ -30,7 +30,7 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
 
     Returns
     -------
-    X : array
+    xk : array
         DTFT values
 
     Requires enough memory to store M * prod(Nd) size matrices
@@ -43,7 +43,7 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
         xp, on_gpu = get_array_module(omega)
     dd = omega.shape[1]
     if Nd is None:
-        if x.ndim == dd+1:
+        if x.ndim == dd + 1:
             Nd = x.shape[:-1]
         elif x.ndim == dd:
             Nd = x.shape
@@ -54,7 +54,7 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
     if len(Nd) == dd:		# just one image
         x = x.ravel(order='F')
         x = x[:, xp.newaxis]
-    elif len(Nd) == dd+1:  # multiple images
+    elif len(Nd) == dd + 1:  # multiple images
         Nd = Nd[:-1]
         x = xp.reshape(x, (xp.prod(Nd), -1))  # [*Nd,L]
     else:
@@ -79,7 +79,7 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
         # loop way: slower but less memory
         #
         M = len(omega)
-        X = xp.zeros((x.size // xp.prod(Nd), M),
+        xk = xp.zeros((x.size // xp.prod(Nd), M),
                      dtype=xp.result_type(x.dtype, omega.dtype,
                                           xp.complex64))  # [L,M]
         if omega.shape[1] < 3:
@@ -92,27 +92,27 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
             tmp = omega[mm, 0] * nng[0]
             for d in range(1, dd):
                 tmp += omega[mm, d] * nng[d]
-            X[:, mm] = xp.dot(xp.exp(-1j*tmp), x)
-        X = X.T  # [M,L]
+            xk[:, mm] = xp.dot(xp.exp(-1j * tmp), x)
+        xk = xk.T  # [M,L]
     else:
-        X = xp.outer(omega[:, 0], nng[0].ravel(order='F'))
+        xk = xp.outer(omega[:, 0], nng[0].ravel(order='F'))
         for d in range(1, dd):
-            X += xp.outer(omega[:, d], nng[d].ravel(order='F'))
-        X = xp.dot(xp.exp(-1j*X), x)
+            xk += xp.outer(omega[:, d], nng[d].ravel(order='F'))
+        xk = xp.dot(xp.exp(-1j * xk), x)
 
-    if X.shape[-1] == 1:
-        X.shape = X.shape[:-1]
+    if xk.shape[-1] == 1:
+        xk.shape = xk.shape[:-1]
 
-    return X
+    return xk
 
 
-def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False, xp=None):
-    """Compute adjoint of d-dim DTFT for spectrum X at frequency locations
+def dtft_adj(xk, omega, Nd=None, n_shift=None, useloop=False, xp=None):
+    """Compute adjoint of d-dim DTFT for spectrum xk at frequency locations
     omega.
 
     Parameters
     ----------
-    X : array
+    xk : array
         DTFT values
     omega : array, optional
         frequency locations (radians)
@@ -123,7 +123,7 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False, xp=None):
 
     Returns
     -------
-    X : array
+    x : array
         signal values
 
     Requires enough memory to store M * (*Nd) size matrices.
@@ -135,19 +135,19 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False, xp=None):
         on_gpu = (xp != np)
     dd = omega.shape[1]
     if Nd is None:
-        if X.ndim == dd+1:
-            Nd = X.shape[:-1]
-        elif X.ndim == dd:
-            Nd = X.shape
+        if xk.ndim == dd + 1:
+            Nd = xk.shape[:-1]
+        elif xk.ndim == dd:
+            Nd = xk.shape
         else:
             raise ValueError("Nd must be specified")
     Nd = xp.atleast_1d(Nd)
     if len(Nd) == dd:		# just one image
-        X = X.ravel(order='F')
-        X = X[:, xp.newaxis]
+        xk = xk.ravel(order='F')
+        xk = xk[:, xp.newaxis]
     elif len(Nd) == dd+1:  # multiple images
         Nd = Nd[:-1]
-        X = xp.reshape(X, (xp.prod(Nd), -1))  # [*Nd,L]
+        xk = xp.reshape(xk, (xp.prod(Nd), -1))  # [*Nd,L]
     else:
         print('bad input signal size')
 
@@ -169,22 +169,23 @@ def dtft_adj(X, omega, Nd=None, n_shift=None, useloop=False, xp=None):
         nn = xp.indices(Nd)
 
     if on_gpu:
-        Nd = tuple(Nd.get())
+        Nd = Nd.get()
+    Nd = tuple(Nd)
 
     if useloop:
         # slower, but low memory
         M = omega.shape[0]
         x = xp.zeros(Nd)  # [(Nd), M]
         for mm in range(0, M):
-            t = omega[mm, 0]*nn[0]
+            t = omega[mm, 0] * nn[0]
             for d in range(1, dd):
-                t += omega[mm, d]*nn[d]
-            x = x + xp.exp(1j*t) * X[mm]
+                t += omega[mm, d] * nn[d]
+            x = x + xp.exp(1j * t) * xk[mm]
     else:
         x = xp.outer(nn[0].ravel(order='F'), omega[:, 0])
         for d in range(1, dd):
             x += xp.outer(nn[d].ravel(order='F'), omega[:, d])
-        x = xp.dot(xp.exp(1j*x[:, xp.newaxis]), X)  # [(*Nd),L]
+        x = xp.dot(xp.exp(1j * x[:, xp.newaxis]), xk)  # [(*Nd),L]
         x = xp.reshape(x, Nd, order='F')  # [(Nd),L]
 
     if x.shape[-1] == 1:

@@ -130,7 +130,7 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     Nd = 64
     Kd = 128
     Jd = 6
-    Ld_table1 = 512
+    Ld_table1 = 1024
     n_shift = Nd // 2
     om = _perturbed_gridpoints(Nd, xp=xp)
     rstate = xp.random.RandomState(1234)
@@ -140,7 +140,7 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     maxdiff_forward = {}
     maxdiff_adjoint = {}
     if mode == 'table0':
-        Ld = Ld_table1 * 100
+        Ld = Ld_table1 * 128
     else:
         Ld = Ld_table1
     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
@@ -184,7 +184,7 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
     Nd = [16, ] * ndim
     Kd = [32, ] * ndim
     Jd = [6, ] * ndim
-    Ld_table1 = 512
+    Ld_table1 = 1024
     n_shift = np.asarray(Nd) / 2
     om = _perturbed_gridpoints(Nd, xp=xp)
     rstate = xp.random.RandomState(1234)
@@ -194,7 +194,7 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
     maxdiff_forward = {}
     maxdiff_adjoint = {}
     if mode == 'table0':
-        Ld = Ld_table1 * 100
+        Ld = Ld_table1 * 128
     else:
         Ld = Ld_table1
     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
@@ -238,20 +238,25 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
     ndim = 3
     Nd = [8, ] * ndim
     Kd = [16, ] * ndim
-    Jd = [5, ] * ndim  # use odd kernel for variety (even in 1D, 2D tests)
-    Ld_table1 = 512
+    Jd = [6, ] * ndim  # use odd kernel for variety (even in 1D, 2D tests)
+    Ld_table1 = 1024
     n_shift = np.asarray(Nd) / 2
     om = _perturbed_gridpoints(Nd, xp=xp)
 
+    rtol = 1e-2
+    atol = 1e-4
     maxdiff_forward = {}
     maxdiff_adjoint = {}
     rstate = xp.random.RandomState(1234)
     if mode == 'table0':
-        Ld = Ld_table1 * 100
+        Ld = Ld_table1 * 128
     else:
         Ld = Ld_table1
-    A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
-                  mode=mode, Ld=Ld,
+    A = NufftBase(om=om,
+                  Nd=Nd, Jd=Jd, Kd=Kd,
+                  n_shift=n_shift,
+                  mode=mode,
+                  Ld=Ld,
                   kernel_type=kernel_type,
                   precision=precision,
                   phasing=phasing,
@@ -260,11 +265,13 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
     x = x + 1j * rstate.standard_normal(Nd)
     y = A._nufft_forward(x)
     y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
-    assert_(max_percent_diff(y, y2) < 0.02)
+    xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
+#    assert_(max_percent_diff(y, y2) < 0.02)
 
     x_adj = A._nufft_adj(y)
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
-    assert_(max_percent_diff(x_adj, x_adj2) < 0.02)
+#    assert_(max_percent_diff(x_adj, x_adj2) < 0.02)
+    xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
     maxdiff_forward[
         (kernel_type, mode, precision, phasing)] = \
@@ -339,7 +346,7 @@ def test_nufft_dtypes(precision, xp):
 
 
 @pytest.mark.parametrize(
-    'n, phasing, xp',
+    'xp, n, phasing',
     product(
         all_xp,
         [64, ],  # [33, 64]:  # TODO: odd case doesn't pass

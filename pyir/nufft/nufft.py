@@ -106,7 +106,7 @@ def _block_outer_prod(x1, x2, xp=None):
 class NufftBase(object):
     """Base NUFFT Class"""
     @profile
-    def __init__(self, Nd, om, Jd=6, Kd=None, Ld=2048, precision='single',
+    def __init__(self, Nd, om, Jd=6, Kd=None, Ld=None, precision='single',
                  kernel_type='kb:beatty', mode='table0', ortho=False,
                  n_shift=None, phasing='real', sparse_format='CSC',
                  adjoint_scalefactor=1., kernel_kwargs={}, verbose=False,
@@ -239,6 +239,10 @@ class NufftBase(object):
         self._make_arrays_contiguous(order='F')
         # TODO: cleanup how initialization is done
         self.__sparse_format = None
+        if Ld is None and mode == 'table0':
+            Ld = 16384
+        else:
+            Ld = 1024
         self.__Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
         if self.mode == 'sparse':
             self._init_sparsemat()  # create COO matrix
@@ -764,7 +768,7 @@ class NufftBase(object):
 
         if self.phasing == 'complex':
             if np.any(self.n_shift != 0):
-                phase = xp.exp(1j * xp.dot(om, self.n_shift.ravel()))			# [1,M]
+                phase = xp.exp(1j * xp.dot(om, xp.asarray(self.n_shift.ravel())))			# [1,M]
                 phase = phase.reshape((1, -1), order='F')
                 uu *= phase  # use broadcasting along first dimension
             sparse_dtype = self._cplx_dtype
@@ -811,7 +815,7 @@ class NufftBase(object):
         if self.phasing == 'complex' and \
                 np.any(np.asarray(self.n_shift) != 0):
             self.phase_shift = xp.exp(
-                1j * xp.dot(self.om, self.n_shift.ravel()))  # [M 1]
+                1j * xp.dot(self.om, xp.asarray(self.n_shift.ravel())))  # [M 1]
         else:
             self.phase_shift = None  # compute on-the-fly
         if self.Ld is None:
@@ -1242,7 +1246,7 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
         xk = fftn(x, tuple(Kd), axes=range(x.ndim - 1))
     else:
         xk = xp.fft.fftn(x, tuple(Kd), axes=tuple(range(x.ndim - 1)))
-        
+
     if obj.phase_before is not None:
         xk *= obj.phase_before[..., xp.newaxis]
     xk = xk.reshape((np.prod(Kd), L), order='F')
