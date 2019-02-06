@@ -371,9 +371,19 @@ class NufftBase(object):
         self.__sparse_format = sparse_format.upper()
         if self.p is not None:
             if sparse_format == 'CSC':
-                self.p = self.p.tocsc()
+                if self.p.format == 'coo' and self.on_gpu:
+                    # TODO: fix bug in Cupy.
+                    #       For now, we do the conversion via the CPU.
+                    self.p = cupyx.scipy.sparse.csc_matrix(self.p.get().tocsc())
+                else:
+                    self.p = self.p.tocsc()
             elif sparse_format == 'CSR':
-                self.p = self.p.tocsr()
+                if self.p.format == 'coo' and self.on_gpu:
+                    # TODO: fix bug in Cupy.
+                    #       For now, we do the conversion via the CPU.
+                    self.p = cupyx.scipy.sparse.csr_matrix(self.p.get().tocsr())
+                else:
+                    self.p = self.p.tocsr()
             elif sparse_format == 'COO':
                 self.p = self.p.tocoo()
             elif sparse_format == 'LIL':
@@ -1112,13 +1122,14 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
                 args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
             obj.kern_adj(obj.block, obj.grid, args)
         else:
+            # TODO: remove need for python-level loop here
             for r in range(nreps):
                 if ndim == 1:
-                    args = (xk[:, r], obj.h[0], tm, x)
+                    args = (xk[:, r], obj.h[0], tm, x[:, r])
                 elif ndim == 2:
-                    args = (xk[:, r], obj.h[0], obj.h[1], tm, x)
+                    args = (xk[:, r], obj.h[0], obj.h[1], tm, x[:, r])
                 elif ndim == 3:
-                    args = (xk[:, r], obj.h[0], obj.h[1], obj.h[2], tm, x)
+                    args = (xk[:, r], obj.h[0], obj.h[1], obj.h[2], tm, x[:, r])
                 obj.kern_adj(obj.block, obj.grid, args)
 
     return xk.astype(x.dtype)
@@ -1233,7 +1244,7 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
 
     if copy_x and (data_address_in == get_data_address(x)):
         # make sure original array isn't modified!
-        x = x.copy()
+        x = x.copy(order='A')
 
     L = x.shape[-1]
     #
@@ -1259,7 +1270,18 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
         x = obj.interp_table(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        x = obj.p * xk  # [M,*L]
+        if xp == np:
+            x = obj.p * xk  # [M,*L]
+        else:
+            # cannot use the notation above because it seems there is a bug in
+            # COO->CSC/CSR conversion that causes issues
+            # can avoid by calling cusparse.csrmv directly
+
+            # obj.p is CSC so use obj.p.T with transa=True to due a CSR multiplication
+            if xk.ndim == 1:
+                x = cupy.cusparse.csrmv(obj.p.T, xk, transa=True)  # [*Kd, *L]
+            else:
+                x = cupy.cusparse.csrmm(obj.p.T, xk, transa=True)
 
     x = xp.reshape(x, (obj.M, L), order='F')
 
@@ -1310,7 +1332,7 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
 
     if copy_x and (data_address_in == get_data_address(x)):
         # make sure original array isn't modified!
-        x = x.copy()
+        x = x.copy(order='A')
 
     L = x.shape[-1]
 
@@ -1357,7 +1379,7 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
     xk = xp.reshape(xk, (obj.M, -1), order='F')  # [M,*L]
     if copy and (data_address_in == get_data_address(xk)):
         # ensure input array isn't modified by in-place operations below
-        xk = xk.copy()
+        xk = xk.copy(order='A')
 
     nrepetitions = xk.shape[-1]
 
@@ -1371,7 +1393,16 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
         xk_all = obj.interp_table_adj(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        xk_all = (obj.p.H * xk)  # [*Kd, *L]
+        if xp == np:
+            xk_all = (obj.p.H * xk)  # [*Kd, *L]
+        else:
+            # cannot use the notation above because it seems there is a bug in
+            # COO->CSC/CSR conversion that causes issues
+            # can avoid by calling cusparse.csrmv directly
+            if xk.ndim == 1:
+                xk_all = cupy.cusparse.csrmv(obj.p.H, xk, transa=False)  # [*Kd, *L]
+            else:
+                xk_all = cupy.cusparse.csrmm(obj.p.H, xk, transa=False)
 
     # x = xp.zeros(tuple(Kd) + (nrepetitions,), dtype=xk.dtype)
 
@@ -1443,7 +1474,7 @@ def nufft_adj_exact(obj, xk, copy=True, xp=None):
     xk = xp.reshape(xk, (obj.M, -1), order='F')  # [M,*L]
     if copy and (data_address_in == get_data_address(xk)):
         # make sure the original array isn't modified!
-        xk = xk.copy()
+        xk = xk.copy(order='A')
 
     nrepetitions = xk.shape[-1]
 
