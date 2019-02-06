@@ -1004,14 +1004,27 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
 
     else:
         x = xp.zeros((obj.M, xk.shape[-1]), dtype=obj._cplx_dtype, order='F')
-        if ndim == 1:
-            args = (xk, obj.h[0], tm, x)
-        elif ndim == 2:
-            args = (xk, obj.h[0], obj.h[1], tm, x)
-        elif ndim == 3:
-            args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
-        obj.kern_forward(obj.block, obj.grid, args)
-
+        nreps = x.shape[-1]
+        if nreps == 1:
+            if ndim == 1:
+                args = (xk, obj.h[0], tm, x)
+            elif ndim == 2:
+                args = (xk, obj.h[0], obj.h[1], tm, x)
+            elif ndim == 3:
+                args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
+            # obj.kern_forward(obj.block, obj.grid, args)
+            obj.kern_forward(obj.grid, obj.block, args)
+        else:
+            for r in range(nreps):
+                if ndim == 1:
+                    args = (xk[..., r], obj.h[0], tm, x[..., r])
+                elif ndim == 2:
+                    args = (xk[..., r], obj.h[0], obj.h[1], tm, x[..., r])
+                elif ndim == 3:
+                    args = (xk[..., r], obj.h[0], obj.h[1], obj.h[2], tm, x[..., r])
+                # obj.kern_forward(obj.block, obj.grid, args)
+                obj.kern_forward(obj.grid, obj.block, args)
+                
     # apply phase shift
     if hasattr(obj, 'phase_shift'):
         if isinstance(obj.phase_shift, (xp.ndarray, list)):
@@ -1120,7 +1133,8 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
                 args = (xk, obj.h[0], obj.h[1], tm, x)
             elif ndim == 3:
                 args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
-            obj.kern_adj(obj.block, obj.grid, args)
+            # obj.kern_adj(obj.block, obj.grid, args)
+            obj.kern_adj(obj.grid, obj.block, args)
         else:
             # TODO: remove need for python-level loop here
             for r in range(nreps):
@@ -1130,7 +1144,8 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
                     args = (xk[:, r], obj.h[0], obj.h[1], tm, x[:, r])
                 elif ndim == 3:
                     args = (xk[:, r], obj.h[0], obj.h[1], obj.h[2], tm, x[:, r])
-                obj.kern_adj(obj.block, obj.grid, args)
+                # obj.kern_adj(obj.block, obj.grid, args)
+                obj.kern_adj(obj.grid, obj.block, args)
 
     return xk.astype(x.dtype)
 
