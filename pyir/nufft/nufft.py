@@ -800,6 +800,15 @@ class NufftBase(object):
         self.p = coo_matrix((uu.ravel(order='F'),
                              (mm.ravel(order='F'), kk.ravel(order='F'))),
                             shape=(M, int(self.Kd.prod())), dtype=sparse_dtype)
+
+        # return in CSC format by default
+        if self.on_gpu:
+            # TODO: fix bug in Cupy.
+            #       For now, we do the conversion via the CPU.
+            self.p = cupyx.scipy.sparse.csc_matrix(self.p.get().tocsc())
+        else:
+            self.p = self.p.tocsc()
+
         tend2 = time()
         if self.verbose:
             print("Sparse init stage 2 duration = {} s".format(tend2-tend1))
@@ -1024,7 +1033,7 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
                     args = (xk[..., r], obj.h[0], obj.h[1], obj.h[2], tm, x[..., r])
                 # obj.kern_forward(obj.block, obj.grid, args)
                 obj.kern_forward(obj.grid, obj.block, args)
-                
+
     # apply phase shift
     if hasattr(obj, 'phase_shift'):
         if isinstance(obj.phase_shift, (xp.ndarray, list)):
