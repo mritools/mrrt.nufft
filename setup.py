@@ -6,17 +6,12 @@ from setuptools import setup, find_packages
 import distutils
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
+from Cython.Build import cythonize
 import numpy
 import tempfile
 import subprocess
 import versioneer
 
-try:
-    from Cython.Build import cythonize
-except ImportError:
-    USE_CYTHON = False
-else:
-    USE_CYTHON = True
 
 # Note if rpath errors related to libgomp occur on OsX, try adding the path
 # containing libgomp to the link arguments.  e.g.
@@ -246,8 +241,7 @@ if os.environ.get("CYTHON_TRACE"):
     cythonize_opts['linetrace'] = True
     cython_macros.append(("CYTHON_TRACE_NOGIL", 1))
 
-if USE_CYTHON:
-    ext_modules = cythonize(ext_modules, compiler_directives=cythonize_opts)
+ext_modules = cythonize(ext_modules, compiler_directives=cythonize_opts)
 
 
 setup(name='pyir.nufft',
