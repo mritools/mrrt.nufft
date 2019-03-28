@@ -107,7 +107,7 @@ class NufftBase(object):
     """Base NUFFT Class"""
     @profile
     def __init__(self, Nd, om, Jd=6, Kd=None, Ld=None, precision='single',
-                 kernel_type='kb:beatty', mode='table0', ortho=False,
+                 kernel_type='kb:beatty', mode='table', ortho=False,
                  n_shift=None, phasing='real', sparse_format='CSC',
                  adjoint_scalefactor=1., kernel_kwargs={}, verbose=False,
                  on_gpu=False):
@@ -132,15 +132,13 @@ class NufftBase(object):
             The type of gridding kernel to use.  'kb:beatty' is near optimal in
             most cases and works well for grid oversampling factors
             substantially less than 2.
-        mode : {'sparse', 'table1', 'table0'}, optional
+        mode : {'sparse', 'table'}, optional
             The NUFFT implementation to use.  ``sparse`` corresponds to
             precomputation of a sparse matrix corresponding to the operation.
             This requires a longer initialization and uses more memory, but is
             typically faster than the lookup-table based approaches.
-            ``table*`` modes use a look-up table based interpolation.  This is
+            ``table`` uses a look-up table based interpolation.  This is
             fast to initialize and uses less memory.
-            ``table1`` and ``table0`` correspond to first-order and
-            nearest-neighbor interpolation from the gridding lookup table.
         ortho : bool, optional
             TODO
 
@@ -239,9 +237,7 @@ class NufftBase(object):
         self._make_arrays_contiguous(order='F')
         # TODO: cleanup how initialization is done
         self.__sparse_format = None
-        if Ld is None and mode == 'table0':
-            Ld = 16384
-        else:
+        if Ld is None:
             Ld = 1024
         self.__Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
         if self.mode == 'sparse':
@@ -259,12 +255,6 @@ class NufftBase(object):
             if np.any(np.logical_and(odd_L, odd_J)):
                 warnings.warn(
                     "accuracy may be compromised when L and J are both odd")
-            if self.mode == 'table0':
-                self.table_order = 0  # just order in newfft
-            elif self.mode == 'table1' or self.mode == 'table':
-                self.table_order = 1  # just order in newfft
-            else:
-                raise ValueError("Invalid NUFFT mode: {}".format(self.mode))
             self._init_table()
             self.interp_table = _nufft_table_interp  # TODO: remove?
             self.interp_table_adj = _nufft_table_adj  # TODO: remove?
@@ -838,12 +828,7 @@ class NufftBase(object):
         else:
             self.phase_shift = None  # compute on-the-fly
         if self.Ld is None:
-            if self.table_order == 0:
-                self.Ld = 2 ** 11
-            elif self.table_order == 1:
-                self.Ld = 2 ** 9
-            else:
-                raise ValueError("Bad table mode")
+            self.Ld = 2 ** 10
         if ndim != len(self.Jd) or ndim != len(self.Ld) or \
                 ndim != len(self.Kd):
             raise ValueError('inconsistent dimensions among ndim, Jd, Ld, Kd')
@@ -953,8 +938,6 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
     x : array
         DTFT coefficients (k-space)
     """
-    order = obj.table_order
-
     if om is None:
         om = obj.om
 
@@ -988,7 +971,7 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
     xk = complexify(xk, complex_dtype=obj._cplx_dtype)  # force complex
 
     if not obj.on_gpu:
-        arg = [obj.Jd, obj.Ld, tm, order]
+        arg = [obj.Jd, obj.Ld, tm]
         if ndim == 1:
             x = interp1_table(xk, obj.h[0], *arg)
         elif ndim == 2:
@@ -1005,11 +988,11 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
         # save_testdata = False
         # if save_testdata:
         #     if ndim == 1:
-        #         np.savez('table1d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #         np.savez('table1d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
         #     elif ndim == 2:
-        #         np.savez('table2d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #         np.savez('table2d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
         #     elif ndim == 3:
-        #         np.savez('table3d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #         np.savez('table3d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
 
     else:
         x = xp.zeros((obj.M, xk.shape[-1]), dtype=obj._cplx_dtype, order='F')
@@ -1067,7 +1050,6 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
     xk : array
         DFT coefficients
     """
-    order = obj.table_order
     if om is None:
         om = obj.om
     _xp, on_gpu = get_array_module(x, xp)
@@ -1110,7 +1092,7 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
     x = complexify(x, complex_dtype=obj._cplx_dtype)
 
     if not obj.on_gpu:
-        arg = [obj.Jd, obj.Ld, tm, obj.Kd[0:ndim], order]
+        arg = [obj.Jd, obj.Ld, tm, obj.Kd[0:ndim]]
 
         if ndim == 1:
             xk = interp1_table_adj(x, obj.h[0], *arg)
@@ -1124,11 +1106,11 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
         # save_testdata = False
         # if save_testdata:
         #     if ndim == 1:
-        #         np.savez('table1d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #         np.savez('table1d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
         #     elif ndim == 2:
-        #         np.savez('table2d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #         np.savez('table2d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
         #     elif ndim == 3:
-        #         np.savez('table3d_adj_data.npz', Xk=xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm, order=order)
+        #         np.savez('table3d_adj_data.npz', Xk=xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
 
     else:
         # kern_forward(block, grid, (ck, h1, tm, fm))

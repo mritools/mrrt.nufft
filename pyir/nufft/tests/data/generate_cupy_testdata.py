@@ -40,7 +40,7 @@ def _perturbed_gridpoints(Nd, rel_std=0.5, seed=1234, xp=np):
 
 
 kernel_type = 'kb:beatty'
-for mode in ['table0', 'table1']:
+for mode in ['table']:
     for precision in ['single', 'double']:
         for phasing in ['real', 'complex']:
             for ndim in [1, 2, 3]:
@@ -49,27 +49,23 @@ for mode in ['table0', 'table1']:
                     Nd = 64
                     Kd = 128
                     Jd = 6
-                    Ld_table1 = 512
+                    Ld = 512
                     n_shift = Nd // 2
                     om = _perturbed_gridpoints(Nd)
                 elif ndim == 2:
                     Nd = [16, ] * ndim
                     Kd = [32, ] * ndim
                     Jd = [6, ] * ndim
-                    Ld_table1 = 512
+                    Ld = 512
                     n_shift = np.asarray(Nd) / 2
                     om = _perturbed_gridpoints(Nd)
                 elif ndim == 3:
                     Nd = [8, ] * ndim
                     Kd = [16, ] * ndim
                     Jd = [5, ] * ndim  # use odd kernel for variety (even in 1D, 2D tests)
-                    Ld_table1 = 512
+                    Ld = 512
                     n_shift = np.asarray(Nd) / 2
                     om = _perturbed_gridpoints(Nd)
-                if mode == 'table0':
-                    Ld = Ld_table1 * 100
-                else:
-                    Ld = Ld_table1
                 A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                               mode=mode, Ld=Ld,
                               kernel_type=kernel_type,
@@ -106,12 +102,12 @@ if False:
 
     os.chdir('/media/lee8rx/3TB_Data11/cupy_testdata')
 
-    mode = 'table1'
+    mode = 'table'
     precision = 'double'
     phasing = 'complex'
     ndim = 1
     for ndim in [1, 2, 3]:
-        for mode in ['table0', 'table1']:
+        for mode in ['table']:
             for precision in ['single', 'double']:
                 for phasing in ['real', 'complex']:
                     print(ndim, mode, precision, phasing)
@@ -119,24 +115,21 @@ if False:
                         Nd = [64, ]
                         Kd = [128, ]
                         Jd = 6
-                        Ld_table1 = 512
+                        Ld = 512
                         #om = _perturbed_gridpoints(Nd)
                     elif ndim == 2:
                         Nd = [16, ] * ndim
                         Kd = [32, ] * ndim
                         Jd = 6
-                        Ld_table1 = 512
+                        Ld = 512
                         #om = _perturbed_gridpoints(Nd)
                     elif ndim == 3:
                         Nd = [8, ] * ndim
                         Kd = [16, ] * ndim
                         Jd = 5  # use odd kernel for variety (even in 1D, 2D tests)
-                        Ld_table1 = 512
+                        Ld = 512
                         #om = _perturbed_gridpoints(Nd)
-                    if mode == 'table0':
-                        Ld = Ld_table1 * 100
-                    else:
-                        Ld = Ld_table1
+
                     forward_data = np.load('table{}d_forward_order{}_{}_{}.npz'.format(ndim, mode[-1], precision, phasing))
                     print(list(forward_data.keys()))
                     adj_data = np.load('table{}d_adj_order{}_{}_{}.npz'.format(ndim, mode[-1], precision, phasing))
@@ -157,10 +150,7 @@ if False:
                     else:
                         real_dtype = np.float64
                         cplx_dtype = np.complex128
-                        if mode == 'table1':
-                            rtol = atol = 1e-13
-                        else:
-                            rtol = atol = 1e-3
+                        rtol = atol = 1e-13
 
                     print("forward")
                     ck = cupy.asarray(forward_data['Xk'].squeeze(), dtype=cplx_dtype)

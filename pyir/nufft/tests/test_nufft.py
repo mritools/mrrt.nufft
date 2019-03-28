@@ -78,7 +78,7 @@ def test_nufft_init(xp, show_figure=False):
 @pytest.mark.parametrize(
     'mode, phasing',
     product(
-        ['sparse', 'table1', 'table0'],
+        ['sparse', 'table'],
         ['real', 'complex']
     )
 )
@@ -120,7 +120,7 @@ def test_nufft_adj(mode, phasing, verbose=False):
     'xp, mode, precision, phasing, kernel_type',
     product(
         all_xp,
-        ['sparse', 'table1', 'table0'],
+        ['sparse', 'table'],
         ['single', 'double'],
         ['real', 'complex'],
         ['kb:beatty', ]
@@ -130,7 +130,7 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     Nd = 64
     Kd = 128
     Jd = 6
-    Ld_table1 = 1024
+    Ld = 1024
     n_shift = Nd // 2
     om = _perturbed_gridpoints(Nd, xp=xp)
     rstate = xp.random.RandomState(1234)
@@ -139,10 +139,6 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     atol = 1e-5
     maxdiff_forward = {}
     maxdiff_adjoint = {}
-    if mode == 'table0':
-        Ld = Ld_table1 * 128
-    else:
-        Ld = Ld_table1
     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                   mode=mode, Ld=Ld,
                   kernel_type=kernel_type,
@@ -173,7 +169,7 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     'xp, mode, precision, phasing, kernel_type',
     product(
         all_xp,
-        ['sparse', 'table1', 'table0'],
+        ['sparse', 'table'],
         ['single', 'double'],
         ['real', 'complex'],
         ['kb:beatty', ]
@@ -184,7 +180,7 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
     Nd = [16, ] * ndim
     Kd = [32, ] * ndim
     Jd = [6, ] * ndim
-    Ld_table1 = 1024
+    Ld = 1024
     n_shift = np.asarray(Nd) / 2
     om = _perturbed_gridpoints(Nd, xp=xp)
     rstate = xp.random.RandomState(1234)
@@ -193,10 +189,6 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
     atol = 1e-5
     maxdiff_forward = {}
     maxdiff_adjoint = {}
-    if mode == 'table0':
-        Ld = Ld_table1 * 128
-    else:
-        Ld = Ld_table1
     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                   mode=mode, Ld=Ld,
                   kernel_type=kernel_type,
@@ -228,7 +220,7 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
     'xp, mode, precision, phasing, kernel_type',
     product(
         all_xp,
-        ['sparse', 'table1', 'table0'],
+        ['sparse', 'table'],
         ['single', 'double'],
         ['real', 'complex'],
         ['kb:beatty', ]
@@ -239,7 +231,7 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
     Nd = [8, ] * ndim
     Kd = [16, ] * ndim
     Jd = [6, ] * ndim  # use odd kernel for variety (even in 1D, 2D tests)
-    Ld_table1 = 1024
+    Ld = 1024
     n_shift = np.asarray(Nd) / 2
     om = _perturbed_gridpoints(Nd, xp=xp)
 
@@ -248,10 +240,6 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
     maxdiff_forward = {}
     maxdiff_adjoint = {}
     rstate = xp.random.RandomState(1234)
-    if mode == 'table0':
-        Ld = Ld_table1 * 128
-    else:
-        Ld = Ld_table1
     A = NufftBase(om=om,
                   Nd=Nd, Jd=Jd, Kd=Kd,
                   n_shift=n_shift,
@@ -301,7 +289,7 @@ def test_nufft_dtypes(precision, xp):
     om = _perturbed_gridpoints(Nd, xp=xp)
 
     kernel_type = 'kb:beatty'
-    mode = 'table1'
+    mode = 'table'
     A = NufftBase(om=om, Nd=Nd, Jd=Jd, Kd=Kd, n_shift=n_shift,
                   mode=mode, Ld=Ld,
                   kernel_type=kernel_type,

@@ -19,7 +19,7 @@ from ._extensions._nufft_table import (_interp1_table_per,
                                        _interp3_table_adj)
 
 
-def interp1_table(ck, h1, J1, L1, tm, order=0):
+def interp1_table(ck, h1, J1, L1, tm):
     K1 = ck.shape[0]
     N = ck.shape[1]
     M = tm.shape[0]
@@ -37,11 +37,11 @@ def interp1_table(ck, h1, J1, L1, tm, order=0):
 
     J1 = int(J1)
     L1 = int(L1)
-    fm = _interp1_table_per(ck, K1, h1, J1, L1, tm, M, N, order)
+    fm = _interp1_table_per(ck, K1, h1, J1, L1, tm, M, N)
     return fm
 
 
-def interp1_table_adj(fm, h1, J1, L1, tm, K1, order=None):
+def interp1_table_adj(fm, h1, J1, L1, tm, K1):
 
     M = fm.shape[0]
     N = fm.shape[1]
@@ -60,11 +60,11 @@ def interp1_table_adj(fm, h1, J1, L1, tm, K1, order=None):
 
     J1 = int(J1)
     L1 = int(L1)
-    ck = _interp1_table_adj(fm, K1, h1, J1, L1, tm, M, N, order)
+    ck = _interp1_table_adj(fm, K1, h1, J1, L1, tm, M, N)
     return ck
 
 
-def interp2_table(ck, h1, h2, Jd, Ld, tm, order=0):
+def interp2_table(ck, h1, h2, Jd, Ld, tm):
     Kd = ck.shape
     if(ck.ndim == 2):
         N = 1
@@ -94,11 +94,11 @@ def interp2_table(ck, h1, h2, Jd, Ld, tm, order=0):
     if not tm.shape == (M, 2):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx2")
 
-    fm = _interp2_table_per(ck, Kd, h1, h2, Jd, Ld, tm, M, N, order)
+    fm = _interp2_table_per(ck, Kd, h1, h2, Jd, Ld, tm, M, N)
     return fm
 
 
-def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd, order=None):
+def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd):
 
     M = fm.shape[0]
     N = fm.shape[1]
@@ -124,11 +124,11 @@ def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd, order=None):
     if not tm.shape == (M, 2):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx2")
 
-    ck = _interp2_table_adj(fm, Kd, h1, h2, Jd, Ld, tm, M, N, order)
+    ck = _interp2_table_adj(fm, Kd, h1, h2, Jd, Ld, tm, M, N)
     return ck
 
 
-def interp3_table(ck, h1, h2, h3, Jd, Ld, tm, order=0):
+def interp3_table(ck, h1, h2, h3, Jd, Ld, tm):
     Kd = ck.shape
     if(ck.ndim == 3):
         N = 1
@@ -164,11 +164,11 @@ def interp3_table(ck, h1, h2, h3, Jd, Ld, tm, order=0):
     if not tm.shape == (M, 3):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx3")
 
-    fm = _interp3_table_per(ck, Kd, h1, h2, h3, Jd, Ld, tm, M, N, order)
+    fm = _interp3_table_per(ck, Kd, h1, h2, h3, Jd, Ld, tm, M, N)
     return fm
 
 
-def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd, order=None):
+def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd):
 
     M = fm.shape[0]
     N = fm.shape[1]
@@ -200,5 +200,5 @@ def interp3_table_adj(fm, h1, h2, h3, Jd, Ld, tm, Kd, order=None):
     if not tm.shape == (M, 3):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx2")
 
-    ck = _interp3_table_adj(fm, Kd, h1, h2, h3, Jd, Ld, tm, M, N, order)
+    ck = _interp3_table_adj(fm, Kd, h1, h2, h3, Jd, Ld, tm, M, N)
     return ck

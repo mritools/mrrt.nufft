@@ -27,7 +27,7 @@ def _determine_dtypes(h1):
 
 
 def _interp1_table_per(
-    ck, int K1, h1, int J1, int L1, tm, int M, int N, order=0):
+    ck, int K1, h1, int J1, int L1, tm, int M, int N):
     cdef:
         float_interp1_per_cplx_t floatfunc_cplx
         float_interp1_per_real_t floatfunc_real
@@ -42,18 +42,10 @@ def _interp1_table_per(
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
-    if order == 0:
-        floatfunc_cplx = float_interp1_table0_complex_per
-        doublefunc_cplx = double_interp1_table0_complex_per
-        doublefunc_real = double_interp1_table0_real_per
-        floatfunc_real = float_interp1_table0_real_per
-    elif order == 1:
-        floatfunc_cplx = float_interp1_table1_complex_per
-        doublefunc_cplx = double_interp1_table1_complex_per
-        doublefunc_real = double_interp1_table1_real_per
-        floatfunc_real = float_interp1_table1_real_per
-    else:
-        raise ValueError("unimplemented order")
+    floatfunc_cplx = float_interp1_table1_complex_per
+    doublefunc_cplx = double_interp1_table1_complex_per
+    doublefunc_real = double_interp1_table1_real_per
+    floatfunc_real = float_interp1_table1_real_per
 
     tm = np.asfortranarray(tm)
     r_fm = np.asfortranarray(fm[:, 0].real)
@@ -125,7 +117,7 @@ def _interp1_table_per(
 
 
 def _interp1_table_adj(
-        fm, int K1, h1, int J1, int L1, tm, int M, int N, order):
+        fm, int K1, h1, int J1, int L1, tm, int M, int N):
     cdef:
         float_interp1_per_adj_cplx_t floatfunc_cplx
         float_interp1_per_adj_real_t floatfunc_real
@@ -141,18 +133,10 @@ def _interp1_table_adj(
     if tm.dtype != h1.real.dtype:
         tm = tm.astype(h1.real.dtype)
 
-    if order == 0:
-        floatfunc_cplx = float_interp1_table0_complex_per_adj
-        doublefunc_cplx = double_interp1_table0_complex_per_adj
-        doublefunc_real = double_interp1_table0_real_per_adj
-        floatfunc_real = float_interp1_table0_real_per_adj
-    elif order == 1:
-        floatfunc_cplx = float_interp1_table1_complex_per_adj
-        doublefunc_cplx = double_interp1_table1_complex_per_adj
-        doublefunc_real = double_interp1_table1_real_per_adj
-        floatfunc_real = float_interp1_table1_real_per_adj
-    else:
-        raise ValueError("unimplemented order")
+    floatfunc_cplx = float_interp1_table1_complex_per_adj
+    doublefunc_cplx = double_interp1_table1_complex_per_adj
+    doublefunc_real = double_interp1_table1_real_per_adj
+    floatfunc_real = float_interp1_table1_real_per_adj
 
     tm = np.asfortranarray(tm)
 
@@ -228,7 +212,7 @@ def _interp1_table_adj(
 
 
 def _interp2_table_per(
-    ck, Kd, h1, h2, Jd, Ld, tm, int M, int N, order=0):
+    ck, Kd, h1, h2, Jd, Ld, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -250,18 +234,10 @@ def _interp2_table_per(
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
-    if order == 0:
-        floatfunc_cplx = float_interp2_table0_complex_per
-        doublefunc_cplx = double_interp2_table0_complex_per
-        doublefunc_real = double_interp2_table0_real_per
-        floatfunc_real = float_interp2_table0_real_per
-    elif order == 1:
-        floatfunc_cplx = float_interp2_table1_complex_per
-        doublefunc_cplx = double_interp2_table1_complex_per
-        doublefunc_real = double_interp2_table1_real_per
-        floatfunc_real = float_interp2_table1_real_per
-    else:
-        raise ValueError("unimplemented order")
+    floatfunc_cplx = float_interp2_table1_complex_per
+    doublefunc_cplx = double_interp2_table1_complex_per
+    doublefunc_real = double_interp2_table1_real_per
+    floatfunc_real = float_interp2_table1_real_per
 
     tm = np.asfortranarray(tm)
     r_fm = np.asfortranarray(fm[:, 0].real)
@@ -354,7 +330,7 @@ def _interp2_table_per(
 
 
 def _interp2_table_adj(
-        fm, Kd, h1, h2, Jd, Ld, tm, int M, int N, order):
+        fm, Kd, h1, h2, Jd, Ld, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -377,18 +353,10 @@ def _interp2_table_adj(
     if tm.dtype != h1.real.dtype:
         tm = tm.astype(h1.real.dtype)
 
-    if order == 0:
-        floatfunc_cplx = float_interp2_table0_complex_per_adj
-        doublefunc_cplx = double_interp2_table0_complex_per_adj
-        doublefunc_real = double_interp2_table0_real_per_adj
-        floatfunc_real = float_interp2_table0_real_per_adj
-    elif order == 1:
-        floatfunc_cplx = float_interp2_table1_complex_per_adj
-        doublefunc_cplx = double_interp2_table1_complex_per_adj
-        doublefunc_real = double_interp2_table1_real_per_adj
-        floatfunc_real = float_interp2_table1_real_per_adj
-    else:
-        raise ValueError("unimplemented order")
+    floatfunc_cplx = float_interp2_table1_complex_per_adj
+    doublefunc_cplx = double_interp2_table1_complex_per_adj
+    doublefunc_real = double_interp2_table1_real_per_adj
+    floatfunc_real = float_interp2_table1_real_per_adj
 
     tm = np.asfortranarray(tm)
 
@@ -484,7 +452,7 @@ def _interp2_table_adj(
 
 
 def _interp3_table_per(
-    ck, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N, order=0):
+    ck, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -509,18 +477,10 @@ def _interp3_table_per(
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
-    if order == 0:
-        floatfunc_cplx = float_interp3_table0_complex_per
-        doublefunc_cplx = double_interp3_table0_complex_per
-        doublefunc_real = double_interp3_table0_real_per
-        floatfunc_real = float_interp3_table0_real_per
-    elif order == 1:
-        floatfunc_cplx = float_interp3_table1_complex_per
-        doublefunc_cplx = double_interp3_table1_complex_per
-        doublefunc_real = double_interp3_table1_real_per
-        floatfunc_real = float_interp3_table1_real_per
-    else:
-        raise ValueError("unimplemented order")
+    floatfunc_cplx = float_interp3_table1_complex_per
+    doublefunc_cplx = double_interp3_table1_complex_per
+    doublefunc_real = double_interp3_table1_real_per
+    floatfunc_real = float_interp3_table1_real_per
 
     tm = np.asfortranarray(tm)
     r_fm = np.asfortranarray(fm[:, 0].real)
@@ -632,7 +592,7 @@ def _interp3_table_per(
 
 
 def _interp3_table_adj(
-        fm, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N, order):
+        fm, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -657,18 +617,10 @@ def _interp3_table_adj(
     if tm.dtype != h1.real.dtype:
         tm = tm.astype(h1.real.dtype)
 
-    if order == 0:
-        floatfunc_cplx = float_interp3_table0_complex_per_adj
-        doublefunc_cplx = double_interp3_table0_complex_per_adj
-        doublefunc_real = double_interp3_table0_real_per_adj
-        floatfunc_real = float_interp3_table0_real_per_adj
-    elif order == 1:
-        floatfunc_cplx = float_interp3_table1_complex_per_adj
-        doublefunc_cplx = double_interp3_table1_complex_per_adj
-        doublefunc_real = double_interp3_table1_real_per_adj
-        floatfunc_real = float_interp3_table1_real_per_adj
-    else:
-        raise ValueError("unimplemented order")
+    floatfunc_cplx = float_interp3_table1_complex_per_adj
+    doublefunc_cplx = double_interp3_table1_complex_per_adj
+    doublefunc_real = double_interp3_table1_real_per_adj
+    floatfunc_real = float_interp3_table1_real_per_adj
 
     tm = np.asfortranarray(tm)
 
