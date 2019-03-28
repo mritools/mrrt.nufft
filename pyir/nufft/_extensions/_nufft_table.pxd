@@ -13,7 +13,7 @@ thread conflicts.
 cdef extern from "c/nufft_table.h":
     # Cython does not know the 'restrict' keyword
 
-    cdef void double_interp1_table1_complex_per(
+    cdef void double_interp1_table1_complex_forward(
         const double *r_ck, # [K1,1] in
         const double *i_ck,
         const int K1,
@@ -26,7 +26,7 @@ cdef extern from "c/nufft_table.h":
         double *r_fm,       # [M,1] out
         double *i_fm)
 
-    cdef void double_interp1_table1_real_per(
+    cdef void double_interp1_table1_real_forward(
         const double *r_ck, # [K,1] in
         const double *i_ck,
         const int K1,
@@ -38,7 +38,7 @@ cdef extern from "c/nufft_table.h":
         double *r_fm,       # [M,1] out
         double *i_fm)
 
-    cdef void double_interp1_table1_complex_per_adj(
+    cdef void double_interp1_table1_complex_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
         const int K1,
@@ -52,7 +52,7 @@ cdef extern from "c/nufft_table.h":
         const double *i_fm,
         const int N)
 
-    cdef void double_interp1_table1_real_per_adj(
+    cdef void double_interp1_table1_real_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
         const int K1,
@@ -65,7 +65,7 @@ cdef extern from "c/nufft_table.h":
         const double *i_fm,
         const int N)
 
-    cdef void double_interp2_table1_complex_per_adj(
+    cdef void double_interp2_table1_complex_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
         const int K1,
@@ -84,7 +84,7 @@ cdef extern from "c/nufft_table.h":
         const double *i_fm,
         const int N)
 
-    cdef void double_interp2_table1_real_per_adj(
+    cdef void double_interp2_table1_real_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
         const int K1,
@@ -101,7 +101,7 @@ cdef extern from "c/nufft_table.h":
         const double *i_fm,
         const int N)
 
-    cdef void double_interp2_table1_complex_per_adj(
+    cdef void double_interp2_table1_complex_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
         const int K1,
@@ -120,7 +120,7 @@ cdef extern from "c/nufft_table.h":
         const double *i_fm,
         const int N)
 
-    cdef void double_interp2_table1_real_per(
+    cdef void double_interp2_table1_real_forward(
         const double *r_ck, # [K1,K2] in
         const double *i_ck,
         const int K1,
@@ -136,7 +136,7 @@ cdef extern from "c/nufft_table.h":
         double *r_fm,       # [M,1] out
         double *i_fm)
 
-    cdef void double_interp2_table1_complex_per(
+    cdef void double_interp2_table1_complex_forward(
         const double *r_ck, # [K1,K2] in
         const double *i_ck,
         const int K1,
@@ -154,7 +154,7 @@ cdef extern from "c/nufft_table.h":
         double *r_fm,       # [M,1] out
         double *i_fm)
 
-    cdef void double_interp3_table1_complex_per(
+    cdef void double_interp3_table1_complex_forward(
         const double *r_ck, # [K1,K2,K3] in
         const double *i_ck,
         const int K1,
@@ -177,7 +177,7 @@ cdef extern from "c/nufft_table.h":
         double *r_fm,       # [M,1] out
         double *i_fm)
 
-    cdef void double_interp3_table1_real_per(
+    cdef void double_interp3_table1_real_forward(
         const double *r_ck, # [K1,K2,K3] in
         const double *i_ck,
         const int K1,
@@ -197,7 +197,7 @@ cdef extern from "c/nufft_table.h":
         double *r_fm,       # [M,1] out
         double *i_fm)
 
-    cdef void double_interp3_table1_complex_per_adj(
+    cdef void double_interp3_table1_complex_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
         const int K1,
@@ -221,7 +221,7 @@ cdef extern from "c/nufft_table.h":
         const double *i_fm,
         const int N)
 
-    cdef void double_interp3_table1_real_per_adj(
+    cdef void double_interp3_table1_real_adj(
         double *r_ck,   # [K1,K2] in
         double *i_ck,
         const int K1,
@@ -242,7 +242,7 @@ cdef extern from "c/nufft_table.h":
         const double *i_fm,
         const int N)
 
-    cdef void float_interp1_table1_complex_per(
+    cdef void float_interp1_table1_complex_forward(
         const float *r_ck, # [K1,1] in
         const float *i_ck,
         const int K1,
@@ -255,7 +255,7 @@ cdef extern from "c/nufft_table.h":
         float *r_fm,       # [M,1] out
         float *i_fm)
 
-    cdef void float_interp1_table1_real_per(
+    cdef void float_interp1_table1_real_forward(
         const float *r_ck, # [K,1] in
         const float *i_ck,
         const int K1,
@@ -267,7 +267,7 @@ cdef extern from "c/nufft_table.h":
         float *r_fm,       # [M,1] out
         float *i_fm)
 
-    cdef void float_interp1_table1_complex_per_adj(
+    cdef void float_interp1_table1_complex_adj(
         float *r_ck,   # [K1,K2] in
         float *i_ck,
         const int K1,
@@ -281,7 +281,7 @@ cdef extern from "c/nufft_table.h":
         const float *i_fm,
         const int N)
 
-    cdef void float_interp1_table1_real_per_adj(
+    cdef void float_interp1_table1_real_adj(
         float *r_ck,   # [K1,K2] in
         float *i_ck,
         const int K1,
@@ -294,7 +294,7 @@ cdef extern from "c/nufft_table.h":
         const float *i_fm,
         const int N)
 
-    cdef void float_interp2_table1_real_per_adj(
+    cdef void float_interp2_table1_real_adj(
         float *r_ck,   # [K1,K2] in
         float *i_ck,
         const int K1,
@@ -311,7 +311,7 @@ cdef extern from "c/nufft_table.h":
         const float *i_fm,
         const int N)
 
-    cdef void float_interp2_table1_complex_per_adj(
+    cdef void float_interp2_table1_complex_adj(
         float *r_ck,   # [K1,K2] in
         float *i_ck,
         const int K1,
@@ -330,7 +330,7 @@ cdef extern from "c/nufft_table.h":
         const float *i_fm,
         const int N)
 
-    cdef void float_interp2_table1_real_per(
+    cdef void float_interp2_table1_real_forward(
         const float *r_ck, # [K1,K2] in
         const float *i_ck,
         const int K1,
@@ -346,7 +346,7 @@ cdef extern from "c/nufft_table.h":
         float *r_fm,       # [M,1] out
         float *i_fm)
 
-    cdef void float_interp2_table1_complex_per(
+    cdef void float_interp2_table1_complex_forward(
         const float *r_ck, # [K1,K2] in
         const float *i_ck,
         const int K1,
@@ -364,7 +364,7 @@ cdef extern from "c/nufft_table.h":
         float *r_fm,       # [M,1] out
         float *i_fm)
 
-    cdef void float_interp3_table1_complex_per(
+    cdef void float_interp3_table1_complex_forward(
         const float *r_ck, # [K1,K2,K3] in
         const float *i_ck,
         const int K1,
@@ -387,7 +387,7 @@ cdef extern from "c/nufft_table.h":
         float *r_fm,       # [M,1] out
         float *i_fm)
 
-    cdef void float_interp3_table1_real_per(
+    cdef void float_interp3_table1_real_forward(
         const float *r_ck, # [K1,K2,K3] in
         const float *i_ck,
         const int K1,
@@ -407,7 +407,7 @@ cdef extern from "c/nufft_table.h":
         float *r_fm,       # [M,1] out
         float *i_fm)
 
-    cdef void float_interp3_table1_complex_per_adj(
+    cdef void float_interp3_table1_complex_adj(
         float *r_ck,   # [K1,K2] in
         float *i_ck,
         const int K1,
@@ -431,7 +431,7 @@ cdef extern from "c/nufft_table.h":
         const float *i_fm,
         const int N)
 
-    cdef void float_interp3_table1_real_per_adj(
+    cdef void float_interp3_table1_real_adj(
         float *r_ck,   # [K1,K2] in
         float *i_ck,
         const int K1,
@@ -453,133 +453,133 @@ cdef extern from "c/nufft_table.h":
         const int N)
 
 
-ctypedef void float_interp1_per_cplx(const float *, const float *,
+ctypedef void float_interp1_forward_cplx(const float *, const float *,
+                                         const int,
+                                         const float *, const float *,
+                                         const int,
+                                         const int,
+                                         const float *, const int,
+                                         float *, float *)
+ctypedef void float_interp1_forward_real(const float *, const float *,
+                                         const int,
+                                         const float *,
+                                         const int,
+                                         const int,
+                                         const float *, const int,
+                                         float *, float *)
+ctypedef void double_interp1_forward_cplx(const double *, const double *,
+                                          const int,
+                                          const double *, const double *,
+                                          const int,
+                                          const int,
+                                          const double *, const int,
+                                          double *, double *)
+ctypedef void double_interp1_forward_real(const double *, const double *,
+                                          const int,
+                                          const double *,
+                                          const int,
+                                          const int,
+                                          const double *, const int,
+                                          double *, double *)
+ctypedef float_interp1_forward_cplx* float_interp1_forward_cplx_t
+ctypedef float_interp1_forward_real* float_interp1_forward_real_t
+ctypedef double_interp1_forward_cplx* double_interp1_forward_cplx_t
+ctypedef double_interp1_forward_real* double_interp1_forward_real_t
+
+
+ctypedef void float_interp2_forward_cplx(const float *, const float *,
+                                         const int, const int,
+                                         const float *, const float *,
+                                         const float *, const float *,
+                                         const int, const int,
+                                         const int, const int,
+                                         const float *, const int,
+                                         float *, float *)
+ctypedef void float_interp2_forward_real(const float *, const float *,
+                                         const int, const int,
+                                         const float *, const float *,
+                                         const int, const int,
+                                         const int, const int,
+                                         const float *, const int,
+                                         float *, float *)
+ctypedef void double_interp2_forward_cplx(const double *, const double *,
+                                          const int, const int,
+                                          const double *, const double *,
+                                          const double *, const double *,
+                                          const int, const int,
+                                          const int, const int,
+                                          const double *, const int,
+                                          double *, double *)
+ctypedef void double_interp2_forward_real(const double *, const double *,
+                                          const int, const int,
+                                          const double *, const double *,
+                                          const int, const int,
+                                          const int, const int,
+                                          const double *, const int,
+                                          double *, double *)
+ctypedef float_interp2_forward_cplx* float_interp2_forward_cplx_t
+ctypedef float_interp2_forward_real* float_interp2_forward_real_t
+ctypedef double_interp2_forward_cplx* double_interp2_forward_cplx_t
+ctypedef double_interp2_forward_real* double_interp2_forward_real_t
+
+
+ctypedef void float_interp3_forward_cplx(const float *, const float *,
+                                         const int, const int, const int,
+                                         const float *, const float *,
+                                         const float *, const float *,
+                                         const float *, const float *,
+                                         const int, const int, const int,
+                                         const int, const int, const int,
+                                         const float *, const int,
+                                         float *, float *)
+ctypedef void float_interp3_forward_real(const float *, const float *,
+                                         const int, const int, const int,
+                                         const float *, const float *,
+                                         const float *,
+                                         const int, const int, const int,
+                                         const int, const int, const int,
+                                         const float *, const int,
+                                         float *, float *)
+ctypedef void double_interp3_forward_cplx(const double *, const double *,
+                                          const int, const int, const int,
+                                          const double *, const double *,
+                                          const double *, const double *,
+                                          const double *, const double *,
+                                          const int, const int, const int,
+                                          const int, const int, const int,
+                                          const double *, const int,
+                                          double *, double *)
+ctypedef void double_interp3_forward_real(const double *, const double *,
+                                          const int, const int, const int,
+                                          const double *, const double *,
+                                          const double *,
+                                          const int, const int, const int,
+                                          const int, const int, const int,
+                                          const double *, const int,
+                                          double *, double *)
+ctypedef float_interp3_forward_cplx* float_interp3_forward_cplx_t
+ctypedef float_interp3_forward_real* float_interp3_forward_real_t
+ctypedef double_interp3_forward_cplx* double_interp3_forward_cplx_t
+ctypedef double_interp3_forward_real* double_interp3_forward_real_t
+
+
+ctypedef void float_interp1_adj_cplx(float *, float *,
                                      const int,
                                      const float *, const float *,
                                      const int,
                                      const int,
                                      const float *, const int,
-                                     float *, float *)
-ctypedef void float_interp1_per_real(const float *, const float *,
+                                     const float *, const float *,
+                                     const int)
+ctypedef void float_interp1_adj_real(float *, float *,
                                      const int,
                                      const float *,
                                      const int,
                                      const int,
                                      const float *, const int,
-                                     float *, float *)
-ctypedef void double_interp1_per_cplx(const double *, const double *,
-                                      const int,
-                                      const double *, const double *,
-                                      const int,
-                                      const int,
-                                      const double *, const int,
-                                      double *, double *)
-ctypedef void double_interp1_per_real(const double *, const double *,
-                                      const int,
-                                      const double *,
-                                      const int,
-                                      const int,
-                                      const double *, const int,
-                                      double *, double *)
-ctypedef float_interp1_per_cplx* float_interp1_per_cplx_t
-ctypedef float_interp1_per_real* float_interp1_per_real_t
-ctypedef double_interp1_per_cplx* double_interp1_per_cplx_t
-ctypedef double_interp1_per_real* double_interp1_per_real_t
-
-
-ctypedef void float_interp2_per_cplx(const float *, const float *,
-                                     const int, const int,
-                                     const float *, const float *,
-                                     const float *, const float *,
-                                     const int, const int,
-                                     const int, const int,
-                                     const float *, const int,
-                                     float *, float *)
-ctypedef void float_interp2_per_real(const float *, const float *,
-                                     const int, const int,
-                                     const float *, const float *,
-                                     const int, const int,
-                                     const int, const int,
-                                     const float *, const int,
-                                     float *, float *)
-ctypedef void double_interp2_per_cplx(const double *, const double *,
-                                      const int, const int,
-                                      const double *, const double *,
-                                      const double *, const double *,
-                                      const int, const int,
-                                      const int, const int,
-                                      const double *, const int,
-                                      double *, double *)
-ctypedef void double_interp2_per_real(const double *, const double *,
-                                      const int, const int,
-                                      const double *, const double *,
-                                      const int, const int,
-                                      const int, const int,
-                                      const double *, const int,
-                                      double *, double *)
-ctypedef float_interp2_per_cplx* float_interp2_per_cplx_t
-ctypedef float_interp2_per_real* float_interp2_per_real_t
-ctypedef double_interp2_per_cplx* double_interp2_per_cplx_t
-ctypedef double_interp2_per_real* double_interp2_per_real_t
-
-
-ctypedef void float_interp3_per_cplx(const float *, const float *,
-                                     const int, const int, const int,
-                                     const float *, const float *,
-                                     const float *, const float *,
-                                     const float *, const float *,
-                                     const int, const int, const int,
-                                     const int, const int, const int,
-                                     const float *, const int,
-                                     float *, float *)
-ctypedef void float_interp3_per_real(const float *, const float *,
-                                     const int, const int, const int,
-                                     const float *, const float *,
-                                     const float *,
-                                     const int, const int, const int,
-                                     const int, const int, const int,
-                                     const float *, const int,
-                                     float *, float *)
-ctypedef void double_interp3_per_cplx(const double *, const double *,
-                                      const int, const int, const int,
-                                      const double *, const double *,
-                                      const double *, const double *,
-                                      const double *, const double *,
-                                      const int, const int, const int,
-                                      const int, const int, const int,
-                                      const double *, const int,
-                                      double *, double *)
-ctypedef void double_interp3_per_real(const double *, const double *,
-                                      const int, const int, const int,
-                                      const double *, const double *,
-                                      const double *,
-                                      const int, const int, const int,
-                                      const int, const int, const int,
-                                      const double *, const int,
-                                      double *, double *)
-ctypedef float_interp3_per_cplx* float_interp3_per_cplx_t
-ctypedef float_interp3_per_real* float_interp3_per_real_t
-ctypedef double_interp3_per_cplx* double_interp3_per_cplx_t
-ctypedef double_interp3_per_real* double_interp3_per_real_t
-
-
-ctypedef void float_interp1_per_adj_cplx(float *, float *,
-                                     const int,
-                                     const float *, const float *,
-                                     const int,
-                                     const int,
-                                     const float *, const int,
                                      const float *, const float *,
                                      const int)
-ctypedef void float_interp1_per_adj_real(float *, float *,
-                                     const int,
-                                     const float *,
-                                     const int,
-                                     const int,
-                                     const float *, const int,
-                                     const float *, const float *,
-                                     const int)
-ctypedef void double_interp1_per_adj_cplx(double *, double *,
+ctypedef void double_interp1_adj_cplx(double *, double *,
                                       const int,
                                       const double *, const double *,
                                       const int,
@@ -587,7 +587,7 @@ ctypedef void double_interp1_per_adj_cplx(double *, double *,
                                       const double *, const int,
                                       const double *, const double *,
                                       const int)
-ctypedef void double_interp1_per_adj_real(double *, double *,
+ctypedef void double_interp1_adj_real(double *, double *,
                                       const int,
                                       const double *,
                                       const int,
@@ -595,13 +595,13 @@ ctypedef void double_interp1_per_adj_real(double *, double *,
                                       const double *, const int,
                                       const double *, const double *,
                                       const int)
-ctypedef float_interp1_per_adj_cplx* float_interp1_per_adj_cplx_t
-ctypedef float_interp1_per_adj_real* float_interp1_per_adj_real_t
-ctypedef double_interp1_per_adj_cplx* double_interp1_per_adj_cplx_t
-ctypedef double_interp1_per_adj_real* double_interp1_per_adj_real_t
+ctypedef float_interp1_adj_cplx* float_interp1_adj_cplx_t
+ctypedef float_interp1_adj_real* float_interp1_adj_real_t
+ctypedef double_interp1_adj_cplx* double_interp1_adj_cplx_t
+ctypedef double_interp1_adj_real* double_interp1_adj_real_t
 
 
-ctypedef void float_interp2_per_adj_cplx(float *, float *,
+ctypedef void float_interp2_adj_cplx(float *, float *,
                                      const int, const int,
                                      const float *, const float *,
                                      const float *, const float *,
@@ -610,7 +610,7 @@ ctypedef void float_interp2_per_adj_cplx(float *, float *,
                                      const float *, const int,
                                      const float *, const float *,
                                      const int)
-ctypedef void float_interp2_per_adj_real(float *, float *,
+ctypedef void float_interp2_adj_real(float *, float *,
                                      const int, const int,
                                      const float *, const float *,
                                      const int, const int,
@@ -618,7 +618,7 @@ ctypedef void float_interp2_per_adj_real(float *, float *,
                                      const float *, const int,
                                      const float *, const float *,
                                      const int)
-ctypedef void double_interp2_per_adj_cplx(double *, double *,
+ctypedef void double_interp2_adj_cplx(double *, double *,
                                       const int, const int,
                                       const double *, const double *,
                                       const double *, const double *,
@@ -627,7 +627,7 @@ ctypedef void double_interp2_per_adj_cplx(double *, double *,
                                       const double *, const int,
                                       const double *, const double *,
                                       const int)
-ctypedef void double_interp2_per_adj_real(double *, double *,
+ctypedef void double_interp2_adj_real(double *, double *,
                                       const int, const int,
                                       const double *, const double *,
                                       const int, const int,
@@ -635,13 +635,13 @@ ctypedef void double_interp2_per_adj_real(double *, double *,
                                       const double *, const int,
                                       const double *, const double *,
                                       const int)
-ctypedef float_interp2_per_adj_cplx* float_interp2_per_adj_cplx_t
-ctypedef float_interp2_per_adj_real* float_interp2_per_adj_real_t
-ctypedef double_interp2_per_adj_cplx* double_interp2_per_adj_cplx_t
-ctypedef double_interp2_per_adj_real* double_interp2_per_adj_real_t
+ctypedef float_interp2_adj_cplx* float_interp2_adj_cplx_t
+ctypedef float_interp2_adj_real* float_interp2_adj_real_t
+ctypedef double_interp2_adj_cplx* double_interp2_adj_cplx_t
+ctypedef double_interp2_adj_real* double_interp2_adj_real_t
 
 
-ctypedef void float_interp3_per_adj_cplx(float *, float *,
+ctypedef void float_interp3_adj_cplx(float *, float *,
                                      const int, const int, const int,
                                      const float *, const float *,
                                      const float *, const float *,
@@ -651,7 +651,7 @@ ctypedef void float_interp3_per_adj_cplx(float *, float *,
                                      const float *, const int,
                                      const float *, const float *,
                                      const int)
-ctypedef void float_interp3_per_adj_real(float *, float *,
+ctypedef void float_interp3_adj_real(float *, float *,
                                      const int, const int, const int,
                                      const float *, const float *,
                                      const float *,
@@ -660,7 +660,7 @@ ctypedef void float_interp3_per_adj_real(float *, float *,
                                      const float *, const int,
                                      const float *, const float *,
                                      const int)
-ctypedef void double_interp3_per_adj_cplx(double *, double *,
+ctypedef void double_interp3_adj_cplx(double *, double *,
                                       const int, const int, const int,
                                       const double *, const double *,
                                       const double *, const double *,
@@ -670,7 +670,7 @@ ctypedef void double_interp3_per_adj_cplx(double *, double *,
                                       const double *, const int,
                                       const double *, const double *,
                                       const int)
-ctypedef void double_interp3_per_adj_real(double *, double *,
+ctypedef void double_interp3_adj_real(double *, double *,
                                       const int, const int, const int,
                                       const double *, const double *,
                                       const double *,
@@ -679,9 +679,9 @@ ctypedef void double_interp3_per_adj_real(double *, double *,
                                       const double *, const int,
                                       const double *, const double *,
                                       const int)
-ctypedef float_interp3_per_adj_cplx* float_interp3_per_adj_cplx_t
-ctypedef float_interp3_per_adj_real* float_interp3_per_adj_real_t
-ctypedef double_interp3_per_adj_cplx* double_interp3_per_adj_cplx_t
-ctypedef double_interp3_per_adj_real* double_interp3_per_adj_real_t
+ctypedef float_interp3_adj_cplx* float_interp3_adj_cplx_t
+ctypedef float_interp3_adj_real* float_interp3_adj_real_t
+ctypedef double_interp3_adj_cplx* double_interp3_adj_cplx_t
+ctypedef double_interp3_adj_real* double_interp3_adj_real_t
 
 

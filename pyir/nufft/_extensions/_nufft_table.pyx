@@ -26,13 +26,13 @@ def _determine_dtypes(h1):
     return kernel_dtype, cplx_dtype, cplx_kernel
 
 
-def _interp1_table_per(
+def _interp1_table_forward(
     ck, int K1, h1, int J1, int L1, tm, int M, int N):
     cdef:
-        float_interp1_per_cplx_t floatfunc_cplx
-        float_interp1_per_real_t floatfunc_real
-        double_interp1_per_cplx_t doublefunc_cplx
-        double_interp1_per_real_t doublefunc_real
+        float_interp1_forward_cplx_t floatfunc_cplx
+        float_interp1_forward_real_t floatfunc_real
+        double_interp1_forward_cplx_t doublefunc_cplx
+        double_interp1_forward_real_t doublefunc_real
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
@@ -42,10 +42,10 @@ def _interp1_table_per(
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
-    floatfunc_cplx = float_interp1_table1_complex_per
-    doublefunc_cplx = double_interp1_table1_complex_per
-    doublefunc_real = double_interp1_table1_real_per
-    floatfunc_real = float_interp1_table1_real_per
+    floatfunc_cplx = float_interp1_table1_complex_forward
+    doublefunc_cplx = double_interp1_table1_complex_forward
+    doublefunc_real = double_interp1_table1_real_forward
+    floatfunc_real = float_interp1_table1_real_forward
 
     tm = np.asfortranarray(tm)
     r_fm = np.asfortranarray(fm[:, 0].real)
@@ -119,10 +119,10 @@ def _interp1_table_per(
 def _interp1_table_adj(
         fm, int K1, h1, int J1, int L1, tm, int M, int N):
     cdef:
-        float_interp1_per_adj_cplx_t floatfunc_cplx
-        float_interp1_per_adj_real_t floatfunc_real
-        double_interp1_per_adj_cplx_t doublefunc_cplx
-        double_interp1_per_adj_real_t doublefunc_real
+        float_interp1_adj_cplx_t floatfunc_cplx
+        float_interp1_adj_real_t floatfunc_real
+        double_interp1_adj_cplx_t doublefunc_cplx
+        double_interp1_adj_real_t doublefunc_real
 
     fm = np.asarray(fm)  # from Matrix to array
     if fm.ndim == 1:
@@ -133,10 +133,10 @@ def _interp1_table_adj(
     if tm.dtype != h1.real.dtype:
         tm = tm.astype(h1.real.dtype)
 
-    floatfunc_cplx = float_interp1_table1_complex_per_adj
-    doublefunc_cplx = double_interp1_table1_complex_per_adj
-    doublefunc_real = double_interp1_table1_real_per_adj
-    floatfunc_real = float_interp1_table1_real_per_adj
+    floatfunc_cplx = float_interp1_table1_complex_adj
+    doublefunc_cplx = double_interp1_table1_complex_adj
+    doublefunc_real = double_interp1_table1_real_adj
+    floatfunc_real = float_interp1_table1_real_adj
 
     tm = np.asfortranarray(tm)
 
@@ -211,7 +211,7 @@ def _interp1_table_adj(
     return ck
 
 
-def _interp2_table_per(
+def _interp2_table_forward(
     ck, Kd, h1, h2, Jd, Ld, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
@@ -220,10 +220,10 @@ def _interp2_table_per(
         int K2 = Kd[1]
         int L1 = Ld[0]
         int L2 = Ld[1]
-        float_interp2_per_cplx_t floatfunc_cplx
-        float_interp2_per_real_t floatfunc_real
-        double_interp2_per_cplx_t doublefunc_cplx
-        double_interp2_per_real_t doublefunc_real
+        float_interp2_forward_cplx_t floatfunc_cplx
+        float_interp2_forward_real_t floatfunc_real
+        double_interp2_forward_cplx_t doublefunc_cplx
+        double_interp2_forward_real_t doublefunc_real
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
@@ -234,10 +234,10 @@ def _interp2_table_per(
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
-    floatfunc_cplx = float_interp2_table1_complex_per
-    doublefunc_cplx = double_interp2_table1_complex_per
-    doublefunc_real = double_interp2_table1_real_per
-    floatfunc_real = float_interp2_table1_real_per
+    floatfunc_cplx = float_interp2_table1_complex_forward
+    doublefunc_cplx = double_interp2_table1_complex_forward
+    doublefunc_real = double_interp2_table1_real_forward
+    floatfunc_real = float_interp2_table1_real_forward
 
     tm = np.asfortranarray(tm)
     r_fm = np.asfortranarray(fm[:, 0].real)
@@ -338,10 +338,10 @@ def _interp2_table_adj(
         int K2 = Kd[1]
         int L1 = Ld[0]
         int L2 = Ld[1]
-        float_interp2_per_adj_cplx_t floatfunc_cplx
-        float_interp2_per_adj_real_t floatfunc_real
-        double_interp2_per_adj_cplx_t doublefunc_cplx
-        double_interp2_per_adj_real_t doublefunc_real
+        float_interp2_adj_cplx_t floatfunc_cplx
+        float_interp2_adj_real_t floatfunc_real
+        double_interp2_adj_cplx_t doublefunc_cplx
+        double_interp2_adj_real_t doublefunc_real
 
     fm = np.asarray(fm)  # from Matrix to array
     if fm.ndim == 1:
@@ -353,10 +353,10 @@ def _interp2_table_adj(
     if tm.dtype != h1.real.dtype:
         tm = tm.astype(h1.real.dtype)
 
-    floatfunc_cplx = float_interp2_table1_complex_per_adj
-    doublefunc_cplx = double_interp2_table1_complex_per_adj
-    doublefunc_real = double_interp2_table1_real_per_adj
-    floatfunc_real = float_interp2_table1_real_per_adj
+    floatfunc_cplx = float_interp2_table1_complex_adj
+    doublefunc_cplx = double_interp2_table1_complex_adj
+    doublefunc_real = double_interp2_table1_real_adj
+    floatfunc_real = float_interp2_table1_real_adj
 
     tm = np.asfortranarray(tm)
 
@@ -451,7 +451,7 @@ def _interp2_table_adj(
     return ck
 
 
-def _interp3_table_per(
+def _interp3_table_forward(
     ck, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
@@ -463,10 +463,10 @@ def _interp3_table_per(
         int L1 = Ld[0]
         int L2 = Ld[1]
         int L3 = Ld[2]
-        float_interp3_per_cplx_t floatfunc_cplx
-        float_interp3_per_real_t floatfunc_real
-        double_interp3_per_cplx_t doublefunc_cplx
-        double_interp3_per_real_t doublefunc_real
+        float_interp3_forward_cplx_t floatfunc_cplx
+        float_interp3_forward_real_t floatfunc_real
+        double_interp3_forward_cplx_t doublefunc_cplx
+        double_interp3_forward_real_t doublefunc_real
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
@@ -477,10 +477,10 @@ def _interp3_table_per(
     if ck.ndim == 2:
         ck = ck[..., np.newaxis]
 
-    floatfunc_cplx = float_interp3_table1_complex_per
-    doublefunc_cplx = double_interp3_table1_complex_per
-    doublefunc_real = double_interp3_table1_real_per
-    floatfunc_real = float_interp3_table1_real_per
+    floatfunc_cplx = float_interp3_table1_complex_forward
+    doublefunc_cplx = double_interp3_table1_complex_forward
+    doublefunc_real = double_interp3_table1_real_forward
+    floatfunc_real = float_interp3_table1_real_forward
 
     tm = np.asfortranarray(tm)
     r_fm = np.asfortranarray(fm[:, 0].real)
@@ -603,10 +603,10 @@ def _interp3_table_adj(
         int L1 = Ld[0]
         int L2 = Ld[1]
         int L3 = Ld[2]
-        float_interp3_per_adj_cplx_t floatfunc_cplx
-        float_interp3_per_adj_real_t floatfunc_real
-        double_interp3_per_adj_cplx_t doublefunc_cplx
-        double_interp3_per_adj_real_t doublefunc_real
+        float_interp3_adj_cplx_t floatfunc_cplx
+        float_interp3_adj_real_t floatfunc_real
+        double_interp3_adj_cplx_t doublefunc_cplx
+        double_interp3_adj_real_t doublefunc_real
 
     fm = np.asarray(fm)  # from Matrix to array
     if fm.ndim == 1:
@@ -617,10 +617,10 @@ def _interp3_table_adj(
     if tm.dtype != h1.real.dtype:
         tm = tm.astype(h1.real.dtype)
 
-    floatfunc_cplx = float_interp3_table1_complex_per_adj
-    doublefunc_cplx = double_interp3_table1_complex_per_adj
-    doublefunc_real = double_interp3_table1_real_per_adj
-    floatfunc_real = float_interp3_table1_real_per_adj
+    floatfunc_cplx = float_interp3_table1_complex_adj
+    doublefunc_cplx = double_interp3_table1_complex_adj
+    doublefunc_real = double_interp3_table1_real_adj
+    floatfunc_real = float_interp3_table1_real_adj
 
     tm = np.asfortranarray(tm)
 

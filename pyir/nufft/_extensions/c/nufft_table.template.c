@@ -37,10 +37,10 @@ developed for the BSD-licensed PyWavelets project.
 
 
 /*
-* interp1_table1_complex_per()
+* interp1_table1_complex_forward()
 * 1D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp1_table1_complex_per)(
+void CAT(TYPE, _interp1_table1_complex_forward)(
 const TYPE * restrict r_ck, /* [K1,1] in */
 const TYPE * restrict i_ck,
 const int K1,
@@ -91,10 +91,10 @@ TYPE * restrict i_fm)
 
 
 /*
-* interp1_table1_real_per()
+* interp1_table1_real_forward()
 * 1D, 1st-order, real, periodic
 */
-void CAT(TYPE, _interp1_table1_real_per)(
+void CAT(TYPE, _interp1_table1_real_forward)(
 const TYPE * restrict r_ck, /* [K,1] in */
 const TYPE * restrict i_ck,
 const int K1,
@@ -141,7 +141,7 @@ TYPE * restrict i_fm)
 }
 
 
-void CAT(TYPE, _interp1_table1_complex_per_adj_inner)(
+void CAT(TYPE, _interp1_table1_complex_adj_inner)(
 TYPE * restrict r_ck,       /* [K1,1] out */
 TYPE * restrict i_ck,
 const int K1,
@@ -193,10 +193,10 @@ const TYPE * restrict i_fm)
 }
 
 /*
-* interp1_table1_complex_per_adj()
+* interp1_table1_complex_adj()
 * 1D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp1_table1_complex_per_adj)(
+void CAT(TYPE, _interp1_table1_complex_adj)(
 TYPE * restrict r_ck,   /* [K1,K2] in */
 TYPE * restrict i_ck,
 const int K1,
@@ -215,7 +215,7 @@ const int N)
 
     #pragma omp parallel for private(nn)
     for (nn=0; nn<N; nn++) {
-       CAT(TYPE, _interp1_table1_complex_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
+       CAT(TYPE, _interp1_table1_complex_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1,
                         r_h1, i_h1,
                         J1, L1,
@@ -225,7 +225,7 @@ const int N)
 }
 
 
-void CAT(TYPE, _interp1_table1_real_per_adj_inner)(
+void CAT(TYPE, _interp1_table1_real_adj_inner)(
 TYPE * restrict r_ck,       /* [K1,1] out */
 TYPE * restrict i_ck,
 const int K1,
@@ -274,10 +274,10 @@ const TYPE * restrict i_fm)
 }
 
 /*
-* interp1_table1_real_per_adj()
+* interp1_table1_real_adj()
 * 1D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp1_table1_real_per_adj)(
+void CAT(TYPE, _interp1_table1_real_adj)(
 TYPE * restrict r_ck,   /* [K1,K2] in */
 TYPE * restrict i_ck,
 const int K1,
@@ -295,7 +295,7 @@ const int N)
 
     #pragma omp parallel for private(nn)
     for (nn=0; nn<N; nn++) {
-       CAT(TYPE, _interp1_table1_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
+       CAT(TYPE, _interp1_table1_real_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1,
                         r_h1,
                         J1, L1,
@@ -305,7 +305,7 @@ const int N)
 }
 
 
-void CAT(TYPE, _interp2_table1_real_per_adj_inner)(
+void CAT(TYPE, _interp2_table1_real_adj_inner)(
 TYPE * restrict r_ck,       /* [K1,K2] out */
 TYPE * restrict i_ck,
 const int K1,
@@ -381,10 +381,10 @@ const TYPE * restrict i_fm)
 }
 
 /*
-* interp2_table1_real_per_adj()
+* interp2_table1_real_adj()
 * 2D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp2_table1_real_per_adj)(
+void CAT(TYPE, _interp2_table1_real_adj)(
 TYPE * restrict r_ck,   /* [K1,K2] in */
 TYPE * restrict i_ck,
 const int K1,
@@ -406,7 +406,7 @@ const int N)
 
     #pragma omp parallel for private(nn)
     for (nn=0; nn<N; nn++) {
-       CAT(TYPE, _interp2_table1_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
+       CAT(TYPE, _interp2_table1_real_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2,
                         r_h1, r_h2,
                         J1, J2, L1, L2,
@@ -416,7 +416,7 @@ const int N)
 }
 
 
-void CAT(TYPE, _interp2_table1_complex_per_adj_inner)(
+void CAT(TYPE, _interp2_table1_complex_adj_inner)(
 TYPE * restrict r_ck,       /* [K1,K2] out */
 TYPE * restrict i_ck,
 const int K1,
@@ -498,10 +498,10 @@ const TYPE * restrict i_fm)
 }
 
 /*
-* interp2_table1_complex_per_adj()
+* interp2_table1_complex_adj()
 * 2D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp2_table1_complex_per_adj)(
+void CAT(TYPE, _interp2_table1_complex_adj)(
 TYPE * restrict r_ck,   /* [K1,K2] in */
 TYPE * restrict i_ck,
 const int K1,
@@ -525,7 +525,7 @@ const int N)
 
     #pragma omp parallel for private(nn)
     for (nn=0; nn<N; nn++) {
-       CAT(TYPE, _interp2_table1_complex_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
+       CAT(TYPE, _interp2_table1_complex_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2,
                         r_h1, i_h1, r_h2, i_h2,
                         J1, J2, L1, L2,
@@ -536,10 +536,10 @@ const int N)
 
 
 /*
-* interp2_table1_real_per()
+* interp2_table1_real_forward()
 * 2D, 1st-order, real, periodic
 */
-void CAT(TYPE, _interp2_table1_real_per)(
+void CAT(TYPE, _interp2_table1_real_forward)(
 const TYPE * restrict r_ck, /* [K1,K2] in */
 const TYPE * restrict i_ck,
 const int K1,
@@ -622,10 +622,10 @@ TYPE * restrict i_fm)
 
 
 /*
-* interp2_table1_complex_per()
+* interp2_table1_complex_forward()
 * 2D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp2_table1_complex_per)(
+void CAT(TYPE, _interp2_table1_complex_forward)(
 const TYPE * restrict r_ck, /* [K1,K2] in */
 const TYPE * restrict i_ck,
 const int K1,
@@ -710,10 +710,10 @@ TYPE * restrict i_fm)
 
 
 /*
-* interp3_table1_complex_per()
+* interp3_table1_complex_forward()
 * 3D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp3_table1_complex_per)(
+void CAT(TYPE, _interp3_table1_complex_forward)(
 const TYPE * restrict r_ck, /* [K1,K2,K3] in */
 const TYPE * restrict i_ck,
 const int K1,
@@ -824,10 +824,10 @@ TYPE * restrict i_fm)
 
 
 /*
-* interp3_table1_real_per()
+* interp3_table1_real_forward()
 * 3D, 1st-order, real, periodic
 */
-void CAT(TYPE, _interp3_table1_real_per)(
+void CAT(TYPE, _interp3_table1_real_forward)(
 const TYPE * restrict r_ck, /* [K1,K2,K3] in */
 const TYPE * restrict i_ck,
 const int K1,
@@ -931,7 +931,7 @@ TYPE * restrict i_fm)
 }
 
 
-void CAT(TYPE, _interp3_table1_complex_per_adj_inner)(
+void CAT(TYPE, _interp3_table1_complex_adj_inner)(
 TYPE * restrict r_ck,       /* [K1,K2,K3] out */
 TYPE * restrict i_ck,
 const int K1,
@@ -1041,10 +1041,10 @@ const TYPE * restrict i_fm)
 
 
 /*
-* interp3_table1_complex_per_adj()
+* interp3_table1_complex_adj()
 * 3D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp3_table1_complex_per_adj)(
+void CAT(TYPE, _interp3_table1_complex_adj)(
 TYPE * restrict r_ck,   /* [K1,K2] in */
 TYPE * restrict i_ck,
 const int K1,
@@ -1073,7 +1073,7 @@ const int N)
 
     #pragma omp parallel for private(nn)
     for (nn=0; nn<N; nn++) {
-       CAT(TYPE, _interp3_table1_complex_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
+       CAT(TYPE, _interp3_table1_complex_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, K3,
                         r_h1, i_h1, r_h2, i_h2, r_h3, i_h3,
                         J1, J2, J3, L1, L2, L3,
@@ -1083,7 +1083,7 @@ const int N)
 }
 
 
-void CAT(TYPE, _interp3_table1_real_per_adj_inner)(
+void CAT(TYPE, _interp3_table1_real_adj_inner)(
 TYPE * restrict r_ck,       /* [K1,K2,K3] out */
 TYPE * restrict i_ck,
 const int K1,
@@ -1181,10 +1181,10 @@ const TYPE * restrict i_fm)
 }
 
 /*
-* interp3_table1_real_per_adj()
+* interp3_table1_real_adj()
 * 3D, 1st order, real, periodic
 */
-void CAT(TYPE, _interp3_table1_real_per_adj)(
+void CAT(TYPE, _interp3_table1_real_adj)(
 TYPE * restrict r_ck,   /* [K1,K2] in */
 TYPE * restrict i_ck,
 const int K1,
@@ -1210,7 +1210,7 @@ const int N)
 
     #pragma omp parallel for private(nn)
     for (nn=0; nn<N; nn++) {
-       CAT(TYPE, _interp3_table1_real_per_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
+       CAT(TYPE, _interp3_table1_real_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, K3,
                         r_h1, r_h2, r_h3,
                         J1, J2, J3, L1, L2, L3,

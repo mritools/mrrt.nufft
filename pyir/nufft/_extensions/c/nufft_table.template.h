@@ -28,10 +28,10 @@ developed for the BSD-licensed PyWavelets project.
 #endif
 
 /*
-* interp1_table1_complex_per()
+* interp1_table1_complex_forward()
 * 1D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp1_table1_complex_per)(
+void CAT(TYPE, _interp1_table1_complex_forward)(
     const TYPE *r_ck, /* [K1,1] in */
     const TYPE *i_ck,
     const int K1,
@@ -45,10 +45,10 @@ void CAT(TYPE, _interp1_table1_complex_per)(
     TYPE *i_fm);
 
 /*
-* interp1_table1_real_per()
+* interp1_table1_real_forward()
 * 1D, 1st-order, real, periodic
 */
-void CAT(TYPE, _interp1_table1_real_per)(
+void CAT(TYPE, _interp1_table1_real_forward)(
     const TYPE *r_ck, /* [K,1] in */
     const TYPE *i_ck,
     const int K1,
@@ -62,10 +62,10 @@ void CAT(TYPE, _interp1_table1_real_per)(
 
 
 /*
-* interp1_table1_complex_per_adj()
+* interp1_table1_complex_adj()
 * 1D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp1_table1_complex_per_adj)(
+void CAT(TYPE, _interp1_table1_complex_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
     TYPE *i_ck,
     const int K1,
@@ -81,10 +81,10 @@ void CAT(TYPE, _interp1_table1_complex_per_adj)(
 
 
 /*
-* interp1_table1_real_per_adj()
+* interp1_table1_real_adj()
 * 1D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp1_table1_real_per_adj)(
+void CAT(TYPE, _interp1_table1_real_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
     TYPE *i_ck,
     const int K1,
@@ -98,10 +98,10 @@ void CAT(TYPE, _interp1_table1_real_per_adj)(
     const int N);
 
 /*
-* interp2_table1_real_per_adj()
+* interp2_table1_real_adj()
 * 2D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp2_table1_real_per_adj)(
+void CAT(TYPE, _interp2_table1_real_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
     TYPE *i_ck,
     const int K1,
@@ -120,10 +120,10 @@ void CAT(TYPE, _interp2_table1_real_per_adj)(
 
 
 /*
-* interp2_table1_complex_per_adj()
+* interp2_table1_complex_adj()
 * 2D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp2_table1_complex_per_adj)(
+void CAT(TYPE, _interp2_table1_complex_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
     TYPE *i_ck,
     const int K1,
@@ -143,10 +143,10 @@ void CAT(TYPE, _interp2_table1_complex_per_adj)(
     const int N);
 
 /*
-* interp2_table1_real_per()
+* interp2_table1_real_forward()
 * 2D, 1st-order, real, periodic
 */
-void CAT(TYPE, _interp2_table1_real_per)(
+void CAT(TYPE, _interp2_table1_real_forward)(
     const TYPE *r_ck, /* [K1,K2] in */
     const TYPE *i_ck,
     const int K1,
@@ -164,10 +164,10 @@ void CAT(TYPE, _interp2_table1_real_per)(
 
 
 /*
-* interp2_table1_complex_per()
+* interp2_table1_complex_forward()
 * 2D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp2_table1_complex_per)(
+void CAT(TYPE, _interp2_table1_complex_forward)(
     const TYPE *r_ck, /* [K1,K2] in */
     const TYPE *i_ck,
     const int K1,
@@ -186,10 +186,10 @@ void CAT(TYPE, _interp2_table1_complex_per)(
     TYPE *i_fm);
 
 /*
-* interp3_table1_complex_per()
+* interp3_table1_complex_forward()
 * 3D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp3_table1_complex_per)(
+void CAT(TYPE, _interp3_table1_complex_forward)(
     const TYPE *r_ck, /* [K1,K2,K3] in */
     const TYPE *i_ck,
     const int K1,
@@ -213,10 +213,10 @@ void CAT(TYPE, _interp3_table1_complex_per)(
     TYPE *i_fm);
 
 /*
-* interp3_table1_real_per()
+* interp3_table1_real_forward()
 * 3D, 1st-order, real, periodic
 */
-void CAT(TYPE, _interp3_table1_real_per)(
+void CAT(TYPE, _interp3_table1_real_forward)(
     const TYPE *r_ck, /* [K1,K2,K3] in */
     const TYPE *i_ck,
     const int K1,
@@ -237,10 +237,10 @@ void CAT(TYPE, _interp3_table1_real_per)(
     TYPE *i_fm);
 
 /*
-* interp3_table1_complex_per_adj()
+* interp3_table1_complex_adj()
 * 3D, 1st order, complex, periodic
 */
-void CAT(TYPE, _interp3_table1_complex_per_adj)(
+void CAT(TYPE, _interp3_table1_complex_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
     TYPE *i_ck,
     const int K1,
@@ -265,10 +265,10 @@ void CAT(TYPE, _interp3_table1_complex_per_adj)(
     const int N);
 
 /*
-* interp3_table1_real_per_adj()
+* interp3_table1_real_adj()
 * 3D, 1st order, real, periodic
 */
-void CAT(TYPE, _interp3_table1_real_per_adj)(
+void CAT(TYPE, _interp3_table1_real_adj)(
     TYPE *r_ck,   /* [K1,K2] in */
     TYPE *i_ck,
     const int K1,

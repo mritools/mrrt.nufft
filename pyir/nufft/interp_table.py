@@ -11,9 +11,9 @@ thread conflicts.
 """
 import numpy as np
 
-from ._extensions._nufft_table import (_interp1_table_per,
-                                       _interp2_table_per,
-                                       _interp3_table_per,
+from ._extensions._nufft_table import (_interp1_table_forward,
+                                       _interp2_table_forward,
+                                       _interp3_table_forward,
                                        _interp1_table_adj,
                                        _interp2_table_adj,
                                        _interp3_table_adj)
@@ -37,7 +37,7 @@ def interp1_table(ck, h1, J1, L1, tm):
 
     J1 = int(J1)
     L1 = int(L1)
-    fm = _interp1_table_per(ck, K1, h1, J1, L1, tm, M, N)
+    fm = _interp1_table_forward(ck, K1, h1, J1, L1, tm, M, N)
     return fm
 
 
@@ -94,7 +94,7 @@ def interp2_table(ck, h1, h2, Jd, Ld, tm):
     if not tm.shape == (M, 2):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx2")
 
-    fm = _interp2_table_per(ck, Kd, h1, h2, Jd, Ld, tm, M, N)
+    fm = _interp2_table_forward(ck, Kd, h1, h2, Jd, Ld, tm, M, N)
     return fm
 
 
@@ -164,7 +164,7 @@ def interp3_table(ck, h1, h2, h3, Jd, Ld, tm):
     if not tm.shape == (M, 3):  # (M != tm.shape[0]) | (2 != tm.shape[1]):
         raise ValueError("tm must be Mx3")
 
-    fm = _interp3_table_per(ck, Kd, h1, h2, h3, Jd, Ld, tm, M, N)
+    fm = _interp3_table_forward(ck, Kd, h1, h2, h3, Jd, Ld, tm, M, N)
     return fm
 
 
