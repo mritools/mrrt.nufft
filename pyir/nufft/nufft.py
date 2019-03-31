@@ -59,8 +59,8 @@ from pyir.utils import have_cupy
 if have_cupy:
     import cupy
     import cupyx.scipy.sparse
-    from pyir.cuda.CUDA_MRI_cupy import (default_device,
-                                         get_1D_block_table_gridding)
+    from pyir.cuda.cuda_utils import (default_device,
+                                      get_1D_block_table_gridding)
 
 
 __all__ = ['NufftBase', 'nufft_adj', 'nufft_forward', 'nufft_adj_exact',
