@@ -43,24 +43,18 @@ from pyir.nufft.interp_table import (interp1_table,
 
 from pyir.nufft.simple_kernels import _scale_tri
 
-from pyir.utils import (fftn,
-                        ifftn,
-                        outer_sum,
-                        complexify,
-                        is_string_like,
-                        reale,
-                        profile,
-                        get_data_address)
+from ._fft_cpu import fftn, ifftn
 
 from ._kernels import NufftKernel
-from pyir.utils._cupy import get_array_module
+from .nufft_utils import (get_array_module, reale, profile, is_string_like,
+                          get_data_address, complexify)
+from . import config
 
-from pyir.utils import have_cupy
-if have_cupy:
+if config.have_cupy:
     import cupy
     import cupyx.scipy.sparse
-    from pyir.cuda.cuda_utils import (default_device,
-                                      get_1D_block_table_gridding)
+    from ._cupy import (default_device,
+                        get_1D_block_table_gridding)
 
 
 __all__ = ['NufftBase', 'nufft_adj', 'nufft_forward', 'nufft_adj_exact',
@@ -118,20 +112,20 @@ class NufftBase(object):
         Nd : array-like
             Shape of the Cartesian grid in the spatial domain.
         om : array
-            non-Cartesian sampling frequencies
+            Non-Cartesian sampling frequencies.
         J : int or array-like, optional
-            size of the NUFFT kernel on each axis
+            Size of the NUFFT kernel on each axis
         Kd : array-like, optional
             Oversampled cartesian grid size (default = 2*Nd)
         Ld : array-like, optional
             When ``mode != 'sparse'``, this controls the size of the kernel
             lookup table used.   (size will be ``J[i]*Ld[i]`` for axis i).
         precision : {'single', 'double'}, optional
-            precision of the NUFFT operations
+            Precision of the NUFFT operations.
         kernel_type : {'kb:beatty', ...}, optional
             The type of gridding kernel to use.  'kb:beatty' is near optimal in
             most cases and works well for grid oversampling factors
-            substantially less than 2.
+             substantially less than 2.
         mode : {'sparse', 'table'}, optional
             The NUFFT implementation to use.  ``sparse`` corresponds to
             precomputation of a sparse matrix corresponding to the operation.
@@ -220,7 +214,7 @@ class NufftBase(object):
                                   Kd=self.Kd,
                                   n_mid=self.n_mid,
                                   **kernel_kwargs)
-        self._calc_scaling()  # [(Nd)]  scaling factors
+        self._calc_scaling()
         self.M = 0
         if self.om is not None:
             self.M = self.om.shape[0]
@@ -230,8 +224,10 @@ class NufftBase(object):
             self.__n_shift = n_shift
         if (self.ndim != len(self.Jd)) or (self.ndim != len(self.Kd)):
             raise ValueError("Inconsistent Dimensions")
+
         # set the phase to be applied if self.phasing=='real'
         self._set_phase_funcs()
+
         self.gram = None  # TODO
         self._update_array__precision()
         self._make_arrays_contiguous(order='F')
@@ -275,7 +271,7 @@ class NufftBase(object):
             self._init_gpu()
 
     def _init_gpu(self):
-        from pyir.cuda.autoinit_cupy import _get_gridding_funcs
+        from pyir.cuda.autoinit import _get_gridding_funcs
         M = self.om.shape[0]
         if not len(np.unique(self.Jd)):
             raise ValueError(

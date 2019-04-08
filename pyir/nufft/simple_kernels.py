@@ -45,12 +45,12 @@ def nufft_gauss(J=6, sig=None, xp=np):
 
     def kernel(k, J=J, sig=sig):
         """Gaussian kernel"""
-        return xp.exp(-(k/sig)**2/2.) * (abs(k) < J/2.)
+        return xp.exp(-(k / sig)**2 / 2.) * (abs(k) < J / 2.)
 
     def kernel_ft(t, sig=sig):
         """FT of Gaussian kernel"""
-        tmp = sqrt(2*xp.pi)
-        return sig*tmp*xp.exp(-xp.pi * (t * sig * tmp)**2)
+        tmp = sqrt(2 * xp.pi)
+        return sig * tmp * xp.exp(-xp.pi * (t * sig * tmp)**2)
 
     return kernel, kernel_ft
 
@@ -140,7 +140,7 @@ def nufft_best_gauss(J, K_N=2, sn_type='ft', xp=np):
 
 
 def linear_kernel(k, J):
-    return (1 - abs(k/(J/2.))) * (abs(k) < J/2.)
+    return (1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
 
 
 def _scale_tri(N, J, K, n_mid, xp=np):
@@ -166,9 +166,9 @@ def _scale_tri(N, J, K, n_mid, xp=np):
 
 
 def cos3diric_kernel(k, J, xp=np):
-    from pyir.utils import diric
-    tmp = 2*xp.pi*k/J
-    return diric(tmp, J) * xp.cos(tmp/2.)**3
+    from scipy.special import diric
+    tmp = 2 * xp.pi * k / J
+    return diric(tmp, J) * xp.cos(tmp / 2.)**3
 
 
 def nufft_diric(k, N, K, use_true_diric=False, xp=np):
@@ -212,7 +212,7 @@ def nufft_diric(k, N, K, use_true_diric=False, xp=np):
 
 def _diric_kernel(k, J, N):
     d = nufft_diric(k, N, N, use_true_diric=True)
-    return d * (abs(k) < J/2.)
+    return d * (abs(k) < J / 2.)
 
 
 def get_diric_kernel(N):

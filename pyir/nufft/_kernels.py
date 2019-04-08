@@ -18,13 +18,10 @@ import functools
 
 import numpy as np
 
-from pyir.nufft._kaiser_bessel import kaiser_bessel
-
-from pyir.nufft.nufft_utils import to_1d_int_array
-
-from pyir.nufft.simple_kernels import nufft_diric
-
-from pyir.utils import is_string_like
+from ._kaiser_bessel import kaiser_bessel
+from .nufft_utils import to_1d_int_array
+from .simple_kernels import nufft_diric
+from .nufft_utils import is_string_like
 
 __all__ = ['NufftKernel', ]
 
@@ -193,7 +190,7 @@ class NufftKernel(object):
                 J = self.params['Jd'][d]
             else:
                 J = 1
-            x = np.linspace(-J/2, J/2, 1001)
+            x = np.linspace(-J / 2, J / 2, 1001)
 
             y = self.kernel[d](x)
             if real_imag:
@@ -202,7 +199,7 @@ class NufftKernel(object):
             else:
                 axes[d].plot(x, np.abs(y), 'k-', label='magnitude')
             if d == self.ndim - 1:
-                axes[d].xaxis.set_ticks([-J/2, J/2])
+                axes[d].xaxis.set_ticks([-J / 2, J / 2])
                 axes[d].xaxis.set_ticklabels(['-J/2', 'J/2'])
             axes[d].set_ylabel('kernel amplitude, axis {}'.format(d))
             axes[d].set_title(title_text)
@@ -211,6 +208,13 @@ class NufftKernel(object):
         return axes
 
     def __repr__(self):
+        repstr = "NufftKernel({}, ".format(self.kernel_type)
+        for k, v in self.params.items():
+            repstr += ", {}={}".format(k, v)
+        repstr += ')'
+        return repstr
+
+    def __str__(self):
         repstr = "kernel type: {}\n".format(self.kernel_type)
         repstr += "kernel dimensions: {}\n".format(self.ndim)
         if 'kb:' in self.kernel_type:

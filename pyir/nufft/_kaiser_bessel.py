@@ -26,8 +26,9 @@ from __future__ import division, print_function, absolute_import
 import warnings
 import numpy as np
 from scipy.special import iv, jv, i0, j0
-from pyir.utils import reale, get_array_module, have_cupy, profile
-if have_cupy:
+from .nufft_utils import get_array_module, reale, profile
+from . import config
+if config.have_cupy:
     from cupyx.scipy.special import j0 as j0_cupy, i0 as i0_cupy
 
 __all__ = ['kaiser_bessel', 'kaiser_bessel_ft']

@@ -1,16 +1,149 @@
 from __future__ import division, print_function, absolute_import
 
+import sys
 import warnings
 
 import numpy as np
-from pyir.utils._cupy import get_array_module
-from pyir.utils import profile
+from . import config
+if config.have_cupy:
+    import cupy
 
-__all__ = ['_nufft_samples',
-           '_nufft_interp_zn',
-           '_nufft_offset',
-           'to_1d_int_array',
-           ]
+
+__all__ = ['get_array_module', 'profile', 'reale', 'is_string_like',
+           'get_data_address', 'complexify', 'outer_sum']
+
+
+"""
+@profile decorator that does nothing when line profiler is not active
+
+see:
+http://stackoverflow.com/questions/18229628/python-profiling-using-line-profiler-clever-way-to-remove-profile-statements
+"""
+try:
+    if sys.version_info[0] >= 3:
+        import builtins
+        profile = builtins.__dict__['profile']
+    else:
+        import __builtin__
+        profile = __builtin__.profile
+except (AttributeError, KeyError):
+    # No line profiler, provide a pass-through version
+    def profile(func):
+        return func
+
+
+# from John Hunter's matplotlib
+def is_string_like(obj):
+    """Check if obj is string."""
+    try:
+        obj + ''
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def get_array_module(arr, xp=None):
+    """ Check if the array is a cupy GPU array and return the array module.
+
+    Paramters
+    ---------
+    arr : numpy.ndarray or cupy.core.core.ndarray
+        The array to check.
+
+    Returns
+    -------
+    array_module : python module
+        This will be cupy when on_gpu is True and numpy otherwise.
+    on_gpu : bool
+        Boolean indicating whether the array is on the GPU.
+    """
+    if xp is None:
+        if config.have_cupy:
+            xp = cupy.get_array_module(arr)
+            return xp, (xp != np)
+        else:
+            return np, False
+    else:
+        return xp, (xp != np)
+
+
+def get_data_address(x):
+    """Returns memory address where a numpy or cupy array's data is stored."""
+    if hasattr(x, '__array_interface__'):
+        ptr_x = x.__array_interface__['data'][0]
+    elif hasattr(x, '__cuda_array_interface__'):
+        ptr_x = x.__cuda_array_interface__['data'][0]
+    else:
+        raise ValueError(
+            "Input must have an __array_interface__ or "
+            "__cuda_array_interface__ attribute.")
+    return ptr_x
+
+
+def complexify(x, complex_dtype=None, xp=None):
+    """Promote to complex if real input was provided.
+
+    Parameters
+    ----------
+    x : array-like
+        The array to convert
+    complex_dtype : np.complex64, np.complex128 or None
+        The dtype to use.  If None, the dtype used will be the one returned by
+        ``np.result_tupe(x.dtype, np.complex64)``.
+
+    Returns
+    -------
+    xc : array-like
+        Complex-valued x.
+    """
+    xp, on_gpu = get_array_module(x, xp)
+    x = xp.asarray(x)
+
+    if xp.iscomplexobj(x) and (x.dtype == complex_dtype):
+        return x
+
+    if complex_dtype is None:
+        # determine complex datatype to use based on numpy's promotion rules
+        complex_dtype = xp.result_type(x.dtype, xp.complex64)
+
+    return xp.asarray(x, dtype=complex_dtype)
+
+
+def outer_sum(xx=None, yy=None, conjugate_y=False, squeeze_output=True,
+              xp=None):
+    """ outer_sum xx + yy.
+
+    Parameters
+    ----------
+    xx : xp.ndarray
+        n-dimensional array. will have a new axis appended.
+    yy : xp.ndarray
+        1d array.  will have xx.ndim new axes prepended
+    conjugate_y : bool, optional
+        If true, use the complex conjugate of yy.
+    squeeze_output : bool, optional
+        If true, squeeze any singleton dimensions in the output.
+
+    Returns
+    -------
+    ss : xp.ndarray
+        outer sum  (produced via numpy broadcating).
+        ``ss.shape = xx.shape + (yy.size, )``
+    """
+    if xp is None:
+        xp, on_gpu = get_array_module(xx)
+    xx = xp.atleast_1d(xx)
+    yy = xp.atleast_1d(yy)
+    if conjugate_y:
+        yy = yy.conj()
+    if (yy.ndim != 1):
+        raise ValueError("yy must be a 1D vector")
+    for d in range(xx.ndim):
+        yy = yy[xp.newaxis, ...]
+    ss = xx[..., xp.newaxis] + yy
+    if squeeze_output:
+        ss = xp.squeeze(ss)
+    return ss
 
 
 @profile
@@ -236,3 +369,62 @@ def to_1d_int_array(arr, n=None, dtype_out=np.intp, xp=None):
                     "array did not have the expected size of {}".format(n))
 
     return arr.astype(dtype_out)
+
+
+def reale(x, com='error', tol=None, msg=None, xp=None):
+    """Return real part of complex data (with error checking).
+
+    Parameters
+    ----------
+    x : array-like
+        The data to check.
+    com : {'warn', 'error', 'display', 'report'}
+        Control rather to raise a warning, an error, or to just display to the
+        console.  If `com == 'report'`, the relative magnitude of the imaginary
+        component is printed to the console.
+    tol : float or None
+        Allow complex values below `tol` in magnitude.  If `None`, `tol` will
+        be 1000*eps.
+    msg : str or None
+        Additional message to print upon encountering complex values.
+
+    Notes
+    -----
+    based on Matlab routine by Jeff Fessler, University of Michigan
+    """
+    xp, on_gpu = get_array_module(x, xp)
+    if not xp.iscomplexobj(x):
+        return x
+
+    if tol is None:
+        tol = 1000 * xp.finfo(x.dtype).eps
+
+    if com not in ['warn', 'error', 'display', 'report']:
+        raise ValueError(
+            ("Bad com: {}.  It must be one of {'warn', 'error', 'display', "
+             "'report'}").format(com))
+
+    max_abs_x = xp.max(xp.abs(x))
+    if max_abs_x == 0:
+        if xp.any(xp.abs(xp.imag(x)) > 0):
+            raise RuntimeError("max real 0, but imaginary!")
+        else:
+            return xp.real(x)
+
+    # TODO: CuPy has a bug on trying to access the .imag attribute on real-valued arrays
+    frac = xp.max(xp.abs(x.imag)) / max_abs_x
+    if com == 'report':
+        print('imaginary part %g%%' % frac * 100)
+
+    if frac > tol:
+        t = 'imaginary fraction of x is %g (tol=%g)' % (frac, tol)
+        if msg is not None:
+            t += '\n' + msg
+        if com == 'display':
+            print(t)
+        elif com == 'warn':
+            warnings.warn(t)
+        else:
+            raise RuntimeError(t)
+
+    return xp.real(x)

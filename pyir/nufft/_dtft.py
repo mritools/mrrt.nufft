@@ -9,7 +9,7 @@ originally developed by Jeff Fessler and his students.
 from __future__ import division, print_function, absolute_import
 
 import numpy as np
-from pyir.utils._cupy import get_array_module
+from .nufft_utils import get_array_module
 
 __all__ = ['dtft', 'dtft_adj']
 
