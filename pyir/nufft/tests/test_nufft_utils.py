@@ -26,6 +26,7 @@ if have_cupy:
 else:
     all_xp = [np, ]
 
+# data generated using Jeff Fessler's Michigan image reconstruction toolbox
 pkg_dir = os.path.dirname(os.path.realpath(pyir.nufft.__file__))
 data_dir = pjoin(pkg_dir, 'tests', 'data')
 
