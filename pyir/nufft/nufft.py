@@ -979,17 +979,7 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
             xk = xp.reshape(xk, tuple(np.hstack((obj.Kd, nc))), order='F')
             x = interp3_table(xk, obj.h[0], obj.h[1], obj.h[2], *arg)
         else:
-            raise ValueError('dimensions > 3d not done')
-
-        # save_testdata = False
-        # if save_testdata:
-        #     if ndim == 1:
-        #         np.savez('table1d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
-        #     elif ndim == 2:
-        #         np.savez('table2d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
-        #     elif ndim == 3:
-        #         np.savez('table3d_forward_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
-
+            raise NotImplementedError('dimensions > 3 not implemented')
     else:
         x = xp.zeros((obj.M, xk.shape[-1]), dtype=obj._cplx_dtype, order='F')
         nreps = x.shape[-1]
@@ -1097,17 +1087,7 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
         elif ndim == 3:
             xk = interp3_table_adj(x, obj.h[0], obj.h[1], obj.h[2], *arg)
         else:
-            raise ValueError('> 3d not done')
-
-        # save_testdata = False
-        # if save_testdata:
-        #     if ndim == 1:
-        #         np.savez('table1d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
-        #     elif ndim == 2:
-        #         np.savez('table2d_adj_data.npz', Xk=xk, X=x, h0=obj.h[0], h1=obj.h[1], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
-        #     elif ndim == 3:
-        #         np.savez('table3d_adj_data.npz', Xk=xk, X=X, h0=obj.h[0], h1=obj.h[1], h2=obj.h[2], Jd=obj.Jd, Ld=obj.Ld, tm=tm)
-
+            raise NotImplementedError('dimensions > 3 not implemented')
     else:
         # kern_forward(block, grid, (ck, h1, tm, fm))
         nreps = x.shape[-1]
