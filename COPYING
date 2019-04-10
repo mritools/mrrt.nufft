@@ -1,23 +1,61 @@
-pyir.nufft was developed by Gregory R. Lee. It is in large part a translation
-of the Matlab-based NUFFT implementation found in the Michigan Image
-Reconstruction Toolbox created by Jeff Fessler and his students. The original
-Matlab toolbox is available from http://web.eecs.umich.edu/~fessler/code/.
+Copyright (c)  2012-2019 Gregory R. Lee
+All rights reserved.
 
-Original license for the Matlab code by Jeff Fessler and his students
----------------------------------------------------------------------
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
 
-License (as stated at: http://web.eecs.umich.edu/~fessler/code/)
+    * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+       copyright notice, this list of conditions and the following
+       disclaimer in the documentation and/or other materials provided
+       with the distribution.
+
+    * Neither the name of the dipy developers nor the names of any
+       contributors may be used to endorse or promote products derived
+       from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+pyir.nufft builds upon some compatibly licensed 3rd party code:
+
+1.) Code for handling compilation flags (e.g. for OpenMP) when building C
+    extensions is adapted from DIPY.
+
+    Name: DIPY (http://nipy.org/dipy/)
+    Files:  setup.py, setup_helpers.py
+    License: 3-clause BSD
+
+
+2.) The CPU implementation is in large part a translation of the Matlab-based
+    NUFFT implementation found in the Michigan Image Reconstruction Toolbox
+    created by Jeff Fessler and his students. The original Matlab toolbox is
+    available from
+    http://web.eecs.umich.edu/~fessler/code/.
+
+    Michigan Image Reconstruction Toolbox license:
+      (as stated at: http://web.eecs.umich.edu/~fessler/code/)
 
     You may freely use and distribute this software as long as you retain the
     author's name (myself and/or my students) with the software.
     It would also be courteous for you to cite the toolbox and any related
     publications in any papers that present results based on this software.
     UM and the authors make all the usual disclaimers about liability etc.
-    If you make changes to any files, then please change the file name before redistributing to avoid confusion (like the GNU software license). Better
+    If you make changes to any files, then please change the file name before
+    redistributing to avoid confusion (like the GNU software license). Better
     yet, email me the changes and I'll consider incorporating them into the
     toolbox.
-
-License
-=======
-pyir.nufft is made available under a BSD license.
-
