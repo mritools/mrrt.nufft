@@ -47,7 +47,7 @@ from ._fft_cpu import fftn, ifftn
 
 from ._kernels import NufftKernel
 from .nufft_utils import (get_array_module, reale, profile, is_string_like,
-                          get_data_address, complexify)
+                          get_data_address, complexify, outer_sum)
 from . import config
 
 if config.have_cupy:
@@ -271,7 +271,7 @@ class NufftBase(object):
             self._init_gpu()
 
     def _init_gpu(self):
-        from pyir.cuda.autoinit import _get_gridding_funcs
+        from pyir.nufft.cuda.cupy import _get_gridding_funcs
         M = self.om.shape[0]
         if not len(np.unique(self.Jd)):
             raise ValueError(
@@ -310,7 +310,7 @@ class NufftBase(object):
         """Return the ndarray backend being used."""
         # Do not store the module as an attribute so pickling is possible.
         if self.__on_gpu:
-            if not have_cupy:
+            if not config.have_cupy:
                 raise ValueError(
                     "cupy is required for the GPU implementation.")
             return cupy
