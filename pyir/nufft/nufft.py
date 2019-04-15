@@ -55,6 +55,9 @@ if config.have_cupy:
     import cupyx.scipy.sparse
     from ._cupy import (default_device,
                         get_1D_block_table_gridding)
+    from cupyx.scipy import fftpack as cupy_fftpack
+    cupy_fftn = cupy_fftpack.fftn
+    cupy_ifftn = cupy_fftpack.ifftn
 
 
 __all__ = ['NufftBase', 'nufft_adj', 'nufft_forward', 'nufft_adj_exact',
@@ -679,7 +682,7 @@ class NufftBase(object):
             self.sn = self.sn.ravel()  # [(Nd)]
 
     @profile
-    def _init_sparsemat(self):
+    def _init_sparsemat(self, highmem=False):
         """Initialize structure for n-dimensional NUFFT using Sparse matrix
         multiplication.
         """
@@ -792,6 +795,11 @@ class NufftBase(object):
             # TODO: fix bug in Cupy.
             #       For now, we do the conversion via the CPU.
             self.p = cupyx.scipy.sparse.csc_matrix(self.p.get().tocsc())
+            if highmem:
+                self.p_csr = cupyx.scipy.sparse.csr_matrix(
+                    self.p.get().tocsr())
+            else:
+                self.p_csr = None
         else:
             self.p = self.p.tocsc()
 
@@ -1238,7 +1246,8 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
     if xp == np:
         xk = fftn(x, tuple(Kd), axes=range(x.ndim - 1))
     else:
-        xk = xp.fft.fftn(x, tuple(Kd), axes=tuple(range(x.ndim - 1)))
+        xk = cupy_fftn(x, tuple(Kd), axes=tuple(range(x.ndim - 1)),
+                       overwrite_x=True)
 
     if obj.phase_before is not None:
         xk *= obj.phase_before[..., xp.newaxis]
@@ -1259,11 +1268,17 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
             # COO->CSC/CSR conversion that causes issues
             # can avoid by calling cusparse.csrmv directly
 
-            # obj.p is CSC so use obj.p.T with transa=True to due a CSR multiplication
-            if xk.ndim == 1:
-                x = cupy.cusparse.csrmv(obj.p.T, xk, transa=True)  # [*Kd, *L]
+            # obj.p is CSC so use obj.p.T with transa=True to do a CSR multiplication
+            if obj.p_csr is not None:
+                if xk.ndim == 1:
+                    x = cupy.cusparse.csrmv(obj.p_csr, xk, transa=False)  # [*Kd, *L]
+                else:
+                    x = cupy.cusparse.csrmm(obj.p_csr, xk, transa=False)
             else:
-                x = cupy.cusparse.csrmm(obj.p.T, xk, transa=True)
+                if xk.ndim == 1:
+                    x = cupy.cusparse.csrmv(obj.p.T, xk, transa=True)  # [*Kd, *L]
+                else:
+                    x = cupy.cusparse.csrmm(obj.p.T, xk, transa=True)
 
     x = xp.reshape(x, (obj.M, L), order='F')
 
@@ -1400,7 +1415,8 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
     if xp == np:
         x = ifftn(xk_all, axes=range(xk_all.ndim - 1))
     else:
-        x = xp.fft.ifftn(xk_all, axes=tuple(range(xk_all.ndim - 1)))
+        x = cupy_ifftn(xk_all, axes=tuple(range(xk_all.ndim - 1)),
+                       overwrite_x=True)
 
     # eliminate zero padding from ends
     subset_slices = tuple([slice(d) for d in Nd] + [slice(None), ])
