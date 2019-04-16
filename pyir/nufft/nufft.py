@@ -1201,7 +1201,7 @@ def _nufft_table_make1(
 
 
 @profile
-def nufft_forward(obj, x, copy_x=True, xp=None):
+def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
     """ Forward NUFFT (image-space to k-space).
 
     Parameters
@@ -1225,7 +1225,11 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
     try:
         # collapse all excess dimensions into just one
         data_address_in = get_data_address(x)
-        x = x.reshape(list(Nd) + [-1, ], order='F')
+        if grid_only:
+            # x = x.reshape(list(Kd) + [-1, ], order='F')
+            x = x.reshape((np.prod(Kd), -1), order='F')
+        else:
+            x = x.reshape(list(Nd) + [-1, ], order='F')
     except:
         raise ValueError('input signal has wrong size')
 
@@ -1237,25 +1241,30 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
         x = x.copy(order='A')
 
     L = x.shape[-1]
-    #
-    # the usual case is where L=1, i.e., there is just one input signal.
-    #
-    if obj.sn is not None:
-        x *= obj.sn[..., xp.newaxis]		# scaling factors
-    # TODO: cache FFT plans
-    if xp == np:
-        xk = fftn(x, tuple(Kd), axes=range(x.ndim - 1))
+    
+    if not grid_only:
+        #
+        # the usual case is where L=1, i.e., there is just one input signal.
+        #
+        if obj.sn is not None:
+            x *= obj.sn[..., xp.newaxis]		# scaling factors
+        # TODO: cache FFT plans
+        if xp == np:
+            xk = fftn(x, tuple(Kd), axes=range(x.ndim - 1))
+        else:
+            xk = cupy_fftn(x, tuple(Kd), axes=tuple(range(x.ndim - 1)),
+                           overwrite_x=True)
+    
+        if obj.phase_before is not None:
+            xk *= obj.phase_before[..., xp.newaxis]
+        xk = xk.reshape((np.prod(Kd), L), order='F')
+    
+        if obj.ortho:
+            xk /= obj.scale_ortho
     else:
-        xk = cupy_fftn(x, tuple(Kd), axes=tuple(range(x.ndim - 1)),
-                       overwrite_x=True)
+        xk = x
 
-    if obj.phase_before is not None:
-        xk *= obj.phase_before[..., xp.newaxis]
-    xk = xk.reshape((np.prod(Kd), L), order='F')
-
-    if obj.ortho:
-        xk /= obj.scale_ortho
-
+    
     if 'table' in obj.mode:
         # interpolate via tabulated interpolator
         x = obj.interp_table(obj, xk)
@@ -1281,6 +1290,8 @@ def nufft_forward(obj, x, copy_x=True, xp=None):
                     x = cupy.cusparse.csrmm(obj.p.T, xk, transa=True)
 
     x = xp.reshape(x, (obj.M, L), order='F')
+    if grid_only:
+        return x
 
     if obj.phase_after is not None:
         x *= obj.phase_after[:, None]  # broadcast rather than np.tile
@@ -1346,7 +1357,8 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
 
 
 @profile
-def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
+def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False,
+              xp=None):
     """Adjoint NUFFT (k-space to image-space).
 
     Parameters
@@ -1397,9 +1409,14 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, xp=None):
             # COO->CSC/CSR conversion that causes issues
             # can avoid by calling cusparse.csrmv directly
             if xk.ndim == 1:
-                xk_all = cupy.cusparse.csrmv(obj.p.H, xk, transa=False)  # [*Kd, *L]
+                # xk_all will have shape [*Kd, *L]
+                xk_all = cupy.cusparse.csrmv(obj.p.H, xk, transa=False)
             else:
                 xk_all = cupy.cusparse.csrmm(obj.p.H, xk, transa=False)
+
+    if grid_only:
+        # return raw gridded samples prior to FFT and truncation
+        return xk_all
 
     # x = xp.zeros(tuple(Kd) + (nrepetitions,), dtype=xk.dtype)
 
