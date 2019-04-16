@@ -1,0 +1,112 @@
+{% include grid_includes_template %}
+
+{% if complex_kernel == True %}
+    {% set funcstr = 'complex' %}
+{% else %}
+    {% set funcstr = 'real' %}
+{% endif %}
+
+{% if real_type == 'float' %}
+    {% set complex_type = 'complex<float>' %}
+{% else %}
+    {% set complex_type = 'complex<double>' %}
+{% endif %}
+
+/*
+ * interp2_table{{order}}_{{funcstr}}_{{real_type}}_per_adj()
+ * adjoint 2D, order={{order}}, {{funcstr}}, periodic, {{real_type}} precision
+ */
+
+extern "C" __global__
+void interp2_table{{order}}_{{funcstr}}_{{real_type}}_per_adj_GPUkernel(
+        {{complex_type}} * __restrict__ ck,      /* [{{K1}},{{K2}}] out */
+        {% if complex_kernel == True %}
+        const {{complex_type}} * __restrict__ h1,    /* [{{J}}*{{L}}+1,1] in */
+        const {{complex_type}} * __restrict__ h2,    /* [{{J}}*{{L}}+1,1] in */
+        {% else %}
+        const {{real_type}} * __restrict__ h1,   /* [{{J}}*{{L}}+1,1] in */
+        const {{real_type}} * __restrict__ h2,   /* [{{J}}*{{L}}+1,1] in */
+        {% endif %}
+        const {{real_type}} * __restrict__ p_tm,  /* [{{M}},2] in */
+        const {{complex_type}} * __restrict__ fm)    /* [{{M}},1] in */
+{
+    /* trick: shift table pointer to center */
+    h1 += {{ncenter}};
+    h2 += {{ncenter}};
+
+    /* interp */
+    int jj1, jj2;
+    int mm=blockIdx.x*blockDim.x+threadIdx.x;
+    if(mm < {{M}}) {
+        const {{real_type}} t2 = p_tm[{{M}}+mm];
+        const {{real_type}} t1 = p_tm[mm];
+        const {{complex_type}} fmm(fm[mm]);
+        const int koff1 = 1 + floorf(t1 - {{J_2}});
+        int k2 = 1 + floorf(t2 - {{J_2}});
+        /*{{real_type}} rtmp, itmp;*/
+
+        for (jj2=0; jj2 < {{J}}; jj2++, k2++) {
+            const {{real_type}} p2 = (t2 - k2) * {{L}};
+            const int n2 = floorf(p2);
+            {% if order == 1 %}
+                const {{real_type}} alf2 = p2 - n2;
+                {% if complex_kernel == True %}
+                    const {{complex_type}} coef2((1 - alf2) * h2[n2].real() + alf2 * h2[n2+1].real(),
+                                                 -((1 - alf2) * h2[n2].imag() + alf2 * h2[n2+1].imag()));
+                {% else %}
+                    const {{real_type}} coef2 = (1 - alf2) * h2[n2] + alf2 * h2[n2+1];
+                {% endif %}
+            {% elif order == 0 %}
+                {% if complex_kernel == True %}
+                    const {{complex_type}} coef2(conj(h2[n2]));
+                {% else %}
+                    const {{real_type}} coef2 = h2[n2];
+                {% endif %}
+            {% endif %}
+            const int k2mod = mymodi(k2, {{K2}});
+            const int k12mod = k2mod * {{K1}};
+
+            {% if complex_kernel == True %}
+                const {{complex_type}} v2(coef2 * fmm);
+            {% else %}
+                const {{complex_type}} v2(coef2 * fmm.real(),
+                                          coef2 * fmm.imag());
+            {% endif %}
+
+            int k1 = koff1;
+
+            for (jj1=0; jj1 < {{J}}; jj1++, k1++) {
+                const {{real_type}} p1 = (t1 - k1) * {{L}};
+                const int n1 = floorf(p1);
+                {% if order == 1 %}
+                    const {{real_type}} alf1 = p1 - n1;
+                    {% if complex_kernel == True %}
+                        const {{complex_type}} coef1((1 - alf1) * h1[n1].real() + alf1 * h1[n1+1].real(),
+                                                     -((1 - alf1) * h1[n1].imag() + alf1 * h1[n1+1].imag()));
+                    {% else %}
+                        const {{real_type}} coef1 = (1 - alf1) * h1[n1] + alf1 * h1[n1+1];
+                    {% endif %}
+                {% elif order == 0 %}
+                    {% if complex_kernel == True %}
+                        const {{complex_type}} coef1(conj(h1[n1]));
+                    {% else %}
+                        const {{real_type}} coef1 = h1[n1];
+                    {% endif %}
+                {% endif %}
+                const int k1mod = mymodi(k1, {{K1}});
+                const int kk = k12mod + k1mod; /* 3D array index */
+
+
+                {% if complex_kernel == True %}
+                    const {{complex_type}} v1(coef1 * v2);
+                {% else %}
+                    const {{complex_type}} v1(coef1 * v2.real(),
+                                              coef1 * v2.imag());
+                {% endif %}
+
+                //Need atomic operation to avoid race conditions
+                atomicAdd(&ck[kk], v1);
+            } /* j1 */
+        } /* j2 */
+    }
+}

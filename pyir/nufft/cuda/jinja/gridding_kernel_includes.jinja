@@ -1,0 +1,49 @@
+#include <cupy/complex.cuh>
+
+#define mymodi(k,K) ((k) - (K) * floorf((k) / (float) (K)))
+
+// Using a function rather than the mymod definition above might reduce the
+// number of registers used by the table kernels
+//__device__ int mymodi(int k, int K) {
+//    return ((k) - (K) * floorf((k) / (float) (K)));
+//}
+
+
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+    // atomicAdd for doubles didn't exist prior to compute capability 6.0
+    __device__ double atomicAdd(double* address, double val)
+    {
+        unsigned long long int* address_as_ull =
+                                 (unsigned long long int*)address;
+        unsigned long long int old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            old = atomicCAS(address_as_ull, assumed,
+                            __double_as_longlong(val +
+                                __longlong_as_double(assumed)));
+        } while (assumed != old);
+        return __longlong_as_double(old);
+    }
+#endif
+
+
+// atomicAdd for complex floats via two real-valued atomicAdds
+
+__device__ complex<float> atomicAdd(complex<float>* address,
+                                    complex<float> val)
+{
+    float *p = reinterpret_cast<float *>(address);
+
+    return complex<float>(atomicAdd(p, val.real()),
+                          atomicAdd(p + 1, val.imag()));
+}
+
+__device__ complex<double> atomicAdd(complex<double>* address,
+                                     complex<double> val)
+{
+    double *p = reinterpret_cast<double *>(address);
+
+    return complex<double>(atomicAdd(p, val.real()),
+                           atomicAdd(p + 1, val.imag()));
+}
