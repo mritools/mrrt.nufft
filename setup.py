@@ -95,7 +95,9 @@ if os.environ.get("CYTHON_TRACE"):
     cythonize_opts['linetrace'] = True
     cython_macros.append(("CYTHON_TRACE_NOGIL", 1))
 
-ext_modules = cythonize(ext_modules, compiler_directives=cythonize_opts)
+ext_modules = cythonize(ext_modules,
+                        compiler_directives=cythonize_opts,
+                        language_level=2)
 
 setup(name='pyir.nufft',
       author='Gregory R. Lee',

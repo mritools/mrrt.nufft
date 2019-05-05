@@ -4,10 +4,10 @@
 import numpy as np
 import pytest
 
-from pyir.nufft import dtft, dtft_adj
-from pyir.utils import max_percent_diff, have_cupy
+from pyir.nufft import dtft, dtft_adj, config
+from pyir.nufft.nufft_utils import max_percent_diff
 
-if have_cupy:
+if config.have_cupy:
     import cupy
     all_xp = [np, cupy]
 else:

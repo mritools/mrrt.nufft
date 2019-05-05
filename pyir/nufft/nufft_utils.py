@@ -10,7 +10,8 @@ if config.have_cupy:
 
 
 __all__ = ['get_array_module', 'profile', 'reale', 'is_string_like',
-           'get_data_address', 'complexify', 'outer_sum']
+           'get_data_address', 'complexify', 'outer_sum',
+           'max_percent_diff']
 
 
 """
@@ -428,3 +429,53 @@ def reale(x, com='error', tol=None, msg=None, xp=None):
             raise RuntimeError(t)
 
     return xp.real(x)
+
+
+def max_percent_diff(s1, s2, use_both=False, doprint=False, xp=np):
+    """Maximum percent difference between two signals.
+
+    Parameters
+    ----------
+    s1, s2 : array-like
+        The two signals to compare. These should have the same shape.
+    use_both: bool, optional
+        If True use the maximum across s1, s2 as the normalizer.
+
+    %function d = max_percent_diff(s1, s2, [options])
+    %
+    % compute the "maximum percent difference" between two signals
+    % options
+    %   1       use both arguments as the normalizer
+    %   string      print this
+
+    Notes
+    -----
+    Based on Matlab function of the same name
+        Copyright 2000-9-16, Jeff Fessler, The University of Michigan
+    Python port by Gregory Lee.
+    """
+    s1 = xp.squeeze(xp.asarray(s1))
+    s2 = xp.squeeze(xp.asarray(s2))
+
+    # first check that we have comparable signals!
+    if s1.shape != s2.shape:
+        raise ValueError('size mismatch')
+
+    if xp.any(xp.isnan(s1)) | xp.any(xp.isnan(s2)):
+        raise ValueError('NaN values found in input')
+
+    # s1 = np.double(s1);
+    # s2 = np.double(s2);
+
+    if use_both:
+        denom = xp.max(xp.abs(s1).max(), xp.abs(s2).max())
+        if denom == 0:
+            return 0
+    else:
+        denom = xp.abs(s1).max()
+        if denom == 0:
+            denom = xp.abs(s2).max()
+        if denom == 0:
+            return 0
+    d = xp.max(xp.abs(s1 - s2)) / denom
+    return d * 100
