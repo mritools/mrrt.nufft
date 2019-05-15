@@ -431,7 +431,7 @@ def reale(x, com='error', tol=None, msg=None, xp=None):
     return xp.real(x)
 
 
-def max_percent_diff(s1, s2, use_both=False, doprint=False, xp=np):
+def max_percent_diff(s1, s2, use_both=False, doprint=False, xp=None):
     """Maximum percent difference between two signals.
 
     Parameters
@@ -454,6 +454,7 @@ def max_percent_diff(s1, s2, use_both=False, doprint=False, xp=np):
         Copyright 2000-9-16, Jeff Fessler, The University of Michigan
     Python port by Gregory Lee.
     """
+    xp, on_gpu = get_array_module(s1, xp=xp)
     s1 = xp.squeeze(xp.asarray(s1))
     s2 = xp.squeeze(xp.asarray(s2))
 
