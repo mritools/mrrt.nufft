@@ -3,16 +3,16 @@ from __future__ import division, print_function, absolute_import
 from itertools import product
 
 import numpy as np
-from numpy.testing import assert_equal, assert_
+from numpy.testing import assert_equal
 import pytest
-from pyir.utils import max_percent_diff, have_cupy
 
-from pyir.nufft import dtft, dtft_adj
+from pyir.nufft import config, dtft, dtft_adj
 from pyir.nufft.nufft import NufftBase, nufft_adj
 from pyir.nufft.nufft import _nufft_table_make1
+from pyir.nufft.nufft_utils import max_percent_diff
 from pyir.nufft.tests.test_dtft import _uniform_freqs
 
-if have_cupy:
+if config.have_cupy:
     import cupy
 
     all_xp = [np, cupy]

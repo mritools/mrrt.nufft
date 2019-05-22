@@ -5,9 +5,9 @@ import numpy as np
 import pytest
 
 from pyir.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
-from pyir.utils import have_cupy
+from pyir.nufft import config
 
-if have_cupy:
+if config.have_cupy:
     import cupy
 
     all_xp = [np, cupy]
