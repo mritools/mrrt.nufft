@@ -28,10 +28,11 @@ import numpy as np
 from scipy.special import iv, jv, i0, j0
 from .nufft_utils import get_array_module, reale, profile
 from . import config
+
 if config.have_cupy:
     from cupyx.scipy.special import j0 as j0_cupy, i0 as i0_cupy
 
-__all__ = ['kaiser_bessel', 'kaiser_bessel_ft']
+__all__ = ["kaiser_bessel", "kaiser_bessel_ft"]
 
 
 def _i0(x, xp):
@@ -76,7 +77,7 @@ def _jv(x1, x2, xp):
 
 @profile
 def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
-    '''Generalized Kaiser-Bessel function for x in support [-J/2,J/2].
+    """Generalized Kaiser-Bessel function for x in support [-J/2,J/2].
 
     Parameters
     ----------
@@ -119,19 +120,19 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
       for this approximation (for NonInteger Negative kb_m)
       NOTE: Even for the original KB formula, the JOSA FT formula
       is derived only for m > -1 !
-    '''
+    """
     xp, on_gpu = get_array_module(x)
     if alpha is None:
         alpha = 2.34 * J
 
     """Warn about use of modified formula for negative kb_m"""
     if (kb_m < 0) and ((abs(round(kb_m) - kb_m)) > np.finfo(float).eps):
-        wstr = 'Negative NonInt kb_m=%g\n' % (kb_m)
-        wstr += '\t- using modified definition of KB function\n'
+        wstr = "Negative NonInt kb_m=%g\n" % (kb_m)
+        wstr += "\t- using modified definition of KB function\n"
         warnings.warn(wstr)
-    kb_m_bi = abs(kb_m)		# modified "kb_m" as described above
+    kb_m_bi = abs(kb_m)  # modified "kb_m" as described above
     ii = (2 * np.abs(x) < J).nonzero()
-    tmp = (2 * x[ii] / J)
+    tmp = 2 * x[ii] / J
     tmp *= tmp
     f = np.sqrt(1 - tmp)
     if kb_m_bi != 0:
@@ -139,12 +140,12 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     else:
         denom = _i0(alpha, xp=xp)
     if denom == 0:
-        print('m=%g alpha=%g' % (kb_m, alpha))
+        print("m=%g alpha=%g" % (kb_m, alpha))
     kb = xp.zeros_like(x)
     if kb_m_bi != 0:
         kb[ii] = (f ** kb_m * _iv(kb_m_bi, alpha * f, xp=xp)) / float(denom)
     else:
-        kb[ii] = _i0(alpha*f, xp=xp) / float(denom)
+        kb[ii] = _i0(alpha * f, xp=xp) / float(denom)
     kb = kb.real
     return kb
 
@@ -185,16 +186,16 @@ def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
         alpha = 2.34 * J
 
     # persistent warned  #TODO
-    if (kb_m < -1):  # Check for validity of FT formula
+    if kb_m < -1:  # Check for validity of FT formula
         # if isempty(warned)    % only print this reminder the first time
-        wstr = 'kb_m=%g < -1' % (kb_m)
-        wstr += ' in kaiser_bessel_ft()\n'
-        wstr += ' - validity of FT formula uncertain for kb_m < -1\n'
+        wstr = "kb_m=%g < -1" % (kb_m)
+        wstr += " in kaiser_bessel_ft()\n"
+        wstr += " - validity of FT formula uncertain for kb_m < -1\n"
         warnings.warn(wstr)
     elif (kb_m < 0) & ((np.abs(np.round(kb_m) - kb_m)) > np.finfo(float).eps):
         # if isempty(warned)    % only print this reminder the first time
-        wstr = '\nNeg NonInt kb_m=%g in ' % (kb_m)
-        wstr += 'kaiser_bessel_ft()\n\t- validity of FT formula uncertain\n'
+        wstr = "\nNeg NonInt kb_m=%g in " % (kb_m)
+        wstr += "kaiser_bessel_ft()\n\t- validity of FT formula uncertain\n"
         warnings.warn(wstr)
 
     # trick: scipy.special.jv can handle complex args
@@ -208,12 +209,13 @@ def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
     else:
         # no cupy.lib.scimath.sqrt, but it is just equivalent to:
         # convert tmp to complex dtype before calling xp.sqrt
-        tmp_cplx = tmp.astype(xp.result_type(tmp.dtype, xp.complex64),
-                              copy=False)
+        tmp_cplx = tmp.astype(
+            xp.result_type(tmp.dtype, xp.complex64), copy=False
+        )
         z = xp.sqrt(tmp_cplx)
 
-    nu = d / 2. + kb_m
-    const1 = (2 * np.pi) ** (d / 2.) * (J / 2.) ** d * alpha ** kb_m
+    nu = d / 2.0 + kb_m
+    const1 = (2 * np.pi) ** (d / 2.0) * (J / 2.0) ** d * alpha ** kb_m
     if kb_m == 0:
         const1 /= _i0(alpha, xp=xp)
     else:

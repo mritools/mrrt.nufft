@@ -20,9 +20,9 @@ from . import config
 import warnings
 
 if config.have_pyfftw:
-    _default_lib = 'pyfftw'
+    _default_lib = "pyfftw"
 else:
-    _default_lib = 'numpy'
+    _default_lib = "numpy"
 
 
 def define_if(condition, errmsg="requested function not available"):
@@ -40,6 +40,7 @@ def define_if(condition, errmsg="requested function not available"):
     -------
     func : function wrapper
     """
+
     def decorator(func):
         @functools.wraps(func)
         def func_wrapper(*args, **kwargs):
@@ -47,7 +48,9 @@ def define_if(condition, errmsg="requested function not available"):
                 return func(*args, **kwargs)
             else:
                 raise NotImplementedError(errmsg)
+
         return func_wrapper
+
     return decorator
 
 
@@ -64,17 +67,23 @@ try:
     # default effort when calling pyFFTW builder routines
     pyfftw_builder_effort = config.pyfftw_config.PLANNER_EFFORT
 
-    fftn = partial(pyfftw.interfaces.numpy_fft.fftn,
-                   planner_effort=pyfftw_planner_effort,
-                   threads=pyfftw_threads)
-    fftn.__doc__ = ("pyFFTW-based fftn with effort {} and {} "
-                    "threads").format(pyfftw_planner_effort, pyfftw_threads)
+    fftn = partial(
+        pyfftw.interfaces.numpy_fft.fftn,
+        planner_effort=pyfftw_planner_effort,
+        threads=pyfftw_threads,
+    )
+    fftn.__doc__ = (
+        "pyFFTW-based fftn with effort {} and {} " "threads"
+    ).format(pyfftw_planner_effort, pyfftw_threads)
 
-    ifftn = partial(pyfftw.interfaces.numpy_fft.ifftn,
-                    planner_effort=pyfftw_planner_effort,
-                    threads=pyfftw_threads)
-    ifftn.__doc__ = ("pyFFTW-based ifftn with effort {} and {} "
-                     "threads").format(pyfftw_planner_effort, pyfftw_threads)
+    ifftn = partial(
+        pyfftw.interfaces.numpy_fft.ifftn,
+        planner_effort=pyfftw_planner_effort,
+        threads=pyfftw_threads,
+    )
+    ifftn.__doc__ = (
+        "pyFFTW-based ifftn with effort {} and {} " "threads"
+    ).format(pyfftw_planner_effort, pyfftw_threads)
 
     # shifting
     fftshift = pyfftw.interfaces.numpy_fft.fftshift
@@ -101,13 +110,27 @@ except ImportError as e:
     fftfreq = np.fft.fftfreq
 
 
-__all__ = ['fftn', 'ifftn', 'fftshift', 'fftfreq', 'ifftshift',
-           'fftnc', 'ifftnc']
+__all__ = [
+    "fftn",
+    "ifftn",
+    "fftshift",
+    "fftfreq",
+    "ifftshift",
+    "fftnc",
+    "ifftnc",
+]
 
 
 # centered versions of fftn & ifftn for convenience
-def fftnc(a, s=None, axes=None, pre_shift_axes=None, post_shift_axes=None,
-          norm=None, fftn_func=None):
+def fftnc(
+    a,
+    s=None,
+    axes=None,
+    pre_shift_axes=None,
+    post_shift_axes=None,
+    norm=None,
+    fftn_func=None,
+):
     """Centered, n-dimensional forward FFT.
 
     Parameters
@@ -163,8 +186,15 @@ def fftnc(a, s=None, axes=None, pre_shift_axes=None, post_shift_axes=None,
     return fftshift(y, axes=post_shift_axes)
 
 
-def ifftnc(a, s=None, axes=None, pre_shift_axes=None, post_shift_axes=None,
-           norm=None, ifftn_func=None):
+def ifftnc(
+    a,
+    s=None,
+    axes=None,
+    pre_shift_axes=None,
+    post_shift_axes=None,
+    norm=None,
+    ifftn_func=None,
+):
     """Centered, n-dimensional inverse FFT.
 
     Parameters

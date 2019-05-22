@@ -4,24 +4,27 @@ import numpy as np
 from jinja2 import Template
 from .. import config
 
-template_path = os.path.join(os.path.dirname(__file__), 'jinja')
+template_path = os.path.join(os.path.dirname(__file__), "jinja")
 
 
 def _template_from_filename(filename):
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         fstr = f.read()
     return Template(fstr)
 
 
 grid_includes_template = _template_from_filename(
-    os.path.join(template_path, 'gridding_kernel_includes.jinja'))
+    os.path.join(template_path, "gridding_kernel_includes.jinja")
+)
 
 gridding_kernel_templates = {}
 for ndim in [1, 2, 3]:
-    gridding_kernel_templates[(ndim, 'forward')] = _template_from_filename(
-        os.path.join(template_path, 'table_{}d_forward.jinja'.format(ndim)))
-    gridding_kernel_templates[(ndim, 'adjoint')] = _template_from_filename(
-        os.path.join(template_path, 'table_{}d_adjoint.jinja'.format(ndim)))
+    gridding_kernel_templates[(ndim, "forward")] = _template_from_filename(
+        os.path.join(template_path, "table_{}d_forward.jinja".format(ndim))
+    )
+    gridding_kernel_templates[(ndim, "adjoint")] = _template_from_filename(
+        os.path.join(template_path, "table_{}d_adjoint.jinja".format(ndim))
+    )
 
 
 def apply_astyle(code):
@@ -43,34 +46,36 @@ def apply_astyle(code):
     import tempfile
 
     # create a temporary file
-    fid, fname = tempfile.mkstemp('.cu')
+    fid, fname = tempfile.mkstemp(".cu")
 
     try:
         # write to temporary file
-        with open(fid, 'wt') as f:
+        with open(fid, "wt") as f:
             f.write(code)
 
         # call astyle to reformat the file in-place
-        cmd = 'astyle --suffix=none --delete-empty-lines {}'.format(fname)
+        cmd = "astyle --suffix=none --delete-empty-lines {}".format(fname)
         subprocess.check_output(cmd, shell=True)
 
         # read the reformatted file
-        code = open(fname, 'rt').read()
+        code = open(fname, "rt").read()
     finally:
         # delete the temporary file
         os.remove(fname)
     return code
 
 
-def _get_gridding_funcs(Kd,
-                        M,
-                        J,
-                        L,
-                        precision='single',
-                        order=1,
-                        is_complex_kernel=False,
-                        compile_options=('--use_fast_math', ),
-                        render_template_only=False):
+def _get_gridding_funcs(
+    Kd,
+    M,
+    J,
+    L,
+    precision="single",
+    order=1,
+    is_complex_kernel=False,
+    compile_options=("--use_fast_math",),
+    render_template_only=False,
+):
     """Compile a CUDA GPU kernel for the NUFFT.
 
     Paramters
@@ -111,9 +116,9 @@ def _get_gridding_funcs(Kd,
         raise ImportError("This function requries CuPy")
 
     precision = precision.lower()
-    if precision == 'single':
+    if precision == "single":
         real_type = "float"
-    elif precision == 'double':
+    elif precision == "double":
         real_type = "double"
     else:
         raise ValueError("precision must be single or double")
@@ -133,7 +138,7 @@ def _get_gridding_funcs(Kd,
     ndim = len(Kd)
     if ndim < 3:
         Kd = np.asarray(Kd)
-        Kd = np.concatenate((Kd, np.ones(3 - ndim,)))
+        Kd = np.concatenate((Kd, np.ones(3 - ndim)))
 
     ncenter = int(np.floor(J * L / 2))
 
@@ -148,15 +153,16 @@ def _get_gridding_funcs(Kd,
         J=J,
         L=L,
         ncenter=ncenter,
-        J_2='%.1f' % (J / 2),
+        J_2="%.1f" % (J / 2),
         M=M,
         M2=2 * M,
-        K1='%d' % Kd[0],
-        K2='%d' % Kd[1],
-        K3='%d' % Kd[2])
+        K1="%d" % Kd[0],
+        K2="%d" % Kd[1],
+        K3="%d" % Kd[2],
+    )
 
-    template_forward = gridding_kernel_templates[(ndim, 'forward')]
-    template_adjoint = gridding_kernel_templates[(ndim, 'adjoint')]
+    template_forward = gridding_kernel_templates[(ndim, "forward")]
+    template_adjoint = gridding_kernel_templates[(ndim, "adjoint")]
     rendered_template_forward = template_forward.render(**template_kwargs)
     rendered_template_adjoint = template_adjoint.render(**template_kwargs)
 
@@ -165,23 +171,23 @@ def _get_gridding_funcs(Kd,
         return rendered_template_forward, rendered_template_adjoint
 
     if is_complex_kernel:
-        cplx_str = 'complex'
+        cplx_str = "complex"
     else:
-        cplx_str = 'real'
+        cplx_str = "real"
 
-    forward_name = 'interp{}_table{}_{}_{}_per_GPUkernel'.format(
-        ndim, order, cplx_str, real_type)
-    adjoint_name = 'interp{}_table{}_{}_{}_per_adj_GPUkernel'.format(
-        ndim, order, cplx_str, real_type)
+    forward_name = "interp{}_table{}_{}_{}_per_GPUkernel".format(
+        ndim, order, cplx_str, real_type
+    )
+    adjoint_name = "interp{}_table{}_{}_{}_per_adj_GPUkernel".format(
+        ndim, order, cplx_str, real_type
+    )
 
     forward_kernel = cupy.core.RawKernel(
-        rendered_template_forward,
-        name=forward_name,
-        options=compile_options)
+        rendered_template_forward, name=forward_name, options=compile_options
+    )
 
     adjoint_kernel = cupy.core.RawKernel(
-        rendered_template_adjoint,
-        name=adjoint_name,
-        options=compile_options)
+        rendered_template_adjoint, name=adjoint_name, options=compile_options
+    )
 
     return forward_kernel, adjoint_kernel
