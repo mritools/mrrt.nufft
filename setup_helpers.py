@@ -13,14 +13,14 @@ from distutils import log
 
 
 # Path of file to which to write C conditional vars from build-time checks
-CONFIG_H = pjoin('build', 'config.h')
+CONFIG_H = pjoin("build", "config.h")
 # File name (no directory) to which to write Python vars from build-time checks
-CONFIG_PY = '__config__.py'
+CONFIG_PY = "__config__.py"
 # Directory to which to write libraries for building
-LIB_DIR_TMP = pjoin('build', 'extra_libs')
+LIB_DIR_TMP = pjoin("build", "extra_libs")
 
 
-def add_flag_checking(build_ext_class, flag_defines, top_package_dir=''):
+def add_flag_checking(build_ext_class, flag_defines, top_package_dir=""):
     """ Override input `build_ext_class` to check compiler `flag_defines`
 
     Parameters
@@ -63,23 +63,23 @@ def add_flag_checking(build_ext_class, flag_defines, top_package_dir=''):
 
         def can_compile_link(self, compile_flags, link_flags, code):
             cc = self.compiler
-            fname = 'test.c'
+            fname = "test.c"
             cwd = os.getcwd()
             tmpdir = tempfile.mkdtemp()
             try:
                 os.chdir(tmpdir)
-                with open(fname, 'wt') as fobj:
+                with open(fname, "wt") as fobj:
                     fobj.write(code)
                 try:
-                    objects = cc.compile([fname],
-                                         extra_postargs=compile_flags)
+                    objects = cc.compile([fname], extra_postargs=compile_flags)
                 except CompileError:
                     return False
                 try:
                     # Link shared lib rather then executable to avoid
                     # http://bugs.python.org/issue4431 with MSVC 10+
-                    cc.link_shared_lib(objects, "testlib",
-                                       extra_postargs=link_flags)
+                    cc.link_shared_lib(
+                        objects, "testlib", extra_postargs=link_flags
+                    )
                 except (LinkError, TypeError):
                     return False
             finally:
@@ -96,37 +96,45 @@ def add_flag_checking(build_ext_class, flag_defines, top_package_dir=''):
             for compile_flags, link_flags, code, def_var in self.flag_defs:
                 compile_flags = list(compile_flags)
                 link_flags = list(link_flags)
-                flags_good = self.can_compile_link(compile_flags,
-                                                   link_flags,
-                                                   code)
+                flags_good = self.can_compile_link(
+                    compile_flags, link_flags, code
+                )
                 if def_var:
                     def_vars.append((def_var, flags_good))
                 if flags_good:
                     good_compile_flags += compile_flags
                     good_link_flags += link_flags
                 else:
-                    log.warn("Flags {0} omitted because of compile or link "
-                             "error".format(compile_flags + link_flags))
+                    log.warn(
+                        "Flags {0} omitted because of compile or link "
+                        "error".format(compile_flags + link_flags)
+                    )
             if def_vars:  # write config.h file
                 if not exists(config_dir):
                     self.mkpath(config_dir)
-                with open(CONFIG_H, 'wt') as fobj:
-                    fobj.write('/* Automatically generated; do not edit\n')
-                    fobj.write('   C defines from build-time checks */\n')
+                with open(CONFIG_H, "wt") as fobj:
+                    fobj.write("/* Automatically generated; do not edit\n")
+                    fobj.write("   C defines from build-time checks */\n")
                     for v_name, v_value in def_vars:
-                        fobj.write('int {0} = {1};\n'.format(
-                            v_name, 1 if v_value else 0))
+                        fobj.write(
+                            "int {0} = {1};\n".format(
+                                v_name, 1 if v_value else 0
+                            )
+                        )
             if def_vars and top_package_dir:  # write __config__.py file
-                config_py_dir = (top_package_dir if self.inplace else
-                                 pjoin(self.build_lib, top_package_dir))
+                config_py_dir = (
+                    top_package_dir
+                    if self.inplace
+                    else pjoin(self.build_lib, top_package_dir)
+                )
                 if not exists(config_py_dir):
                     self.mkpath(config_py_dir)
                 config_py = pjoin(config_py_dir, CONFIG_PY)
-                with open(config_py, 'wt') as fobj:
-                    fobj.write('# Automatically generated; do not edit\n')
-                    fobj.write('# Variables from compile checks\n')
+                with open(config_py, "wt") as fobj:
+                    fobj.write("# Automatically generated; do not edit\n")
+                    fobj.write("# Variables from compile checks\n")
                     for v_name, v_value in def_vars:
-                        fobj.write('{0} = {1}\n'.format(v_name, v_value))
+                        fobj.write("{0} = {1}\n".format(v_name, v_value))
             if def_vars or good_compile_flags or good_link_flags:
                 for ext in self.extensions:
                     ext.extra_compile_args += good_compile_flags
@@ -164,6 +172,7 @@ def make_np_ext_builder(build_ext_class):
             """
             # Delay numpy import until last moment
             import numpy as np
+
             for ext in self.extensions:
                 ext.include_dirs.append(np.get_include())
             build_ext_class.build_extensions(self)
