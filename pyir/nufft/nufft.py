@@ -58,6 +58,11 @@ if config.have_cupy:
     from cupyx.scipy import fftpack as cupy_fftpack
     cupy_fftn = cupy_fftpack.fftn
     cupy_ifftn = cupy_fftpack.ifftn
+    try:
+        cupy.fft.cache.enable()
+    except AttributeError:
+        # cache not implemented in official CuPy release
+        pass
 
 
 __all__ = ['NufftBase', 'nufft_adj', 'nufft_forward', 'nufft_adj_exact',
@@ -682,7 +687,7 @@ class NufftBase(object):
             self.sn = self.sn.ravel()  # [(Nd)]
 
     @profile
-    def _init_sparsemat(self, highmem=False):
+    def _init_sparsemat(self, highmem=None):
         """Initialize structure for n-dimensional NUFFT using Sparse matrix
         multiplication.
         """
@@ -795,6 +800,11 @@ class NufftBase(object):
             # TODO: fix bug in Cupy.
             #       For now, we do the conversion via the CPU.
             self.p = cupyx.scipy.sparse.csc_matrix(self.p.get().tocsc())
+            if highmem is None:
+                free_memory_bytes = cupy.cuda.device.Device().mem_info[0]
+                # if "enough" memory left, keep a copy (factor of 2 is an
+                # arbitrary choice)
+                highmem = free_memory_bytes > 2 * self.p.data.nbytes
             if highmem:
                 self.p_csr = cupyx.scipy.sparse.csr_matrix(
                     self.p.get().tocsr())
@@ -1241,7 +1251,7 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
         x = x.copy(order='A')
 
     L = x.shape[-1]
-    
+
     if not grid_only:
         #
         # the usual case is where L=1, i.e., there is just one input signal.
@@ -1254,17 +1264,17 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
         else:
             xk = cupy_fftn(x, tuple(Kd), axes=tuple(range(x.ndim - 1)),
                            overwrite_x=True)
-    
+
         if obj.phase_before is not None:
             xk *= obj.phase_before[..., xp.newaxis]
         xk = xk.reshape((np.prod(Kd), L), order='F')
-    
+
         if obj.ortho:
             xk /= obj.scale_ortho
     else:
         xk = x
 
-    
+
     if 'table' in obj.mode:
         # interpolate via tabulated interpolator
         x = obj.interp_table(obj, xk)
