@@ -9,12 +9,13 @@ from pyir.nufft import config
 
 if config.have_cupy:
     import cupy
+
     all_xp = [np, cupy]
 else:
-    all_xp = [np, ]
+    all_xp = [np]
 
 
-@pytest.mark.parametrize('xp', all_xp)
+@pytest.mark.parametrize("xp", all_xp)
 def test_kaiser_bessel(xp, show_figure=False):
     J = 8
     alpha = 2.34 * J
@@ -24,7 +25,7 @@ def test_kaiser_bessel(xp, show_figure=False):
     yy = xp.zeros((len(x), len(mlist)))
     for i, kb_m in enumerate(mlist):
         yy[:, i] = kaiser_bessel(x, J, alpha, kb_m)
-        leg.append('m = %d' % kb_m)
+        leg.append("m = %d" % kb_m)
         func = functools.partial(kaiser_bessel, alpha=alpha, kb_m=kb_m)
         yf = func(x, J)
         xp.testing.assert_array_equal(yf, yy[:, i])
@@ -32,28 +33,39 @@ def test_kaiser_bessel(xp, show_figure=False):
     if show_figure and xp == np:  # skip plotting if arrays are on the GPU
         # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
+
         plt.figure()
-        l1, l2, l3, l4 = plt.plot(x, yy[:, 0], 'c-',
-                                  x, yy[:, 1], 'y-',
-                                  x, yy[:, 2], 'm-',
-                                  x, yy[:, 3], 'g-')
-        plt.legend((l1, l2, l3, l4), leg, loc='upper right')
-        plt.xlabel(r'$\kappa$')
-        plt.ylabel(r'F($\kappa$)')
-        plt.title(r'KB functions: J=%g $\alpha$=%g' % (J, alpha))
-        plt.axis('tight')
+        l1, l2, l3, l4 = plt.plot(
+            x,
+            yy[:, 0],
+            "c-",
+            x,
+            yy[:, 1],
+            "y-",
+            x,
+            yy[:, 2],
+            "m-",
+            x,
+            yy[:, 3],
+            "g-",
+        )
+        plt.legend((l1, l2, l3, l4), leg, loc="upper right")
+        plt.xlabel(r"$\kappa$")
+        plt.ylabel(r"F($\kappa$)")
+        plt.title(r"KB functions: J=%g $\alpha$=%g" % (J, alpha))
+        plt.axis("tight")
         plt.show()
 
 
-@pytest.mark.parametrize('xp', all_xp)
+@pytest.mark.parametrize("xp", all_xp)
 def test_kaiser_bessel_ft(xp, show_figure=False):
     J = 5
     alpha = 6.8
     N = 2 ** 10
-    x = xp.arange(-N / 2., N / 2.) / float(N) * (J + 3) / 2.
+    x = xp.arange(-N / 2.0, N / 2.0) / float(N) * (J + 3) / 2.0
     dx = x[1] - x[0]
     du = 1 / float(N) / float(dx)
-    u = xp.arange(-N / 2., N / 2.) * du
+    u = xp.arange(-N / 2.0, N / 2.0) * du
     uu = 1.5 * xp.linspace(-1, 1, 201)
 
     mlist = [-2, 0, 2, 7]
@@ -70,38 +82,61 @@ def test_kaiser_bessel_ft(xp, show_figure=False):
         Yf[:, ii] = xp.real(fftshift(fft(fftshift(yy[:, ii])))) * dx
         Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
         Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
-        leg.append('m=%d' % kb_m)
+        leg.append("m=%d" % kb_m)
 
     if show_figure and xp == np:  # skip plotting if arrays are on the GPU
         # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
+
         if False:
             plt.figure()
             l1, l2, l3 = plt.plot(
-                u, Yf[
-                    :, 2], 'cx', u, Y[
-                    :, 2], 'yo', uu, Yu[
-                    :, 2], 'y-')
+                u, Yf[:, 2], "cx", u, Y[:, 2], "yo", uu, Yu[:, 2], "y-"
+            )
             plt.legend(
-                (l1, l2, l3), [
-                    'FFT', 'FT coarse', 'FT fine'], loc='upper right')
-            plt.axis('tight')
+                (l1, l2, l3), ["FFT", "FT coarse", "FT fine"], loc="upper right"
+            )
+            plt.axis("tight")
             plt.grid(True)  # , axisx(range(uu)), grid
 
             plt.figure()
-            plt.plot(x, yy[:, 0], 'c-', x, yy[:, 1], 'y-',
-                     x, yy[:, 2], 'm-', x, yy[:, 3], 'g-')
+            plt.plot(
+                x,
+                yy[:, 0],
+                "c-",
+                x,
+                yy[:, 1],
+                "y-",
+                x,
+                yy[:, 2],
+                "m-",
+                x,
+                yy[:, 3],
+                "g-",
+            )
         plt.figure()
-        l1, l2, l3, l4 = plt.plot(uu, Yu[:, 0], 'c-', uu, Yu[:, 1], 'y-',
-                                  uu, Yu[:, 2], 'm-', uu, Yu[:, 3], 'g-')
+        l1, l2, l3, l4 = plt.plot(
+            uu,
+            Yu[:, 0],
+            "c-",
+            uu,
+            Yu[:, 1],
+            "y-",
+            uu,
+            Yu[:, 2],
+            "m-",
+            uu,
+            Yu[:, 3],
+            "g-",
+        )
 
-        plt.axis('tight')
-        plt.legend((l1, l2, l3, l4), leg, loc='upper right')
-        plt.hold('on')
-        plt.plot(u, Yf[:, 1], 'y.')
-        plt.hold('off')
-        plt.xlabel('u')
-        plt.ylabel('Y(u)')
-        plt.title(r'KB FT: $\alpha$=%g' % alpha)
+        plt.axis("tight")
+        plt.legend((l1, l2, l3, l4), leg, loc="upper right")
+        plt.hold("on")
+        plt.plot(u, Yf[:, 1], "y.")
+        plt.hold("off")
+        plt.xlabel("u")
+        plt.ylabel("Y(u)")
+        plt.title(r"KB FT: $\alpha$=%g" % alpha)
 
     return

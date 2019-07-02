@@ -19,7 +19,7 @@ import sys
 import warnings
 
 
-__all__ = ['have_cupy', 'have_pyfftw', 'pyfftw_config']
+__all__ = ["have_cupy", "have_pyfftw", "pyfftw_config"]
 
 
 # status of optional third party libraries
@@ -38,22 +38,27 @@ def _check_pyfftw():
     global have_pyfftw
     global pyfftw_config
 
-    if 'NUFFT_DISABLE_PYFFTW' not in os.environ:
+    if "NUFFT_DISABLE_PYFFTW" not in os.environ:
         try:
             import pyfftw
+
             have_pyfftw = True
             from pyfftw import config
-            if pyfftw.__version__ < '0.11':
+
+            if pyfftw.__version__ < "0.11":
                 warnings.warn(
-                    ("pyFFTW version {} found, but (>=0.11 required). "
-                     "pyFFTW will not be used").format(numba.__version__))
+                    (
+                        "pyFFTW version {} found, but (>=0.11 required). "
+                        "pyFFTW will not be used"
+                    ).format(numba.__version__)
+                )
                 have_pyfftw = False
 
-            if 'PYFFTW_PLANNER_EFFORT' not in os.environ:
+            if "PYFFTW_PLANNER_EFFORT" not in os.environ:
                 # default effort for numpy interfaces and FFTW builiders
-                config.PLANNER_EFFORT = 'FFTW_ESTIMATE'
+                config.PLANNER_EFFORT = "FFTW_ESTIMATE"
 
-            if 'PYFFTW_NUM_THREADS' not in os.environ:
+            if "PYFFTW_NUM_THREADS" not in os.environ:
                 # This cpu_count includes the number of threads available with
                 # "hyperthreading" when present.
                 cpu_count = multiprocessing.cpu_count()
@@ -66,34 +71,40 @@ def _check_pyfftw():
                 try:
                     # try using cross-platform method from psutil
                     import psutil
+
                     pyfftw_threads = psutil.cpu_count(logical=False)
                 except ImportError:
                     # specialized solutions with fallback to cpu_count
-                    if sys.platform == 'linux':
+                    if sys.platform == "linux":
                         try:
-                            hwinfo = subprocess.check_output('lscpu',
-                                                             shell=True)
-                            hwinfo = stdout.decode(
-                                'ascii', 'ignore').split('\n')
+                            hwinfo = subprocess.check_output(
+                                "lscpu", shell=True
+                            )
+                            hwinfo = stdout.decode("ascii", "ignore").split(
+                                "\n"
+                            )
                             for line in hwinfo:
-                                if 'Core(s)' in line:
+                                if "Core(s)" in line:
                                     cores_per_socket = int(
-                                        line.split(':')[1].strip())
-                                if 'Socket(s)' in line:
-                                    sockets = int(line.split(':')[1].strip())
+                                        line.split(":")[1].strip()
+                                    )
+                                if "Socket(s)" in line:
+                                    sockets = int(line.split(":")[1].strip())
                             num_cores = sockets * cores_per_socket
                             pyfftw_threads = num_cores
                         except (subprocess.SubprocessError, NameError):
                             pyfftw_threads = max(cpu_count // 2, 1)
-                    elif sys.platform == 'darwin':
+                    elif sys.platform == "darwin":
                         try:
-                            hwinfo = subprocess.check_output('sysctl hw',
-                                                             shell=True)
-                            hwinfo = hwinfo.decode(
-                                'ascii', 'ignore').split('\n')[:20]
+                            hwinfo = subprocess.check_output(
+                                "sysctl hw", shell=True
+                            )
+                            hwinfo = hwinfo.decode("ascii", "ignore").split(
+                                "\n"
+                            )[:20]
                             for line in hwinfo:
-                                if 'hw.physicalcpu' in line:
-                                    num_cores = int(line.split(':')[1].strip())
+                                if "hw.physicalcpu" in line:
+                                    num_cores = int(line.split(":")[1].strip())
                             pyfftw_threads = num_cores
                         except (subprocess.SubprocessError, NameError):
                             pyfftw_threads = max(cpu_count // 2, 1)
@@ -109,6 +120,7 @@ def _check_pyfftw():
         have_pyfftw = False
         pyfftw_config = None
 
+
 _check_pyfftw()
 
 
@@ -118,20 +130,23 @@ def _check_cupy():
     global have_cupy
     global cupy_has_fftn_planning
 
-    if (have_cupy is None and
-            'NUFFT_DISABLE_CUPY' not in os.environ):
+    if have_cupy is None and "NUFFT_DISABLE_CUPY" not in os.environ:
         try:
             import cupy
+
             have_cupy = True
             try:
                 # try a basic GPU operation to test CuPy functionality
                 cupy.arange(5)
             except cupy.cuda.runtime.CUDARuntimeError:
-                warnings.warn("cupy imports, but does not seem functional. "
-                              "Disabling CuPy-based features.")
+                warnings.warn(
+                    "cupy imports, but does not seem functional. "
+                    "Disabling CuPy-based features."
+                )
                 have_cupy = False
             try:
                 from cupy.cuda.cufft import PlanNd
+
                 cupy_has_fftn_planning = True
             except ImportError:
                 cupy_has_fftn_planning = False
@@ -144,4 +159,6 @@ def _check_cupy():
         have_cupy = False
         cupy_has_fftn_planning = False
     return
+
+
 _check_cupy()

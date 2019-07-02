@@ -11,12 +11,14 @@ thread conflicts.
 """
 import numpy as np
 
-from ._extensions._nufft_table import (_interp1_table_forward,
-                                       _interp2_table_forward,
-                                       _interp3_table_forward,
-                                       _interp1_table_adj,
-                                       _interp2_table_adj,
-                                       _interp3_table_adj)
+from ._extensions._nufft_table import (
+    _interp1_table_forward,
+    _interp2_table_forward,
+    _interp3_table_forward,
+    _interp1_table_adj,
+    _interp2_table_adj,
+    _interp3_table_adj,
+)
 
 
 def interp1_table(ck, h1, J1, L1, tm):
@@ -66,9 +68,9 @@ def interp1_table_adj(fm, h1, J1, L1, tm, K1):
 
 def interp2_table(ck, h1, h2, Jd, Ld, tm):
     Kd = ck.shape
-    if(ck.ndim == 2):
+    if ck.ndim == 2:
         N = 1
-    elif(ck.ndim == 3):
+    elif ck.ndim == 3:
         N = ck.shape[2]
         Kd = Kd[:-1]
     if h1.ndim == 1:
@@ -130,9 +132,9 @@ def interp2_table_adj(fm, h1, h2, Jd, Ld, tm, Kd):
 
 def interp3_table(ck, h1, h2, h3, Jd, Ld, tm):
     Kd = ck.shape
-    if(ck.ndim == 3):
+    if ck.ndim == 3:
         N = 1
-    elif(ck.ndim == 4):
+    elif ck.ndim == 4:
         N = ck.shape[3]
         Kd = Kd[:-1]
     if h1.ndim == 1:

@@ -5,13 +5,21 @@ import warnings
 
 import numpy as np
 from . import config
+
 if config.have_cupy:
     import cupy
 
 
-__all__ = ['get_array_module', 'profile', 'reale', 'is_string_like',
-           'get_data_address', 'complexify', 'outer_sum',
-           'max_percent_diff']
+__all__ = [
+    "get_array_module",
+    "profile",
+    "reale",
+    "is_string_like",
+    "get_data_address",
+    "complexify",
+    "outer_sum",
+    "max_percent_diff",
+]
 
 
 """
@@ -23,9 +31,11 @@ http://stackoverflow.com/questions/18229628/python-profiling-using-line-profiler
 try:
     if sys.version_info[0] >= 3:
         import builtins
-        profile = builtins.__dict__['profile']
+
+        profile = builtins.__dict__["profile"]
     else:
         import __builtin__
+
         profile = __builtin__.profile
 except (AttributeError, KeyError):
     # No line profiler, provide a pass-through version
@@ -37,7 +47,7 @@ except (AttributeError, KeyError):
 def is_string_like(obj):
     """Check if obj is string."""
     try:
-        obj + ''
+        obj + ""
     except (TypeError, ValueError):
         return False
     return True
@@ -70,14 +80,15 @@ def get_array_module(arr, xp=None):
 
 def get_data_address(x):
     """Returns memory address where a numpy or cupy array's data is stored."""
-    if hasattr(x, '__array_interface__'):
-        ptr_x = x.__array_interface__['data'][0]
-    elif hasattr(x, '__cuda_array_interface__'):
-        ptr_x = x.__cuda_array_interface__['data'][0]
+    if hasattr(x, "__array_interface__"):
+        ptr_x = x.__array_interface__["data"][0]
+    elif hasattr(x, "__cuda_array_interface__"):
+        ptr_x = x.__cuda_array_interface__["data"][0]
     else:
         raise ValueError(
             "Input must have an __array_interface__ or "
-            "__cuda_array_interface__ attribute.")
+            "__cuda_array_interface__ attribute."
+        )
     return ptr_x
 
 
@@ -110,8 +121,9 @@ def complexify(x, complex_dtype=None, xp=None):
     return xp.asarray(x, dtype=complex_dtype)
 
 
-def outer_sum(xx=None, yy=None, conjugate_y=False, squeeze_output=True,
-              xp=None):
+def outer_sum(
+    xx=None, yy=None, conjugate_y=False, squeeze_output=True, xp=None
+):
     """ outer_sum xx + yy.
 
     Parameters
@@ -137,7 +149,7 @@ def outer_sum(xx=None, yy=None, conjugate_y=False, squeeze_output=True,
     yy = xp.atleast_1d(yy)
     if conjugate_y:
         yy = yy.conj()
-    if (yy.ndim != 1):
+    if yy.ndim != 1:
         raise ValueError("yy must be a 1D vector")
     for d in range(xx.ndim):
         yy = yy[xp.newaxis, ...]
@@ -168,13 +180,13 @@ def _nufft_samples(stype, Nd=None, xp=np):
 
     pi = xp.pi
     twopi = 2 * pi
-    if stype == 'epi':  # blipped echo-planar cartesian samples
+    if stype == "epi":  # blipped echo-planar cartesian samples
         if len(Nd) == 1:
             Nd = Nd[0]  # convert to int
-            om = (twopi / float(Nd)) * xp.arange(-Nd / 2., Nd / 2.)
+            om = (twopi / float(Nd)) * xp.arange(-Nd / 2.0, Nd / 2.0)
         elif len(Nd) == 2:
-            o1 = (twopi / float(Nd[0])) * xp.arange(-Nd[0] / 2., Nd[0] / 2.)
-            o2 = (twopi / float(Nd[1])) * xp.arange(-Nd[1] / 2., Nd[1] / 2.)
+            o1 = (twopi / float(Nd[0])) * xp.arange(-Nd[0] / 2.0, Nd[0] / 2.0)
+            o2 = (twopi / float(Nd[1])) * xp.arange(-Nd[1] / 2.0, Nd[1] / 2.0)
             o1 = xp.tile(o1, (o2.shape[0], 1)).T
             o2 = xp.tile(o2, (o1.shape[0], 1))  # [o1 o2] = ndgrid(o1, o2)
             # [o1,o2]=xp.meshgrid(o2,o1)
@@ -217,7 +229,7 @@ def _nufft_interp_zn(alist, N, J, K, func, n_mid=None, xp=None):
     Matlab vers:  Copyright 2001-12-11 Jeff Fessler. The University of Michigan
     """
     if not n_mid:
-        n_mid = (N - 1) / 2.  # default: old version
+        n_mid = (N - 1) / 2.0  # default: old version
 
     xp, on_gpu = get_array_module(alist, xp)
     alist = xp.atleast_1d(alist)
@@ -229,34 +241,34 @@ def _nufft_interp_zn(alist, N, J, K, func, n_mid=None, xp=None):
     gam = 2 * np.pi / float(K)
 
     if (alist.min() < 0) or (alist.max() > 1):
-        warnings.warn('value in alist exceeds [0,1]')
+        warnings.warn("value in alist exceeds [0,1]")
 
     # natural phase function. trick: force it to be 2pi periodic
     # Pfunc = inline('exp(-i * mod0(om,2*pi) * (N-1)/2)', 'om', 'N')
 
     if not np.remainder(J, 2):  # even
-        jlist = xp.arange(-J / 2. + 1, J / 2. + 1)
+        jlist = xp.arange(-J / 2.0 + 1, J / 2.0 + 1)
     else:  # odd
-        jlist = xp.arange(-(J - 1) / 2., (J - 1) / 2. + 1)
+        jlist = xp.arange(-(J - 1) / 2.0, (J - 1) / 2.0 + 1)
         alist[alist > 0.5] = 1 - alist[alist > 0.5]
 
     # n0 = (N-1)/2.;
     # nlist0 = np.arange(0,N) - n0;     # include effect of phase shift!
     n0 = xp.arange(0, N) - n_mid
 
-    nn0, jj = xp.ogrid[n0[0]:n0[-1] + 1, jlist[0]:jlist[-1] + 1]
+    nn0, jj = xp.ogrid[n0[0] : n0[-1] + 1, jlist[0] : jlist[-1] + 1]
 
     # must initialize zn as complex
     zn = xp.zeros((N, len(alist)), dtype=np.complex64)
 
     for ia, alf in enumerate(alist):
-        jarg = alf - jj         # [N,J]
-        e = xp.exp(1j * gam * jarg * nn0)       # [N,J]
+        jarg = alf - jj  # [N,J]
+        e = xp.exp(1j * gam * jarg * nn0)  # [N,J]
         # TODO: remove need for this try/except
         try:
-            F = func(jarg, J)           # [N,J]
+            F = func(jarg, J)  # [N,J]
         except:
-            F = func(jarg)           # [N,J]
+            F = func(jarg)  # [N,J]
         zn[:, ia] = xp.sum(F * e, axis=1)
     return zn
 
@@ -287,7 +299,7 @@ def _nufft_offset(om, J, K, xp=None):
         xp, on_gpu = get_array_module(om)
     om = xp.asanyarray(om)
     gam = 2 * np.pi / K
-    k0 = xp.floor(om / gam - J / 2.)  # new way
+    k0 = xp.floor(om / gam - J / 2.0)  # new way
 
     return k0
 
@@ -326,7 +338,7 @@ def _nufft_coef(om, J, K, kernel, xp=None):
         raise ValueError("omega array must be 1D")
     # M = om.shape[0];
     gam = 2 * np.pi / K
-    dk = om / gam - _nufft_offset(om, J, K, xp=xp)     # [M,1]
+    dk = om / gam - _nufft_offset(om, J, K, xp=xp)  # [M,1]
 
     # outer sum via broadcasting
     arg = -xp.arange(1, J + 1)[:, None] + dk[None, :]  # [J,M]
@@ -364,15 +376,16 @@ def to_1d_int_array(arr, n=None, dtype_out=np.intp, xp=None):
     if n is not None:
         if arr.size != n:
             if arr.size == 1:
-                arr = xp.asarray([arr[0], ] * n)
+                arr = xp.asarray([arr[0]] * n)
             else:
                 raise ValueError(
-                    "array did not have the expected size of {}".format(n))
+                    "array did not have the expected size of {}".format(n)
+                )
 
     return arr.astype(dtype_out)
 
 
-def reale(x, com='error', tol=None, msg=None, xp=None):
+def reale(x, com="error", tol=None, msg=None, xp=None):
     """Return real part of complex data (with error checking).
 
     Parameters
@@ -400,10 +413,13 @@ def reale(x, com='error', tol=None, msg=None, xp=None):
     if tol is None:
         tol = 1000 * xp.finfo(x.dtype).eps
 
-    if com not in ['warn', 'error', 'display', 'report']:
+    if com not in ["warn", "error", "display", "report"]:
         raise ValueError(
-            ("Bad com: {}.  It must be one of {'warn', 'error', 'display', "
-             "'report'}").format(com))
+            (
+                "Bad com: {}.  It must be one of {'warn', 'error', 'display', "
+                "'report'}"
+            ).format(com)
+        )
 
     max_abs_x = xp.max(xp.abs(x))
     if max_abs_x == 0:
@@ -414,16 +430,16 @@ def reale(x, com='error', tol=None, msg=None, xp=None):
 
     # TODO: CuPy has a bug on trying to access the .imag attribute on real-valued arrays
     frac = xp.max(xp.abs(x.imag)) / max_abs_x
-    if com == 'report':
-        print('imaginary part %g%%' % frac * 100)
+    if com == "report":
+        print("imaginary part %g%%" % frac * 100)
 
     if frac > tol:
-        t = 'imaginary fraction of x is %g (tol=%g)' % (frac, tol)
+        t = "imaginary fraction of x is %g (tol=%g)" % (frac, tol)
         if msg is not None:
-            t += '\n' + msg
-        if com == 'display':
+            t += "\n" + msg
+        if com == "display":
             print(t)
-        elif com == 'warn':
+        elif com == "warn":
             warnings.warn(t)
         else:
             raise RuntimeError(t)
@@ -460,10 +476,10 @@ def max_percent_diff(s1, s2, use_both=False, doprint=False, xp=None):
 
     # first check that we have comparable signals!
     if s1.shape != s2.shape:
-        raise ValueError('size mismatch')
+        raise ValueError("size mismatch")
 
     if xp.any(xp.isnan(s1)) | xp.any(xp.isnan(s2)):
-        raise ValueError('NaN values found in input')
+        raise ValueError("NaN values found in input")
 
     # s1 = np.double(s1);
     # s2 = np.double(s2);

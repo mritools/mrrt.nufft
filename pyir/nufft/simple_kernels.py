@@ -6,12 +6,14 @@ import numpy as np
 from math import sqrt
 
 
-__all__ = ['nufft_gauss',
-           'nufft_best_gauss',
-           'get_diric_kernel',
-           'cos3diric_kernel',
-           'linear_kernel',
-           'nufft_diric']
+__all__ = [
+    "nufft_gauss",
+    "nufft_best_gauss",
+    "get_diric_kernel",
+    "cos3diric_kernel",
+    "linear_kernel",
+    "nufft_diric",
+]
 
 
 def nufft_gauss(J=6, sig=None, xp=np):
@@ -45,17 +47,17 @@ def nufft_gauss(J=6, sig=None, xp=np):
 
     def kernel(k, J=J, sig=sig):
         """Gaussian kernel"""
-        return xp.exp(-(k / sig)**2 / 2.) * (abs(k) < J / 2.)
+        return xp.exp(-(k / sig) ** 2 / 2.0) * (abs(k) < J / 2.0)
 
     def kernel_ft(t, sig=sig):
         """FT of Gaussian kernel"""
         tmp = sqrt(2 * xp.pi)
-        return sig * tmp * xp.exp(-xp.pi * (t * sig * tmp)**2)
+        return sig * tmp * xp.exp(-xp.pi * (t * sig * tmp) ** 2)
 
     return kernel, kernel_ft
 
 
-def nufft_best_gauss(J, K_N=2, sn_type='ft', xp=np):
+def nufft_best_gauss(J, K_N=2, sn_type="ft", xp=np):
     """ Return "sigma" of best (truncated) gaussian for NUFFT with previously
     numerically-optimized width.
 
@@ -83,11 +85,11 @@ def nufft_best_gauss(J, K_N=2, sn_type='ft', xp=np):
     """
 
     if K_N != 2:
-        raise ValueError('ERROR in %s: only K/N=2 done')
+        raise ValueError("ERROR in %s: only K/N=2 done")
 
     Jgauss2 = np.arange(2, 16)
     Sgauss2 = {}
-    Sgauss2['zn'] = [
+    Sgauss2["zn"] = [
         0.4582,
         0.5854,
         0.6600,
@@ -102,9 +104,10 @@ def nufft_best_gauss(J, K_N=2, sn_type='ft', xp=np):
         1.1898,
         1.2347,
         1.2781,
-        1.3120]
+        1.3120,
+    ]
 
-    Sgauss2['ft'] = [
+    Sgauss2["ft"] = [
         0.4441,
         0.5508,
         0.6240,
@@ -119,28 +122,29 @@ def nufft_best_gauss(J, K_N=2, sn_type='ft', xp=np):
         1.1826,
         1.2198,
         1.2626,
-        1.3120]
+        1.3120,
+    ]
 
     if np.sum(J == Jgauss2) != 1:
         print("user specified J = {}".format(J))
-        raise ValueError('only J in the range [2-15] available')
+        raise ValueError("only J in the range [2-15] available")
     else:
         Jidx = np.where(J == Jgauss2)[0][0]
 
     sn_type = sn_type.lower()
-    if sn_type == 'ft':
-        sig = Sgauss2['ft'][Jidx]
-    elif sn_type == 'zn':
-        sig = Sgauss2['zn'][Jidx]
+    if sn_type == "ft":
+        sig = Sgauss2["ft"][Jidx]
+    elif sn_type == "zn":
+        sig = Sgauss2["zn"][Jidx]
     else:
-        raise ValueError('bad sn_type {}'.format(sn_type))
+        raise ValueError("bad sn_type {}".format(sn_type))
 
     [kernel, kernel_ft] = nufft_gauss(J, sig, xp=xp)
     return sig, kernel, kernel_ft
 
 
 def linear_kernel(k, J):
-    return (1 - abs(k / (J / 2.))) * (abs(k) < J / 2.)
+    return (1 - abs(k / (J / 2.0))) * (abs(k) < J / 2.0)
 
 
 def _scale_tri(N, J, K, n_mid, xp=np):
@@ -167,12 +171,13 @@ def _scale_tri(N, J, K, n_mid, xp=np):
 
 def cos3diric_kernel(k, J, xp=np):
     from scipy.special import diric
+
     tmp = 2 * xp.pi * k / J
-    return diric(tmp, J) * xp.cos(tmp / 2.)**3
+    return diric(tmp, J) * xp.cos(tmp / 2.0) ** 3
 
 
 def nufft_diric(k, N, K, use_true_diric=False, xp=np):
-    ''' "regular fourier" Dirichlet-function WITHOUT phase
+    """ "regular fourier" Dirichlet-function WITHOUT phase
 
     Parameters
     ----------
@@ -196,7 +201,7 @@ def nufft_diric(k, N, K, use_true_diric=False, xp=np):
         \approx sinc(t / (K/N))
 
     Matlab vers:  Copyright 2001-12-8, Jeff Fessler, The University of Michigan
-    '''
+    """
     if use_true_diric:
         # diric version
         t = (xp.pi / K) * k
@@ -212,7 +217,7 @@ def nufft_diric(k, N, K, use_true_diric=False, xp=np):
 
 def _diric_kernel(k, J, N):
     d = nufft_diric(k, N, N, use_true_diric=True)
-    return d * (abs(k) < J / 2.)
+    return d * (abs(k) < J / 2.0)
 
 
 def get_diric_kernel(N):
