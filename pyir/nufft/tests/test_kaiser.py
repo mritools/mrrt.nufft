@@ -80,8 +80,13 @@ def test_kaiser_bessel_ft(xp, show_figure=False):
         kb_m = mlist[ii]
         yy[:, ii] = kaiser_bessel(x, J, alpha, kb_m)
         Yf[:, ii] = xp.real(fftshift(fft(fftshift(yy[:, ii])))) * dx
-        Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
-        Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
+        if kb_m < -1:
+            with pytest.warns(UserWarning):
+                Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
+                Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
+        else:
+            Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
+            Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
         leg.append("m=%d" % kb_m)
 
     if show_figure and xp == np:  # skip plotting if arrays are on the GPU

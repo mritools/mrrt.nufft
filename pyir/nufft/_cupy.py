@@ -35,7 +35,7 @@ def get_1D_block_table_gridding(
     try:
         if kernel is not None:
             # may be limited by the number of registers used by the kernel
-            max_threads_per_block = kernel.attributes["maxThreadsPerBlock"]
+            max_threads_per_block = kernel.max_threads_per_block
         else:
             # device limit
             max_threads_per_block = dev.attributes["MaxBlockDimX"]
