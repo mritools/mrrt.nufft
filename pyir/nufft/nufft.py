@@ -14,7 +14,11 @@ license for the Matlab code is reproduced below.
 
 from __future__ import division, print_function, absolute_import
 
-import collections
+try:
+    from collections.abc import Callable
+except ImportError:
+    from collections import Callable
+
 import warnings
 from math import sqrt
 
@@ -358,7 +362,9 @@ class NufftBase(object):
         # Do not store the module as an attribute so pickling is possible.
         if self.__on_gpu:
             if not config.have_cupy:
-                raise ValueError("cupy is required for the GPU implementation.")
+                raise ValueError(
+                    "CuPy is required for the GPU implementation."
+                )
             return cupy
         else:
             return np
@@ -405,19 +411,11 @@ class NufftBase(object):
         self.__sparse_format = sparse_format.upper()
         if self.p is not None:
             if sparse_format == "CSC":
-                if self.p.format == "coo" and self.on_gpu:
-                    # TODO: fix bug in Cupy.
-                    #       For now, we do the conversion via the CPU.
-                    self.p = cupyx.scipy.sparse.csc_matrix(self.p.get().tocsc())
-                else:
-                    self.p = self.p.tocsc()
+                # works on GPU too now that cupy/cupy#2410 was merged
+                self.p = self.p.tocsc()
             elif sparse_format == "CSR":
-                if self.p.format == "coo" and self.on_gpu:
-                    # TODO: fix bug in Cupy.
-                    #       For now, we do the conversion via the CPU.
-                    self.p = cupyx.scipy.sparse.csr_matrix(self.p.get().tocsr())
-                else:
-                    self.p = self.p.tocsr()
+                # works on GPU too now that cupy/cupy#2410 was merged:
+                self.p = self.p.tocsr()
             elif sparse_format == "COO":
                 self.p = self.p.tocoo()
             elif sparse_format == "LIL":
@@ -485,7 +483,9 @@ class NufftBase(object):
                 raise ValueError("omega needs {} columns".format(self.ndim))
         self.__om = om
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_after = self._phase_after(om, self.n_mid, self.__n_shift)
+            self.phase_after = self._phase_after(
+                om, self.n_mid, self.__n_shift
+            )
         if self.__init_complete:
             self._reinitialize()
 
@@ -769,7 +769,7 @@ class NufftBase(object):
 
             # callable kernel:  kaiser, linear, etc
             kernel_func = self.kernel.kernel[d]
-            if not isinstance(kernel_func, collections.Callable):
+            if not isinstance(kernel_func, Callable):
                 raise ValueError("callable kernel function required")
 
             # [J?,M]
@@ -856,16 +856,14 @@ class NufftBase(object):
 
         # return in CSC format by default
         if self.on_gpu:
-            # TODO: fix bug in Cupy.
-            #       For now, we do the conversion via the CPU.
-            self.p = cupyx.scipy.sparse.csc_matrix(self.p.get().tocsc())
+            self.p = self.p.tocsc()  # works on GPU after fix in cupy/cupy#2410
             if highmem is None:
                 free_memory_bytes = cupy.cuda.device.Device().mem_info[0]
                 # if "enough" memory left, keep a copy (factor of 2 is an
                 # arbitrary choice)
                 highmem = free_memory_bytes > 2 * self.p.data.nbytes
             if highmem:
-                self.p_csr = cupyx.scipy.sparse.csr_matrix(self.p.get().tocsr())
+                self.p_csr = self.p.tocsr()
             else:
                 self.p_csr = None
         else:
@@ -901,7 +899,11 @@ class NufftBase(object):
             self.phase_shift = None  # compute on-the-fly
         if self.Ld is None:
             self.Ld = 2 ** 10
-        if ndim != len(self.Jd) or ndim != len(self.Ld) or ndim != len(self.Kd):
+        if (
+            ndim != len(self.Jd)
+            or ndim != len(self.Ld)
+            or ndim != len(self.Kd)
+        ):
             raise ValueError("inconsistent dimensions among ndim, Jd, Ld, Kd")
         if ndim != self.om.shape[1]:
             raise ValueError("omega needs %d columns" % (ndim))
@@ -971,7 +973,9 @@ class NufftBase(object):
         )
         for d in range(self.ndim):
             if self.mode != "sparse":
-                x = np.linspace(-self.Jd[d] / 2, self.Jd[d] / 2, self.h[d].size)
+                x = np.linspace(
+                    -self.Jd[d] / 2, self.Jd[d] / 2, self.h[d].size
+                )
                 y = self.h[d]
                 if self.on_gpu:
                     y = y.get()
@@ -1203,7 +1207,14 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
                 elif ndim == 2:
                     args = (xk[:, r], obj.h[0], obj.h[1], tm, x[:, r])
                 elif ndim == 3:
-                    args = (xk[:, r], obj.h[0], obj.h[1], obj.h[2], tm, x[:, r])
+                    args = (
+                        xk[:, r],
+                        obj.h[0],
+                        obj.h[1],
+                        obj.h[2],
+                        tm,
+                        x[:, r],
+                    )
                 # obj.kern_adj(obj.block, obj.grid, args)
                 obj.kern_adj(obj.grid, obj.block, args)
 
