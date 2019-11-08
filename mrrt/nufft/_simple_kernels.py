@@ -2,8 +2,9 @@
 for comparison purposes.
 """
 import functools
-import numpy as np
 from math import sqrt
+
+import numpy as np
 
 
 __all__ = [

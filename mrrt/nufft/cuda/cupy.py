@@ -1,7 +1,9 @@
 """Functions for runtime generation of CUDA-based NUFFT kernels."""
 import os
+
 import numpy as np
 from jinja2 import Template
+
 from .. import config
 
 template_path = os.path.join(os.path.dirname(__file__), "jinja")

@@ -12,25 +12,19 @@ license for the Matlab code is reproduced below.
     UM and the authors make all the usual disclaimers about liability etc.
 """
 
-from __future__ import division, print_function, absolute_import
-
 try:
     from collections.abc import Callable
 except ImportError:
     from collections import Callable
-
-import warnings
 from math import sqrt
-
 from time import time
-import numpy as np
+import warnings
 
+import numpy as np
 import scipy.sparse
 
-from mrrt.nufft._dtft import dtft, dtft_adj
-
-from ._kaiser_bessel import kaiser_bessel_ft
-
+from ._dtft import dtft, dtft_adj
+from ._fft_cpu import fftn, ifftn
 from ._interp_table import (
     interp1_table,
     interp2_table,
@@ -39,11 +33,7 @@ from ._interp_table import (
     interp2_table_adj,
     interp3_table_adj,
 )
-
-from ._simple_kernels import _scale_tri
-
-from ._fft_cpu import fftn, ifftn
-
+from ._kaiser_bessel import kaiser_bessel_ft
 from ._kernels import NufftKernel
 from .nufft_utils import (
     _nufft_samples,
@@ -57,8 +47,9 @@ from .nufft_utils import (
     outer_sum,
     profile,
     reale,
-    to_1d_int_array,
+    _as_1d_ints,
 )
+from ._simple_kernels import _scale_tri
 from . import config
 
 if config.have_cupy:
@@ -202,17 +193,17 @@ class NufftBase(object):
 
         # set the private version (__Nd not Nd) to avoid circular calls
         # also Nd, Kd, Jd, etc. should be on the CPU
-        self.__Nd = to_1d_int_array(Nd, xp=np)
+        self.__Nd = _as_1d_ints(Nd, xp=np)
         self.kernel_type = kernel_type
         self.__phasing = phasing
         self.__om = None  # will be set later below
         self._set_n_mid()
         self.ndim = len(self.Nd)  # number of dimensions
-        self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=np)
+        self._Jd = _as_1d_ints(Jd, n=self.ndim, xp=np)
 
         if Kd is None:
             Kd = 2 * self.__Nd
-        self.__Kd = to_1d_int_array(Kd, n=self.ndim, xp=np)
+        self.__Kd = _as_1d_ints(Kd, n=self.ndim, xp=np)
 
         self.ortho = ortho  # normalization for orthogonal FFT
         if self.ortho:
@@ -274,7 +265,7 @@ class NufftBase(object):
         self.__sparse_format = None
         if Ld is None:
             Ld = 1024
-        self.__Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
+        self.__Ld = _as_1d_ints(Ld, n=self.ndim, xp=np)
         if self.mode == "sparse":
             self._init_sparsemat()  # create COO matrix
             # convert to other format if specified
@@ -284,7 +275,7 @@ class NufftBase(object):
                 self.sparse_format = sparse_format
         elif "table" in self.mode:
             # TODO: change name of Ld to table_oversampling
-            self.Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
+            self.Ld = _as_1d_ints(Ld, n=self.ndim, xp=np)
             odd_L = np.mod(self.Ld, 2) == 1
             odd_J = np.mod(self.Jd, 2) == 1
             if np.any(np.logical_and(odd_L, odd_J)):
@@ -507,7 +498,7 @@ class NufftBase(object):
     @Nd.setter
     def Nd(self, Nd):
         K_N_ratio = self.__Kd / self.__Nd
-        self.__Nd = to_1d_int_array(Nd, n=self.ndim, xp=np)
+        self.__Nd = _as_1d_ints(Nd, n=self.ndim, xp=np)
         self._set_n_mid()
         # update Kd to maintain approximately the same amount of oversampling
         self.__Kd = np.round(K_N_ratio * self.__Nd).astype(self.__Kd.dtype)
@@ -520,7 +511,7 @@ class NufftBase(object):
 
     @Jd.setter
     def Jd(self, Jd):
-        self._Jd = to_1d_int_array(Jd, n=self.ndim, xp=np)
+        self._Jd = _as_1d_ints(Jd, n=self.ndim, xp=np)
         if self.on_gpu and len(set(self._Jd)) > 1:
             raise ValueError("per-axis Jd not supported on the GPU")
         if self.__init_complete:
@@ -532,7 +523,7 @@ class NufftBase(object):
 
     @Ld.setter
     def Ld(self, Ld):
-        self.__Ld = to_1d_int_array(Ld, n=self.ndim, xp=np)
+        self.__Ld = _as_1d_ints(Ld, n=self.ndim, xp=np)
         if "table" not in self.mode:
             warnings.warn("Ld is ignored for mode = {}".format(self.mode))
         elif self.on_gpu and len(set(self.__Ld)) > 1:
@@ -546,7 +537,7 @@ class NufftBase(object):
 
     @Kd.setter
     def Kd(self, Kd):
-        self.__Kd = to_1d_int_array(Kd, n=self.ndim, xp=np)
+        self.__Kd = _as_1d_ints(Kd, n=self.ndim, xp=np)
         if isinstance(self.phase_before, np.ndarray):
             self.phase_before = self._phase_before(Kd, self.n_mid)
         if self.__init_complete:

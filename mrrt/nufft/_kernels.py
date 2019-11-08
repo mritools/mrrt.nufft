@@ -19,9 +19,9 @@ import functools
 import numpy as np
 
 from ._kaiser_bessel import kaiser_bessel
-from .nufft_utils import to_1d_int_array
-from .simple_kernels import nufft_diric
-from .nufft_utils import is_string_like
+from ._simple_kernels import nufft_diric
+from .nufft_utils import is_string_like, _as_1d_ints
+
 
 __all__ = ["NufftKernel"]
 
@@ -77,7 +77,7 @@ class NufftKernel(object):
             max_len = 0
             for k, v in list(params.items()):
                 if k in ["Kd", "Jd", "Nd"]:
-                    params[k] = to_1d_int_array(v)
+                    params[k] = _as_1d_ints(v)
                     plen = len(params[k])
                     if plen > max_len:
                         max_len = plen
@@ -88,7 +88,7 @@ class NufftKernel(object):
         # replicate any that were length one to ndim array
         for k, v in list(params.items()):
             if k in ["Kd", "Jd", "Nd"]:
-                params[k] = to_1d_int_array(v, self.ndim)
+                params[k] = _as_1d_ints(v, self.ndim)
             # n_mid is not necessarily an integer, so handle it manually
             if "n_mid" in params and len(params["n_mid"]) < self.ndim:
                 if len(params["n_mid"]) > 1:

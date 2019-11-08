@@ -4,10 +4,7 @@ Try getting FFTs from pyFFTW, falling back to numpy if pyFFTW is unavailable.
 Also defines various other utility functions for centered/unitary FFTs,
 determining optimal transform shapes and planning pyFFTW FFTs.
 """
-from __future__ import division, absolute_import, print_function
-
 import functools
-from functools import partial
 
 import numpy as np
 
@@ -61,7 +58,7 @@ try:
     # default effort when calling pyFFTW builder routines
     pyfftw_builder_effort = config.pyfftw_config.PLANNER_EFFORT
 
-    fftn = partial(
+    fftn = functools.partial(
         pyfftw.interfaces.numpy_fft.fftn,
         planner_effort=pyfftw_planner_effort,
         threads=pyfftw_threads,
@@ -70,7 +67,7 @@ try:
         "pyFFTW-based fftn with effort {} and {} " "threads"
     ).format(pyfftw_planner_effort, pyfftw_threads)
 
-    ifftn = partial(
+    ifftn = functools.partial(
         pyfftw.interfaces.numpy_fft.ifftn,
         planner_effort=pyfftw_planner_effort,
         threads=pyfftw_threads,

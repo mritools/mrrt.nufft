@@ -11,7 +11,6 @@ from mrrt.nufft.tests.test_dtft import _uniform_freqs
 
 if config.have_cupy:
     import cupy
-
     all_xp = [np, cupy]
 else:
     all_xp = [np]

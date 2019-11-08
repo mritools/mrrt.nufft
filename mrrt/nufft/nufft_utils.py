@@ -1,9 +1,8 @@
-from __future__ import division, print_function, absolute_import
-
 import sys
 import warnings
 
 import numpy as np
+
 from . import config
 
 if config.have_cupy:
@@ -43,7 +42,6 @@ except (AttributeError, KeyError):
         return func
 
 
-# from John Hunter's matplotlib
 def is_string_like(obj):
     """Check if obj is string."""
     try:
@@ -352,12 +350,14 @@ def _nufft_coef(om, J, K, kernel, xp=None):
     return (coef, arg)
 
 
-def to_1d_int_array(arr, n=None, dtype_out=np.intp, xp=None):
-    """ convert to 1D integer array.  returns an error if the elements of arr
-    aren't an integer type or arr has more than one non-singleton dimension.
+def _as_1d_ints(arr, n=None, dtype_out=np.intp, xp=None):
+    """Convert to a 1D array with dtype=dtype_out
 
-    If `n` is specified, an error is raised if the array doesn't contain
-    `n` elements.
+    Returns an error if the elements of ``arr`` aren't an integer type or
+    ``arr`` has more than one non-singleton dimension.
+
+    If specified, an error is raised if the array doesn't contain ``n``
+    elements.
     """
     if xp is None:
         xp, on_gpu = get_array_module(arr)
@@ -394,11 +394,11 @@ def reale(x, com="error", tol=None, msg=None, xp=None):
         The data to check.
     com : {'warn', 'error', 'display', 'report'}
         Control rather to raise a warning, an error, or to just display to the
-        console.  If `com == 'report'`, the relative magnitude of the imaginary
-        component is printed to the console.
+        console.  If ``com == 'report'``, the relative magnitude of the
+        imaginary component is printed to the console.
     tol : float or None
-        Allow complex values below `tol` in magnitude.  If `None`, `tol` will
-        be 1000*eps.
+        Allow complex values below ``tol`` in magnitude.  If None, ``tol`` will
+        be ``1000*eps``.
     msg : str or None
         Additional message to print upon encountering complex values.
 
@@ -428,7 +428,6 @@ def reale(x, com="error", tol=None, msg=None, xp=None):
         else:
             return xp.real(x)
 
-    # TODO: CuPy has a bug on trying to access the .imag attribute on real-valued arrays
     frac = xp.max(xp.abs(x.imag)) / max_abs_x
     if com == "report":
         print("imaginary part %g%%" % frac * 100)
@@ -455,14 +454,13 @@ def max_percent_diff(s1, s2, use_both=False, doprint=False, xp=None):
     s1, s2 : array-like
         The two signals to compare. These should have the same shape.
     use_both: bool, optional
-        If True use the maximum across s1, s2 as the normalizer.
+        If True use the maximum across ``s1``, ``s2`` as the normalizer.
+        Otherwise the maximum across ``s1`` is used.
 
-    %function d = max_percent_diff(s1, s2, [options])
-    %
-    % compute the "maximum percent difference" between two signals
-    % options
-    %   1       use both arguments as the normalizer
-    %   string      print this
+    Returns
+    -------
+    d : float
+        The maximum percent difference (in range [0, 100]).
 
     Notes
     -----
@@ -480,9 +478,6 @@ def max_percent_diff(s1, s2, use_both=False, doprint=False, xp=None):
 
     if xp.any(xp.isnan(s1)) | xp.any(xp.isnan(s2)):
         raise ValueError("NaN values found in input")
-
-    # s1 = np.double(s1);
-    # s2 = np.double(s2);
 
     if use_both:
         denom = xp.max(xp.abs(s1).max(), xp.abs(s2).max())

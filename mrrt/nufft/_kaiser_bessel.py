@@ -21,8 +21,6 @@ to compute the kernels on the CPU due to lack of an ``iv`` or ``jv``
 implementation there.
 
 """
-from __future__ import division, print_function, absolute_import
-
 import warnings
 import numpy as np
 from scipy.special import iv, jv, i0, j0

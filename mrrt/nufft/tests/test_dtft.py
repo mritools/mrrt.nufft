@@ -6,7 +6,6 @@ from mrrt.nufft.nufft_utils import max_percent_diff
 
 if config.have_cupy:
     import cupy
-
     all_xp = [np, cupy]
 else:
     all_xp = [np]

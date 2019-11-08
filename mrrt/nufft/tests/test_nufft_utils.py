@@ -23,7 +23,6 @@ from scipy.special import diric
 
 if config.have_cupy:
     import cupy
-
     all_xp = [np, cupy]
 else:
     all_xp = [np]
@@ -83,14 +82,14 @@ def test_nufft_gauss(xp, show_figure=False):
         plt.plot(k, kernel(k, J))
         plt.axis("tight")
         plt.xlabel("k")
-        plt.ylabel("$\psi(k)$")
+        plt.ylabel(r"$\psi(k)$")
         plt.title("Gaussian bell")
         plt.subplot(122)
         l1, l2 = plt.plot(n, sn_ft, "c-o", n, sn_zn, "y-")
         plt.axis("tight")
         plt.legend((l1, l2), ("1/FT", "1/zn"), loc="upper right")
         plt.xlabel("t")
-        plt.ylabel("$\Psi(t)$")
+        plt.ylabel(r"$\Psi(t)$")
         plt.title("Reciprocal of Fourier transform")
     return
 
