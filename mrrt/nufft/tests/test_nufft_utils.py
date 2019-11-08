@@ -6,9 +6,9 @@ import numpy as np
 from numpy.testing import assert_equal, assert_
 import pytest
 
-import pyir.nufft
-from pyir.nufft import config
-from pyir.nufft.nufft_utils import (
+import mrrt.nufft
+from mrrt.nufft import config
+from mrrt.nufft.nufft_utils import (
     _nufft_interp_zn,
     _nufft_coef,
     _nufft_offset,
@@ -17,7 +17,7 @@ from pyir.nufft.nufft_utils import (
     reale,
 )
 
-from pyir.nufft.simple_kernels import linear_kernel, nufft_diric, nufft_gauss
+from mrrt.nufft.simple_kernels import linear_kernel, nufft_diric, nufft_gauss
 from scipy.special import diric
 
 # some tests load results from Fessler's Matlab implementation for comparison
@@ -30,7 +30,7 @@ else:
     all_xp = [np]
 
 # data generated using Jeff Fessler's Michigan image reconstruction toolbox
-pkg_dir = os.path.dirname(os.path.realpath(pyir.nufft.__file__))
+pkg_dir = os.path.dirname(os.path.realpath(mrrt.nufft.__file__))
 data_dir = pjoin(pkg_dir, "tests", "data")
 
 

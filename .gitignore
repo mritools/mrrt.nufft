@@ -14,7 +14,7 @@
 __config__.py
 
 # cython-generated sources
-pyir/nufft/_extensions/*.c
+mrrt/nufft/_extensions/*.c
 cythonize.dat
 
 # binary data files

@@ -21,10 +21,10 @@ Required Dependencies
 ---------------------
 - [numpy](https://github.com/numpy/numpy)
 - [scipy](https://scipy.org)
-- [pyir.utils](https://github.com/grlee77/pyir.utils)
+- [mrrt.utils](https://github.com/grlee77/mrrt.utils)
 
 Recommended Dependencies
 ------------------------
 - [matplotlib](https://matplotlib.org)  (for plotting)
 - [pyFFTW](https://github.com/pyFFTW/pyFFTW) (enable faster FFTS than numpy.fft)
-- [pyir.cuda](https://github.com/grlee77/pyir.cuda)  (code to support the GPU implementation is here)
+- [mrrt.cuda](https://github.com/grlee77/mrrt.cuda)  (code to support the GPU implementation is here)

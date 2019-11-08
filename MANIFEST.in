@@ -1,2 +1,2 @@
 include versioneer.py
-include pyir/nufft/_version.py
+include mrrt/nufft/_version.py

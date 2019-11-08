@@ -5,8 +5,8 @@ import numpy as np
 from numpy.testing import assert_equal, assert_raises, assert_
 import pytest
 
-from pyir.nufft.nufft import NufftKernel
-from pyir.nufft import config
+from mrrt.nufft.nufft import NufftKernel
+from mrrt.nufft import config
 
 if config.have_cupy:
     import cupy

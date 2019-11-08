@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# pyir.nufft documentation build configuration file, created by
+# mrrt.nufft documentation build configuration file, created by
 # sphinx-quickstart on Tue Apr 14 10:29:06 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -17,7 +17,7 @@ import sys
 import os
 
 # General information about the project.
-project = "pyir.nufft"
+project = "mrrt.nufft"
 copyright = "2015-2017, Gregory R. Lee"
 
 currentdir = os.path.abspath(os.path.dirname(__file__))
@@ -29,7 +29,7 @@ if False:
         exec(f.read())
     source_version = get_versions()["version"]
 else:
-    from pyir.nufft._version import get_versions
+    from mrrt.nufft._version import get_versions
 
     __version__ = get_versions()["version"]
     source_version = get_versions()["version"]
@@ -225,7 +225,7 @@ html_domain_indices = False
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "pyir.nufftdoc"
+htmlhelp_basename = "mrrt.nufftdoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -245,8 +245,8 @@ latex_elements = {
 latex_documents = [
     (
         "index",
-        "pyir.nufft.tex",
-        "pyir.nufft Documentation",
+        "mrrt.nufft.tex",
+        "mrrt.nufft Documentation",
         "Gregory R. Lee",
         "manual",
     )
@@ -278,7 +278,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ("index", "pyir.nufft", "pyir.nufft Documentation", ["Gregory R. Lee"], 1)
+    ("index", "mrrt.nufft", "mrrt.nufft Documentation", ["Gregory R. Lee"], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -293,10 +293,10 @@ man_pages = [
 texinfo_documents = [
     (
         "index",
-        "pyir.nufft",
-        "pyir.nufft Documentation",
+        "mrrt.nufft",
+        "mrrt.nufft Documentation",
         "Gregory R. Lee",
-        "pyir.nufft",
+        "mrrt.nufft",
         "One line description of project.",
         "Miscellaneous",
     )

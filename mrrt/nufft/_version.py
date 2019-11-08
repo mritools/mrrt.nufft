@@ -40,8 +40,8 @@ def get_config():
     cfg.VCS = "git"
     cfg.style = "pep440"
     cfg.tag_prefix = ""
-    cfg.parentdir_prefix = "pyir.nufft-"
-    cfg.versionfile_source = "pyir/nufft/_version.py"
+    cfg.parentdir_prefix = "mrrt.nufft-"
+    cfg.versionfile_source = "mrrt/nufft/_version.py"
     cfg.verbose = False
     return cfg
 

@@ -4,8 +4,8 @@
 import numpy as np
 import pytest
 
-from pyir.nufft import dtft, dtft_adj, config
-from pyir.nufft.nufft_utils import max_percent_diff
+from mrrt.nufft import dtft, dtft_adj, config
+from mrrt.nufft.nufft_utils import max_percent_diff
 
 if config.have_cupy:
     import cupy
@@ -144,7 +144,7 @@ def test_dtft_adj_3d(xp, verbose=False, test_Cython=False):
 
     if test_Cython:
         import time
-        from pyir.nufft.cy_dtft import dtft_adj as cy_dtft_adj
+        from mrrt.nufft.cy_dtft import dtft_adj as cy_dtft_adj
 
         t_start = time.time()
         xc = cy_dtft_adj(X.ravel(order="F"), om, Nd, n_shift)

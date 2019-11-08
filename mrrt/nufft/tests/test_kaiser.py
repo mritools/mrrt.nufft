@@ -4,8 +4,8 @@ import functools
 import numpy as np
 import pytest
 
-from pyir.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
-from pyir.nufft import config
+from mrrt.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
+from mrrt.nufft import config
 
 if config.have_cupy:
     import cupy

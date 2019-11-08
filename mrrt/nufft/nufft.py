@@ -27,7 +27,7 @@ import numpy as np
 
 import scipy.sparse
 
-from pyir.nufft.nufft_utils import (
+from mrrt.nufft.nufft_utils import (
     _nufft_samples,
     _nufft_interp_zn,
     _nufft_coef,
@@ -35,11 +35,11 @@ from pyir.nufft.nufft_utils import (
     to_1d_int_array,
 )
 
-from pyir.nufft._dtft import dtft, dtft_adj
+from mrrt.nufft._dtft import dtft, dtft_adj
 
-from pyir.nufft._kaiser_bessel import kaiser_bessel_ft
+from mrrt.nufft._kaiser_bessel import kaiser_bessel_ft
 
-from pyir.nufft.interp_table import (
+from mrrt.nufft.interp_table import (
     interp1_table,
     interp2_table,
     interp3_table,
@@ -48,7 +48,7 @@ from pyir.nufft.interp_table import (
     interp3_table_adj,
 )
 
-from pyir.nufft.simple_kernels import _scale_tri
+from mrrt.nufft.simple_kernels import _scale_tri
 
 from ._fft_cpu import fftn, ifftn
 
@@ -317,7 +317,7 @@ class NufftBase(object):
             self._init_gpu()
 
     def _init_gpu(self):
-        from pyir.nufft.cuda.cupy import _get_gridding_funcs
+        from mrrt.nufft.cuda.cupy import _get_gridding_funcs
 
         M = self.om.shape[0]
         if not len(np.unique(self.Jd)):

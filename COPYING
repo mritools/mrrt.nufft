@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-pyir.nufft builds upon some compatibly licensed 3rd party code:
+mrrt.nufft builds upon some compatibly licensed 3rd party code:
 
 1.) Code for handling compilation flags (e.g. for OpenMP) when building C
     extensions is adapted from DIPY.

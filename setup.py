@@ -44,7 +44,7 @@ flag_defines = (
     else gcc_flag_defines
 )
 
-extbuilder = add_flag_checking(build_ext, flag_defines, pjoin("pyir", "nufft"))
+extbuilder = add_flag_checking(build_ext, flag_defines, pjoin("mrrt", "nufft"))
 
 # add np.get_include() at build time, not during setup.py execution.
 extbuilder = make_np_ext_builder(extbuilder)
@@ -63,7 +63,7 @@ except:
     # TODO: allow a python-only installation with reduced functionality
     raise EnvironmentError(
         """
-        cython could not be found.  Compilation of pyir.nufft requires Cython
+        cython could not be found.  Compilation of mrrt.nufft requires Cython
         version >= 0.21.
         Install or upgrade cython via:
         pip install cython --upgrade
@@ -75,21 +75,21 @@ extra_compile_args = ["-ffast-math"]
 cmdclass = {"build_ext": extbuilder}
 cmdclass.update(versioneer.get_cmdclass())
 
-src_path = pjoin("pyir", "nufft")
+src_path = pjoin("mrrt", "nufft")
 
 # C extensions for table-based NUFFT
 ext_nufft = Extension(
-    "pyir.nufft._extensions._nufft_table",
+    "mrrt.nufft._extensions._nufft_table",
     sources=[
-        "pyir/nufft/_extensions/c/nufft_table.c",
-        "pyir/nufft/_extensions/_nufft_table.pyx",
+        "mrrt/nufft/_extensions/c/nufft_table.c",
+        "mrrt/nufft/_extensions/_nufft_table.pyx",
     ],
     depends=[
-        "pyir/nufft/_extensions/c/nufft_table.template.c",
-        "pyir/nufft/_extensions/c/nufft_table.template.h",
-        "pyir/nufft/_extensions/c/templating.h"
-        "pyir/nufft/_extensions/c/nufft_table.h",
-        "pyir/nufft/_extensions/_nufft_table.pxd",
+        "mrrt/nufft/_extensions/c/nufft_table.template.c",
+        "mrrt/nufft/_extensions/c/nufft_table.template.h",
+        "mrrt/nufft/_extensions/c/templating.h"
+        "mrrt/nufft/_extensions/c/nufft_table.h",
+        "mrrt/nufft/_extensions/_nufft_table.pxd",
     ],
     language="c",
     extra_compile_args=extra_compile_args,
@@ -112,16 +112,16 @@ ext_modules = cythonize(
 )
 
 setup(
-    name="pyir.nufft",
+    name="mrrt.nufft",
     author="Gregory R. Lee",
     version=versioneer.get_version(),
     ext_modules=ext_modules,
     cmdclass=cmdclass,
     packages=find_packages(),
-    namespace_package=["pyir"],
+    namespace_package=["mrrt"],
     # scripts=[],
     # since the package has c code, the egg cannot be zipped
     zip_safe=False,
-    # data_files=[('pyir.nufft/data', glob('pyir.nufft/data/*.npy')), ],
-    package_data={"pyir.nufft": [pjoin("tests", "data", "*")]},
+    # data_files=[('mrrt.nufft/data', glob('mrrt.nufft/data/*.npy')), ],
+    package_data={"mrrt.nufft": [pjoin("tests", "data", "*")]},
 )

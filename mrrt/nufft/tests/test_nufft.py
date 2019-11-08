@@ -6,11 +6,11 @@ import numpy as np
 from numpy.testing import assert_equal
 import pytest
 
-from pyir.nufft import config, dtft, dtft_adj
-from pyir.nufft.nufft import NufftBase, nufft_adj
-from pyir.nufft.nufft import _nufft_table_make1
-from pyir.nufft.nufft_utils import max_percent_diff
-from pyir.nufft.tests.test_dtft import _uniform_freqs
+from mrrt.nufft import config, dtft, dtft_adj
+from mrrt.nufft.nufft import NufftBase, nufft_adj
+from mrrt.nufft.nufft import _nufft_table_make1
+from mrrt.nufft.nufft_utils import max_percent_diff
+from mrrt.nufft.tests.test_dtft import _uniform_freqs
 
 if config.have_cupy:
     import cupy
