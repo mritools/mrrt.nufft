@@ -23,6 +23,7 @@ from scipy.special import diric
 
 if config.have_cupy:
     import cupy
+
     all_xp = [np, cupy]
 else:
     all_xp = [np]

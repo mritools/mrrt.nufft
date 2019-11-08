@@ -8,6 +8,7 @@ from mrrt.nufft import config
 
 if config.have_cupy:
     import cupy
+
     all_xp = [np, cupy]
 else:
     all_xp = [np]

@@ -4,6 +4,7 @@ import numpy as np
 
 try:
     import cupy
+
     default_device = cupy.cuda.device.Device()
     default_context = cupy.cuda.stream.get_current_stream()
 except ImportError:
