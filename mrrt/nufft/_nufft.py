@@ -78,7 +78,12 @@ __all__ = [
 supported_real_types = [np.float32, np.float64]
 supported_cplx_types = [np.complex64, np.complex128]
 
-# TODO: for CuPy case need to check that len(set(Jd)) = 1, etc.
+# TODO: use more pythonic names for Kd, Jd, Ld, Nd, etc
+#       Nd -> shape
+#       Kd -> gridded_shape
+#       Ld -> table_sizes
+#       Jd -> kernel_sizes
+#       om -> omega
 
 
 def _get_legend_text(ax):
@@ -224,14 +229,13 @@ class NufftBase(object):
         self._cplx_dtype = None
         self._real_dtype = None
 
-        self.om = om  # TODO: force om to be an array. don't allow 'epi', etc.
+        self._init_omega(om)  # TODO: force om to be an array. don't allow 'epi', etc.
 
         self.precision = precision
-        self.__mode = None  # set below by mode.setter()
         self._forw = None
         self._adj = None
         self._init = None
-        self.mode = mode  # {'table', 'sparse', 'exact'}
+        self.__mode = mode
         self.adjoint_scalefactor = adjoint_scalefactor
         kernel_type = kernel_type.lower()
         # [M, *Kd]	sparse interpolation matrix (or empty if table-based)
@@ -251,7 +255,7 @@ class NufftBase(object):
         if self.om is not None:
             self.M = self.om.shape[0]
         if n_shift is None:
-            self.__n_shift = (0,) * self.ndim
+            self.__n_shift = (0,) * self.ndim  # TODO: set to self.Nd //2?
         else:
             self.__n_shift = n_shift
         if (self.ndim != len(self.Jd)) or (self.ndim != len(self.Kd)):
@@ -263,6 +267,7 @@ class NufftBase(object):
         self.gram = None  # TODO
         self._update_array__precision()
         self._make_arrays_contiguous(order="F")
+
         # TODO: cleanup how initialization is done
         self.__sparse_format = None
         if Ld is None:
@@ -371,6 +376,7 @@ class NufftBase(object):
         return y
 
     def _set_phase_funcs(self):
+        self._set_n_mid()
         if self.phasing == "real":
             self.phase_before = self._phase_before(self.Kd, self.n_mid)
             self.phase_after = self._phase_after(
@@ -449,8 +455,12 @@ class NufftBase(object):
     def om(self):
         return self.__om
 
-    @om.setter
-    def om(self, om):
+    # disallow setting om after object creation
+    # @om.setter
+    # def om(self, om):
+    #     self._init_omega(om)
+
+    def _init_omega(self, om):
         xp = self.xp
         if om is not None:
             if is_string_like(om):
@@ -549,10 +559,11 @@ class NufftBase(object):
     def mode(self):
         return self.__mode
 
-    @mode.setter
-    def mode(self, mode):
-        self.__mode = mode
-        # TODO: allow changing mode
+    # @mode.setter
+    # def mode(self, mode):
+    #     self.__mode = mode
+    #     if self.__init_complete:
+    #         self._reinitialize()
 
     @property
     def n_shift(self):
