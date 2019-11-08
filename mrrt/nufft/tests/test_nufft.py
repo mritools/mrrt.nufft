@@ -1,5 +1,3 @@
-from __future__ import division, print_function, absolute_import
-
 from itertools import product
 
 import numpy as np
@@ -7,8 +5,7 @@ from numpy.testing import assert_equal
 import pytest
 
 from mrrt.nufft import config, dtft, dtft_adj
-from mrrt.nufft.nufft import NufftBase, nufft_adj
-from mrrt.nufft.nufft import _nufft_table_make1
+from mrrt.nufft._nufft import NufftBase, nufft_adj, _nufft_table_make1
 from mrrt.nufft.nufft_utils import max_percent_diff
 from mrrt.nufft.tests.test_dtft import _uniform_freqs
 

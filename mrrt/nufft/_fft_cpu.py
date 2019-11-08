@@ -6,18 +6,12 @@ determining optimal transform shapes and planning pyFFTW FFTs.
 """
 from __future__ import division, absolute_import, print_function
 
-import multiprocessing
 import functools
 from functools import partial
-from bisect import bisect_left
 
 import numpy as np
-from numpy.compat import integer_types
 
-from .nufft_utils import complexify
 from . import config
-
-import warnings
 
 if config.have_pyfftw:
     _default_lib = "pyfftw"

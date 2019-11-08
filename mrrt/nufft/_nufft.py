@@ -27,19 +27,11 @@ import numpy as np
 
 import scipy.sparse
 
-from mrrt.nufft.nufft_utils import (
-    _nufft_samples,
-    _nufft_interp_zn,
-    _nufft_coef,
-    _nufft_offset,
-    to_1d_int_array,
-)
-
 from mrrt.nufft._dtft import dtft, dtft_adj
 
-from mrrt.nufft._kaiser_bessel import kaiser_bessel_ft
+from ._kaiser_bessel import kaiser_bessel_ft
 
-from mrrt.nufft.interp_table import (
+from ._interp_table import (
     interp1_table,
     interp2_table,
     interp3_table,
@@ -48,19 +40,24 @@ from mrrt.nufft.interp_table import (
     interp3_table_adj,
 )
 
-from mrrt.nufft.simple_kernels import _scale_tri
+from ._simple_kernels import _scale_tri
 
 from ._fft_cpu import fftn, ifftn
 
 from ._kernels import NufftKernel
 from .nufft_utils import (
-    get_array_module,
-    reale,
-    profile,
-    is_string_like,
-    get_data_address,
+    _nufft_samples,
+    _nufft_interp_zn,
+    _nufft_coef,
+    _nufft_offset,
     complexify,
+    get_array_module,
+    get_data_address,
+    is_string_like,
     outer_sum,
+    profile,
+    reale,
+    to_1d_int_array,
 )
 from . import config
 
@@ -107,8 +104,7 @@ def _block_outer_sum(x1, x2, xp=None):
     xx1 = x1.reshape((J1, 1, M))
     xx2 = x2.reshape((1, J2, M))
     # use numpy broadcasting
-    y = xx1 + xx2  # (J1, J2, M)
-    return y
+    return xx1 + xx2  # (J1, J2, M)
 
 
 def _block_outer_prod(x1, x2, xp=None):
@@ -116,9 +112,7 @@ def _block_outer_prod(x1, x2, xp=None):
     J2, M = x2.shape
     xx1 = x1.reshape((J1, 1, M))
     xx2 = x2.reshape((1, J2, M))
-    # use numpy broadcasting
-    y = xx1 * xx2  # (J1, J2, M)
-    return y
+    return xx1 * xx2  # (J1, J2, M)
 
 
 # TODO: change name of NufftBase to NFFT_Base
@@ -1587,7 +1581,6 @@ def nufft_adj_exact(obj, xk, copy=True, xp=None):
     x : array
         DFT coefficients
     """
-    # extract attributes from structure
     Nd = obj.Nd
     xp, on_gpu = get_array_module(xk, xp)
 

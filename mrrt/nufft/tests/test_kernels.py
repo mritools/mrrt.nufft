@@ -1,11 +1,10 @@
-from __future__ import division, print_function, absolute_import
 from itertools import product
 
 import numpy as np
 from numpy.testing import assert_equal, assert_raises, assert_
 import pytest
 
-from mrrt.nufft.nufft import NufftKernel
+from mrrt.nufft._nufft import NufftKernel
 from mrrt.nufft import config
 
 if config.have_cupy:

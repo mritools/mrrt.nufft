@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 from os.path import join as pjoin
 
@@ -17,7 +16,7 @@ from mrrt.nufft.nufft_utils import (
     reale,
 )
 
-from mrrt.nufft.simple_kernels import linear_kernel, nufft_diric, nufft_gauss
+from mrrt.nufft._simple_kernels import linear_kernel, nufft_diric, nufft_gauss
 from scipy.special import diric
 
 # some tests load results from Fessler's Matlab implementation for comparison

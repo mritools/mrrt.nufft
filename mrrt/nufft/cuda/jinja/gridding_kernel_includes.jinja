@@ -2,13 +2,6 @@
 
 #define mymodi(k,K) ((k) - (K) * floorf((k) / (float) (K)))
 
-// Using a function rather than the mymod definition above might reduce the
-// number of registers used by the table kernels
-//__device__ int mymodi(int k, int K) {
-//    return ((k) - (K) * floorf((k) / (float) (K)));
-//}
-
-
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
 #else
     // atomicAdd for doubles didn't exist prior to compute capability 6.0
