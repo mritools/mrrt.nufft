@@ -106,7 +106,6 @@ def _block_outer_prod(x1, x2, xp=None):
     return xx1 * xx2  # (J1, J2, M)
 
 
-# TODO: change name of NufftBase to NFFT_Base
 # TODO: change default n_shift to Nd/2?
 
 
@@ -118,12 +117,12 @@ class NufftBase(object):
         self,
         Nd,
         om,
-        Jd=6,
+        Jd=4,
         Kd=None,
         Ld=None,
         precision="single",
-        kernel_type="kb:beatty",
         mode="table",
+        kernel_type="kb:beatty",
         ortho=False,
         n_shift=None,
         phasing="real",
@@ -140,35 +139,36 @@ class NufftBase(object):
         Nd : array-like
             Shape of the Cartesian grid in the spatial domain.
         om : array
-            Non-Cartesian sampling frequencies.
+            Non-Cartesian sampling frequencies. (TODO: units)
         J : int or array-like, optional
-            Size of the NUFFT kernel on each axis
+            Size of the NUFFT kernel on each axis. For GPU-based NUFFT, it is
+            currently required to use the same size on each axis.
         Kd : array-like, optional
-            Oversampled cartesian grid size (default = 2*Nd)
+            Oversampled cartesian grid size (default is ``1.5 * Nd``).
         Ld : array-like, optional
             When ``mode != 'sparse'``, this controls the size of the kernel
-            lookup table used.   (size will be ``J[i]*Ld[i]`` for axis i).
-        precision : {'single', 'double'}, optional
-            Precision of the NUFFT operations.
-        kernel_type : {'kb:beatty', ...}, optional
-            The type of gridding kernel to use.  'kb:beatty' is near optimal in
-            most cases and works well for grid oversampling factors
-             substantially less than 2.
+            lookup table used. The table size will be ``J[i] * Ld[i]`` for axis
+            ``i``.
+        precision : {'single', 'double', 'auto'}, optional
+            Precision of the NUFFT operations. If 'auto' the precision will be
+            set to match the provided ``om`` array.
         mode : {'sparse', 'table'}, optional
-            The NUFFT implementation to use.  ``sparse`` corresponds to
+            The NUFFT implementation to use. ``sparse`` corresponds to
             precomputation of a sparse matrix corresponding to the operation.
             This requires a longer initialization and uses more memory, but is
             typically faster than the lookup-table based approaches.
             ``table`` uses a look-up table based interpolation.  This is
             fast to initialize and uses less memory.
-        ortho : bool, optional
-            TODO
 
         Additional Parameters
         ---------------------
         n_shift : array-like, optional
-            controls the shift applied (e.g. default is like N/2 shift like
+            Controls the shift applied (e.g. default is an N/2 shift like
             fftshift)
+        ortho : bool, optional
+            If True, an orthogonal FFT with normalization factor (1/sqrt(n)) is
+            used in each direction. Otherwise normalization 1/n is applied
+            during the inverse FFT. (TODO: double check this)
         phasing : {'real', 'complex'}, optional
             If complex, the gridding kernel is complex-valued and the phase
             roll corresponding to ``n_shift`` is built into the kernel.
@@ -176,10 +176,14 @@ class NufftBase(object):
             applied separately.  Performance is similar in either case.
         sparse_format : {'CSC', 'CSR', 'COO', 'LIL', 'DOK'}, optional
             The sparse matrix format used by scipy.sparse for CPU-based
-            implementation.  The GPU implementation always uses CSR.
+            implementation. The GPU implementation always uses CSR.
         adjoint_scalefactor : float, optional
             A custom, constant multiplicative scaling factor for the
             adjoint operation.
+        kernel_type : {'kb:beatty', ...}, optional
+            The type of gridding kernel to use.  'kb:beatty' is near optimal in
+            most cases and works well for grid oversampling factors
+             substantially less than 2.
         kernel_kwargs : dict
             Addtional kwargs to pass along to the NufftKernel object created.
         """
@@ -202,14 +206,12 @@ class NufftBase(object):
         self._Jd = _as_1d_ints(Jd, n=self.ndim, xp=np)
 
         if Kd is None:
-            Kd = 2 * self.__Nd
+            Kd = 1.5 * self.__Nd
         self.__Kd = _as_1d_ints(Kd, n=self.ndim, xp=np)
 
-        self.ortho = ortho  # normalization for orthogonal FFT
-        if self.ortho:
-            self.scale_ortho = sqrt(self.__Kd.prod())
-        else:
-            self.scale_ortho = 1
+        # normalization for orthogonal FFT
+        self.ortho = ortho
+        self.scale_ortho = sqrt(self.__Kd.prod()) if self.ortho else 1
 
         # placeholders for phase_before/phase_after.  phasing.setter
         self.phase_before = None
@@ -1534,7 +1536,6 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
     x = x[subset_slices]
 
     if obj.ortho:
-        # TODO: even if obj.ortho?
         x *= obj.scale_ortho * obj.adjoint_scalefactor
     else:
         # undo default normalization of ifftn (as in matlab nufft_adj)

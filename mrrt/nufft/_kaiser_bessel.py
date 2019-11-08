@@ -183,15 +183,12 @@ def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
     if not alpha:
         alpha = 2.34 * J
 
-    # persistent warned  #TODO
     if kb_m < -1:  # Check for validity of FT formula
-        # if isempty(warned)    % only print this reminder the first time
         wstr = "kb_m=%g < -1" % (kb_m)
         wstr += " in kaiser_bessel_ft()\n"
         wstr += " - validity of FT formula uncertain for kb_m < -1\n"
         warnings.warn(wstr)
     elif (kb_m < 0) & ((np.abs(np.round(kb_m) - kb_m)) > np.finfo(float).eps):
-        # if isempty(warned)    % only print this reminder the first time
         wstr = "\nNeg NonInt kb_m=%g in " % (kb_m)
         wstr += "kaiser_bessel_ft()\n\t- validity of FT formula uncertain\n"
         warnings.warn(wstr)
