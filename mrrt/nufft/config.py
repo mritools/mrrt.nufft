@@ -38,7 +38,7 @@ def _check_pyfftw():
     global have_pyfftw
     global pyfftw_config
 
-    if "NUFFT_DISABLE_PYFFTW" not in os.environ:
+    if "MRRT_DISABLE_PYFFTW" not in os.environ:
         try:
             import pyfftw
 
@@ -130,7 +130,7 @@ def _check_cupy():
     global have_cupy
     global cupy_has_fftn_planning
 
-    if have_cupy is None and "NUFFT_DISABLE_CUPY" not in os.environ:
+    if have_cupy is None and "MRRT_DISABLE_CUPY" not in os.environ:
         try:
             import cupy
             from cupy.cuda import cufft

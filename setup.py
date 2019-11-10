@@ -58,7 +58,7 @@ try:
     if float(cython_version.partition(".")[2][:2]) < 21:
         raise ImportError
     build_cython = True
-except:
+except ImportError:
     build_cython = False
     # TODO: allow a python-only installation with reduced functionality
     raise EnvironmentError(

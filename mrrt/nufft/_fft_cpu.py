@@ -45,10 +45,8 @@ def define_if(condition, errmsg="requested function not available"):
     return decorator
 
 
-try:
+if config.have_pyfftw:
     import pyfftw
-
-    has_pyfftw = True
 
     pyfftw_threads = config.pyfftw_config.NUM_THREADS
 
@@ -87,8 +85,7 @@ try:
     # increase cache preservation time from default of 0.1 seconds
     pyfftw.interfaces.cache.set_keepalive_time(5)
 
-except ImportError:
-    has_pyfftw = False
+else:
     pyfftw_threads = None
     pyfftw_planner_effort = None
     pyfftw_builder_effort = None
