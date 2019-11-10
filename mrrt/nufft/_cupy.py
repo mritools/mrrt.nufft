@@ -1,7 +1,6 @@
 from math import ceil
 import warnings
 
-import numpy as np
 
 try:
     import cupy
