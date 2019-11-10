@@ -50,7 +50,7 @@ def _check_pyfftw():
                     (
                         "pyFFTW version {} found, but (>=0.11 required). "
                         "pyFFTW will not be used"
-                    ).format(numba.__version__)
+                    ).format(pyfftw.__version__)
                 )
                 have_pyfftw = False
 
@@ -133,6 +133,7 @@ def _check_cupy():
     if have_cupy is None and "NUFFT_DISABLE_CUPY" not in os.environ:
         try:
             import cupy
+            from cupy.cuda import cufft
 
             have_cupy = True
             try:
@@ -144,12 +145,7 @@ def _check_cupy():
                     "Disabling CuPy-based features."
                 )
                 have_cupy = False
-            try:
-                from cupy.cuda.cufft import PlanNd
-
-                cupy_has_fftn_planning = True
-            except ImportError:
-                cupy_has_fftn_planning = False
+            cupy_has_fftn_planning = hasattr(cufft, 'PlanNd')
 
         except ImportError:
             have_cupy = False

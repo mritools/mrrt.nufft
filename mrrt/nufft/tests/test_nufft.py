@@ -105,14 +105,15 @@ def test_nufft_adj(mode, phasing, verbose=False):
     if verbose:
         print(
             "nufft vs dtft max%%diff = %g" % max_percent_diff(xd, xn[:, :, -1])
-        )  # TODO
+        )
+    # TODO: don't allow these failures
     try:
         xp.testing.assert_almost_equal(
             np.squeeze(xd), np.squeeze(xn[:, :, -1]), decimal=1
         )
         if verbose:
             print("Success for mode: {}, {}".format(mode, phasing))
-    except:
+    except AssertionError:
         if verbose:
             print("Failed for mode: {}, {}".format(mode, phasing))
     return

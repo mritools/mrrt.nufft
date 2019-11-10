@@ -8,7 +8,6 @@ from . import config
 if config.have_cupy:
     import cupy
 
-
 __all__ = [
     "get_array_module",
     "profile",
@@ -19,6 +18,11 @@ __all__ = [
     "outer_sum",
     "max_percent_diff",
 ]
+
+# TODO: remove things present in mrrt.utils:
+#     from mrrt.utils import complexify, get_array_module, get_data_address, max_percent_diff, reale, profile
+
+# TODO: remove is_string_like (we are now Python 3 only)
 
 
 """
@@ -265,7 +269,7 @@ def _nufft_interp_zn(alist, N, J, K, func, n_mid=None, xp=None):
         # TODO: remove need for this try/except
         try:
             F = func(jarg, J)  # [N,J]
-        except:
+        except TypeError:
             F = func(jarg)  # [N,J]
         zn[:, ia] = xp.sum(F * e, axis=1)
     return zn

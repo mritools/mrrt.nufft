@@ -150,7 +150,7 @@ def test_dtft_adj_3d(xp, verbose=False, test_Cython=False):
 
         X_16rep = xp.tile(X.ravel(order="F")[:, None], (1, 16))
         t_start = time.time()
-        xc16 = cy_dtft_adj(X_16rep, om, Nd, xp.asarray(n_shift))
+        cy_dtft_adj(X_16rep, om, Nd, xp.asarray(n_shift))
         print("duration (16 reps) = {}".format(time.time() - t_start))
         t_start = time.time()
         X_64rep = xp.tile(X.ravel(order="F")[:, None], (1, 64))

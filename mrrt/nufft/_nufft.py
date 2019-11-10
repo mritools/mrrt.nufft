@@ -1154,7 +1154,7 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
     if x.shape[0] != om.shape[0]:
         raise ValueError("x size problem")
 
-    if x.ndim is 1:
+    if x.ndim == 1:
         x = x[:, xp.newaxis]
 
     # adjoint of phase shift
@@ -1332,8 +1332,9 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
             x = x.reshape((np.prod(Kd), -1), order="F")
         else:
             x = x.reshape(list(Nd) + [-1], order="F")
-    except:
-        raise ValueError("input signal has wrong size")
+    except ValueError:
+        print("Input signal has the wrong size.")
+        raise
 
     # Promote to complex if real input was provided
     x = complexify(x, complex_dtype=obj._cplx_dtype)
@@ -1438,8 +1439,9 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
         # collapse all excess dimensions into just one
         data_address_in = get_data_address(x)
         x = x.reshape(list(Nd) + [-1], order="F")
-    except:
-        raise ValueError("input signal has wrong size")
+    except ValueError:
+        print("Input signal has the wrong size")
+        raise
 
     # Promote to complex if real input was provided
     x = complexify(x, complex_dtype=obj._cplx_dtype)

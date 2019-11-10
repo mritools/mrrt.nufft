@@ -87,7 +87,7 @@ try:
     # increase cache preservation time from default of 0.1 seconds
     pyfftw.interfaces.cache.set_keepalive_time(5)
 
-except ImportError as e:
+except ImportError:
     has_pyfftw = False
     pyfftw_threads = None
     pyfftw_planner_effort = None
