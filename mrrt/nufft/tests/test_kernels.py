@@ -17,9 +17,7 @@ else:
 kernel_types = ["kb:beatty", "linear", "diric"]
 
 
-@pytest.mark.parametrize(
-    "xp, dtype", product(all_xp, [np.float32, np.float64])
-)
+@pytest.mark.parametrize("xp, dtype", product(all_xp, [np.float32, np.float64]))
 def test_kernel(xp, dtype, show_figure=False):
 
     J = 4

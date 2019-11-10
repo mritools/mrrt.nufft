@@ -166,13 +166,13 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
-    maxdiff_forward[
-        (kernel_type, mode, precision, phasing)
-    ] = max_percent_diff(y, y2)
+    maxdiff_forward[(kernel_type, mode, precision, phasing)] = max_percent_diff(
+        y, y2
+    )
 
-    maxdiff_adjoint[
-        (kernel_type, mode, precision, phasing)
-    ] = max_percent_diff(x_adj, x_adj2)
+    maxdiff_adjoint[(kernel_type, mode, precision, phasing)] = max_percent_diff(
+        x_adj, x_adj2
+    )
 
 
 @pytest.mark.parametrize(
@@ -224,13 +224,13 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
-    maxdiff_forward[
-        (kernel_type, mode, precision, phasing)
-    ] = max_percent_diff(y, y2)
+    maxdiff_forward[(kernel_type, mode, precision, phasing)] = max_percent_diff(
+        y, y2
+    )
 
-    maxdiff_adjoint[
-        (kernel_type, mode, precision, phasing)
-    ] = max_percent_diff(x_adj, x_adj2)
+    maxdiff_adjoint[(kernel_type, mode, precision, phasing)] = max_percent_diff(
+        x_adj, x_adj2
+    )
 
 
 @pytest.mark.parametrize(
@@ -282,13 +282,13 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
     #    assert_(max_percent_diff(x_adj, x_adj2) < 0.02)
     xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
-    maxdiff_forward[
-        (kernel_type, mode, precision, phasing)
-    ] = max_percent_diff(y, y2)
+    maxdiff_forward[(kernel_type, mode, precision, phasing)] = max_percent_diff(
+        y, y2
+    )
 
-    maxdiff_adjoint[
-        (kernel_type, mode, precision, phasing)
-    ] = max_percent_diff(x_adj, x_adj2)
+    maxdiff_adjoint[(kernel_type, mode, precision, phasing)] = max_percent_diff(
+        x_adj, x_adj2
+    )
 
 
 # TODO: test other nshift, odd shape, odd Kd, etc

@@ -356,9 +356,7 @@ class NufftBase(object):
         # Do not store the module as an attribute so pickling is possible.
         if self.__on_gpu:
             if not config.have_cupy:
-                raise ValueError(
-                    "CuPy is required for the GPU implementation."
-                )
+                raise ValueError("CuPy is required for the GPU implementation.")
             return cupy
         else:
             return np
@@ -482,9 +480,7 @@ class NufftBase(object):
                 raise ValueError("omega needs {} columns".format(self.ndim))
         self.__om = om
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_after = self._phase_after(
-                om, self.n_mid, self.__n_shift
-            )
+            self.phase_after = self._phase_after(om, self.n_mid, self.__n_shift)
         if self.__init_complete:
             self._reinitialize()
 
@@ -899,11 +895,7 @@ class NufftBase(object):
             self.phase_shift = None  # compute on-the-fly
         if self.Ld is None:
             self.Ld = 2 ** 10
-        if (
-            ndim != len(self.Jd)
-            or ndim != len(self.Ld)
-            or ndim != len(self.Kd)
-        ):
+        if ndim != len(self.Jd) or ndim != len(self.Ld) or ndim != len(self.Kd):
             raise ValueError("inconsistent dimensions among ndim, Jd, Ld, Kd")
         if ndim != self.om.shape[1]:
             raise ValueError("omega needs %d columns" % (ndim))
@@ -973,9 +965,7 @@ class NufftBase(object):
         )
         for d in range(self.ndim):
             if self.mode != "sparse":
-                x = np.linspace(
-                    -self.Jd[d] / 2, self.Jd[d] / 2, self.h[d].size
-                )
+                x = np.linspace(-self.Jd[d] / 2, self.Jd[d] / 2, self.h[d].size)
                 y = self.h[d]
                 if self.on_gpu:
                     y = y.get()
