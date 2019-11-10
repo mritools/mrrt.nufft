@@ -1,3 +1,4 @@
+from math import ceil
 import warnings
 
 import numpy as np
@@ -14,16 +15,7 @@ except ImportError:
 
 def int_div_up(a, b):
     """Round a / b to nearest higher integer value."""
-    a = np.int(a)
-    b = np.int(b)
-    return (a // b + 1) if (a % b != 0) else (a // b)
-
-
-def int_div_down(a, b):
-    """Round a / b to nearest lower integer value."""
-    a = np.int(a)
-    b = np.int(b)
-    return a // b
+    return ceil(int(a) / int(b))
 
 
 def get_1D_block_table_gridding(

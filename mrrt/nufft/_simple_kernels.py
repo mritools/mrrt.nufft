@@ -48,7 +48,7 @@ def nufft_gauss(J=6, sig=None, xp=np):
 
     def kernel(k, J=J, sig=sig):
         """Gaussian kernel"""
-        return xp.exp(-(k / sig) ** 2 / 2.0) * (abs(k) < J / 2.0)
+        return xp.exp(-((k / sig) ** 2) / 2.0) * (abs(k) < J / 2.0)
 
     def kernel_ft(t, sig=sig):
         """FT of Gaussian kernel"""

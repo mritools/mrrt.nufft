@@ -229,7 +229,9 @@ class NufftBase(object):
         self._cplx_dtype = None
         self._real_dtype = None
 
-        self._init_omega(om)  # TODO: force om to be an array. don't allow 'epi', etc.
+        self._init_omega(
+            om
+        )  # TODO: force om to be an array. don't allow 'epi', etc.
 
         self.precision = precision
         self._forw = None
@@ -248,7 +250,7 @@ class NufftBase(object):
             Jd=self.Jd,
             Kd=self.Kd,
             n_mid=self.n_mid,
-            **kernel_kwargs
+            **kernel_kwargs,
         )
         self._calc_scaling()
         self.M = 0

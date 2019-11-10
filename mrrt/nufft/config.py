@@ -145,7 +145,7 @@ def _check_cupy():
                     "Disabling CuPy-based features."
                 )
                 have_cupy = False
-            cupy_has_fftn_planning = hasattr(cufft, 'PlanNd')
+            cupy_has_fftn_planning = hasattr(cufft, "PlanNd")
 
         except ImportError:
             have_cupy = False
