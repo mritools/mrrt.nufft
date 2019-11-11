@@ -3,6 +3,7 @@ import platform
 import sys
 from os.path import join as pjoin
 from setuptools import setup, find_packages
+from setuptools.command.test import test as TestCommand
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
@@ -70,9 +71,30 @@ except ImportError:
         """
     )
 
+
+class PyTest(TestCommand):
+    user_options = [("pytest-args=", "a", "Arguments to pass to py.test")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = []
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        # import here, cause outside the eggs aren't loaded
+        import pytest
+
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
+
+
 extra_compile_args = ["-ffast-math"]
 # if use_OpenMP:
-cmdclass = {"build_ext": extbuilder}
+cmdclass = {"build_ext": extbuilder, "test": PyTest}
 cmdclass.update(versioneer.get_cmdclass())
 
 src_path = pjoin("mrrt", "nufft")
@@ -124,4 +146,51 @@ setup(
     zip_safe=False,
     # data_files=[('mrrt.nufft/data', glob('mrrt.nufft/data/*.npy')), ],
     package_data={"mrrt.nufft": [pjoin("tests", "data", "*")]},
+    # maintainer="",
+    # maintainer_email="grlee77@gmail.com",
+    url="https://github.com/mritools/mrrt.nufft",
+    download_url="https://github.com/mritools/mrrt.nufft/releases",
+    license="BSD-3",
+    description="Non-uniform FFT in 1D, 2D and 3D for CPU and GPU (CUDA)",
+    long_description="""\
+        mrrt.nufft includes:
+
+        * 1D, 2D and 3D Transform from uniformly spaced spatial grid to
+        non-uniformly spaced Fourier samples.
+        * 1D, 2D and 3D Inverse Transform non-uniformly spaced Fourier samples
+        to uniformly sampled spatial.
+        * All transforms have both low memory and sparse-matrix (precomputed)
+        variants.
+        * Transforms can be applied to NumPy arrays (CPU) or to CuPy arrays
+        (GPU).
+        """,
+    keywords=[
+        "non-uniform fast Fourier transform",
+        "NFFT",
+        "NUFFT",
+        "scientific",
+        "non-cartesian MRI",
+        "magnetic resonance imaging",
+    ],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD 3-Clause 'New' or 'Revised' License",
+        "Operating System :: OS Independent",
+        "Programming Language :: C",
+        "Programming Language :: CUDA",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+    ],
+    platforms=["Windows", "Linux", "Solaris", "Mac OS-X", "Unix"],
+    tests_require=["pytest"],
+    install_requires=["numpy>=1.14.5"],
+    setup_requires=["numpy>=1.14.5"],
+    python_requires=">=3.6",
 )
