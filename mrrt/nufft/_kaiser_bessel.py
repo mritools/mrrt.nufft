@@ -24,7 +24,7 @@ implementation there.
 import warnings
 import numpy as np
 from scipy.special import iv, jv, i0, j0
-from .nufft_utils import get_array_module, reale, profile
+from mrrt.utils import reale, profile, get_array_module
 from . import config
 
 if config.have_cupy:

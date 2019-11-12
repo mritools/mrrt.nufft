@@ -8,7 +8,7 @@ originally developed by Jeff Fessler and his students.
 
 import numpy as np
 
-from .nufft_utils import get_array_module
+from mrrt.utils import get_array_module
 
 __all__ = ["dtft", "dtft_adj"]
 

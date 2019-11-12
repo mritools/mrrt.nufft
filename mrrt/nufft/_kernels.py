@@ -20,7 +20,7 @@ import numpy as np
 
 from ._kaiser_bessel import kaiser_bessel
 from ._simple_kernels import nufft_diric
-from .nufft_utils import is_string_like, _as_1d_ints
+from .nufft_utils import _as_1d_ints
 
 
 __all__ = ["NufftKernel"]
@@ -43,7 +43,7 @@ class NufftKernel(object):
 
     @kernel_type.setter
     def kernel_type(self, kernel_type):
-        if is_string_like(kernel_type):
+        if isinstance(kernel_type, str):
             self._kernel_type = kernel_type
             self._initialize_kernel(kernel_type)
         elif isinstance(kernel_type, (list, tuple, set)):

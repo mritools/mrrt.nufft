@@ -12,9 +12,8 @@ from mrrt.nufft.nufft_utils import (
     _nufft_coef,
     _nufft_offset,
     _nufft_samples,
-    max_percent_diff,
-    reale,
 )
+from mrrt.utils import max_percent_diff, reale
 
 from mrrt.nufft._simple_kernels import linear_kernel, nufft_diric, nufft_gauss
 from scipy.special import diric

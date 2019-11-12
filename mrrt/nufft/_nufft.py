@@ -42,7 +42,6 @@ from .nufft_utils import (
     _nufft_interp_zn,
     _nufft_coef,
     _nufft_offset,
-    is_string_like,
     outer_sum,
     _as_1d_ints,
 )
@@ -484,7 +483,7 @@ class NufftBase(object):
     def _init_omega(self, om):
         xp = self.xp
         if om is not None:
-            if is_string_like(om):
+            if isinstance(om, str):
                 # special test cases of input sampling pattern
                 om = _nufft_samples(om, self.Nd, xp=xp)
             om = self.xp.asarray(om)
