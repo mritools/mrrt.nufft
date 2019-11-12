@@ -16,6 +16,8 @@ try:
     from collections.abc import Callable
 except ImportError:
     from collections import Callable
+from functools import reduce
+from operator import mul
 from math import sqrt
 from time import time
 import warnings
@@ -40,15 +42,18 @@ from .nufft_utils import (
     _nufft_interp_zn,
     _nufft_coef,
     _nufft_offset,
+    is_string_like,
+    outer_sum,
+    _as_1d_ints,
+)
+from mrrt.utils import (
     complexify,
     get_array_module,
     get_data_address,
-    is_string_like,
-    outer_sum,
     profile,
     reale,
-    _as_1d_ints,
 )
+
 from ._simple_kernels import _scale_tri
 from . import config
 
@@ -57,6 +62,7 @@ if config.have_cupy:
     import cupyx.scipy.sparse
     from ._cupy import default_device, get_1D_block_table_gridding
     from cupyx.scipy import fftpack as cupy_fftpack
+    from mrrt.nufft.cuda.cupy import _get_gridding_funcs
 
     cupy_fftn = cupy_fftpack.fftn
     cupy_ifftn = cupy_fftpack.ifftn
@@ -276,7 +282,7 @@ class NufftBase(object):
             Ld = 1024
         self.__Ld = _as_1d_ints(Ld, n=self.ndim, xp=np)
         if self.mode == "sparse":
-            self._init_sparsemat()  # create COO matrix
+            self._init_sparsemat(highmem=True)  # create CSC matrix
             # convert to other format if specified
             if sparse_format is None:
                 self.sparse_format = "COO"
@@ -292,6 +298,12 @@ class NufftBase(object):
                     "accuracy may be compromised when L and J are both odd"
                 )
             self._init_table()
+
+            tm = self.xp.zeros_like(self.om)
+            for d in range(0, self.ndim):
+                gam = 2 * np.pi / self.Kd[d]
+                tm[:, d] = self.om[:, d] / gam  # t = omega / gamma
+            self.tm = tm
             self.interp_table = _nufft_table_interp  # TODO: remove?
             self.interp_table_adj = _nufft_table_adj  # TODO: remove?
         elif self.mode == "exact":
@@ -310,9 +322,8 @@ class NufftBase(object):
         if self.on_gpu:
             self._init_gpu()
 
+    @profile
     def _init_gpu(self):
-        from mrrt.nufft.cuda.cupy import _get_gridding_funcs
-
         M = self.om.shape[0]
         if not len(np.unique(self.Jd)):
             raise ValueError(
@@ -361,6 +372,7 @@ class NufftBase(object):
         else:
             return np
 
+    # @profile
     def _nufft_forward(self, x):
         if self.mode == "exact":
             y = nufft_forward_exact(self, x=x)
@@ -368,6 +380,7 @@ class NufftBase(object):
             y = nufft_forward(self, x=x)
         return y
 
+    # @profile
     def _nufft_adj(self, x):
         if self.mode == "exact":
             y = nufft_adj_exact(self, xk=x)
@@ -404,10 +417,8 @@ class NufftBase(object):
         self.__sparse_format = sparse_format.upper()
         if self.p is not None:
             if sparse_format == "CSC":
-                # works on GPU too now that cupy/cupy#2410 was merged
                 self.p = self.p.tocsc()
             elif sparse_format == "CSR":
-                # works on GPU too now that cupy/cupy#2410 was merged:
                 self.p = self.p.tocsr()
             elif sparse_format == "COO":
                 self.p = self.p.tocoo()
@@ -487,7 +498,7 @@ class NufftBase(object):
     def _reinitialize(self):
         """utility to reinitialize the NUFFT object"""
         if self.mode == "sparse":
-            self._init_sparsemat()
+            self._init_sparsemat(highmem=True)
         elif "table" in "mode":
             self._init_table()
 
@@ -686,6 +697,7 @@ class NufftBase(object):
         )
         return xp.squeeze(phase).astype(self._cplx_dtype)  # [M,1]
 
+    @profile
     def _calc_scaling(self):
         """image domain scaling factors to account for the finite NUFFT
         kernel.  (i.e. intensity rolloff correction)
@@ -703,7 +715,10 @@ class NufftBase(object):
             for d in range(self.ndim):
                 if kernel.is_kaiser_scale:
                     # nc = np.arange(Nd[d])-(Nd[d]-1)/2.  #OLD WAY
-                    nc = xp.arange(Nd[d]) - self.n_mid[d]
+                    start = Nd[d] - self.n_mid[d]
+                    # Note better to use NumPy than Cupy for these small 1d
+                    # arrays. Transfer tmp to the GPU later
+                    nc = np.arange(start, start + Nd[d])
                     tmp = 1 / kaiser_bessel_ft(
                         nc / Kd[d], Jd[d], kernel.kb_alf[d], kernel.kb_m[d], 1
                     )
@@ -729,7 +744,7 @@ class NufftBase(object):
                     raise ValueError("Unsupported ktype: {}".format(ktype))
                 # tmp = reale(tmp)  #TODO: reale?
                 # TODO: replace outer with broadcasting?
-                self.sn = xp.outer(self.sn.ravel(), tmp.conj())
+                self.sn = xp.outer(self.sn.ravel(), xp.asarray(tmp.conj()))
         if len(Nd) > 1:
             self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
         else:
@@ -747,7 +762,6 @@ class NufftBase(object):
         if om.ndim == 1:
             om = om[:, np.newaxis]
 
-        # TODO: kernel() call below doesn't currently support CuPy
         xp, on_gpu = get_array_module(om)
         if on_gpu:
             coo_matrix = cupyx.scipy.sparse.coo_matrix
@@ -803,9 +817,9 @@ class NufftBase(object):
         uu = ud[0]  # [J1,M]
 
         for d in range(1, self.ndim):
-            Jprod = np.prod(self.Jd[0 : d + 1])
+            Jprod = reduce(mul, self.Jd[0 : d + 1])
             # trick: pre-convert these indices into offsets! (Fortran order)
-            tmp = kd[d] * np.prod(self.Kd[:d])
+            tmp = kd[d] * reduce(mul, self.Kd[:d])
             kk = _block_outer_sum(kk, tmp)  # outer sum of indices
             kk = kk.reshape((Jprod, M), order="F")
             uu = _block_outer_prod(uu, ud[d])  # outer product of coefficients
@@ -842,7 +856,7 @@ class NufftBase(object):
                 )
 
         # shape (*Jd, M)
-        mm = xp.tile(xp.arange(M), (int(np.prod(self.Jd)), 1))
+        mm = xp.tile(xp.arange(M), (reduce(mul, self.Jd), 1))
 
         self.p = coo_matrix(
             (uu.ravel(order="F"), (mm.ravel(order="F"), kk.ravel(order="F"))),
@@ -852,7 +866,7 @@ class NufftBase(object):
 
         # return in CSC format by default
         if self.on_gpu:
-            self.p = self.p.tocsc()  # works on GPU after fix in cupy/cupy#2410
+            self.p = self.p.tocsc()
             if highmem is None:
                 free_memory_bytes = cupy.cuda.device.Device().mem_info[0]
                 # if "enough" memory left, keep a copy (factor of 2 is an
@@ -869,6 +883,7 @@ class NufftBase(object):
         if self.verbose:
             print("Sparse init stage 2 duration = {} s".format(tend2 - tend1))
 
+    # @profile
     def _init_table(self):
         """Initialize structure for n-dimensional NUFFT using table-based
         interpolator.
@@ -1028,11 +1043,12 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
         on_gpu = False
     xp = obj.xp
 
-    tm = xp.zeros_like(om)
-    pi = np.pi
-    for d in range(0, ndim):
-        gam = 2 * pi / obj.Kd[d]
-        tm[:, d] = om[:, d] / gam  # t = omega / gamma
+    # tm = xp.zeros_like(om)
+    # pi = np.pi
+    # for d in range(0, ndim):
+    #     gam = 2 * pi / obj.Kd[d]
+    #     tm[:, d] = om[:, d] / gam  # t = omega / gamma
+    tm = obj.tm
 
     if xk.ndim == 1:
         xk = xk[:, xp.newaxis]
@@ -1040,7 +1056,7 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
         xk = xk.T
     nc = xk.shape[1]
 
-    if xk.shape[0] != np.prod(obj.Kd):
+    if xk.shape[0] != reduce(mul, obj.Kd):
         raise ValueError("xk size problem")
 
     xk = complexify(xk, complex_dtype=obj._cplx_dtype)  # force complex
@@ -1100,7 +1116,7 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
                     raise RuntimeError("dimension mismatch")
                 x *= ph
 
-    return x.astype(xk.dtype)
+    return x.astype(xk.dtype, copy=False)
 
 
 @profile
@@ -1137,11 +1153,12 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
 
     ndim = len(obj.Kd)
 
-    tm = xp.zeros_like(om)
-    pi = np.pi
-    for d in range(0, ndim):
-        gam = 2 * pi / obj.Kd[d]
-        tm[:, d] = om[:, d] / gam  # t = omega / gamma
+    # tm = xp.zeros_like(om)
+    # pi = np.pi
+    # for d in range(0, ndim):
+    #     gam = 2 * pi / obj.Kd[d]
+    #     tm[:, d] = om[:, d] / gam  # t = omega / gamma
+    tm = obj.tm
 
     if x.shape[0] != om.shape[0]:
         raise ValueError("x size problem")
@@ -1178,7 +1195,7 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
         # kern_forward(block, grid, (ck, h1, tm, fm))
         nreps = x.shape[-1]
         xk = xp.zeros(
-            (int(np.prod(obj.Kd)), nreps), dtype=obj._cplx_dtype, order="F"
+            (reduce(mul, obj.Kd), nreps), dtype=obj._cplx_dtype, order="F"
         )
         if nreps == 1:
             if ndim == 1:
@@ -1208,10 +1225,10 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
                 # obj.kern_adj(obj.block, obj.grid, args)
                 obj.kern_adj(obj.grid, obj.block, args)
 
-    return xk.astype(x.dtype)
+    return xk.astype(x.dtype, copy=False)
 
 
-@profile
+# @profile
 def _nufft_table_make1(
     how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={}, xp=np
 ):
@@ -1318,10 +1335,10 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
     xp, on_gpu = get_array_module(x, xp)
     try:
         # collapse all excess dimensions into just one
-        data_address_in = get_data_address(x)
+        # data_address_in = get_data_address(x)
         if grid_only:
             # x = x.reshape(list(Kd) + [-1, ], order='F')
-            x = x.reshape((np.prod(Kd), -1), order="F")
+            x = x.reshape((reduce(mul, Kd), -1), order="F")
         else:
             x = x.reshape(list(Nd) + [-1], order="F")
     except ValueError:
@@ -1331,9 +1348,10 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
     # Promote to complex if real input was provided
     x = complexify(x, complex_dtype=obj._cplx_dtype)
 
-    if copy_x and (data_address_in == get_data_address(x)):
-        # make sure original array isn't modified!
-        x = x.copy(order="A")
+    # if copy_x and (data_address_in == get_data_address(x)):
+    #     # make sure original array isn't modified!
+    #     x = x.copy(order="A")
+    x = xp.array(x, order="A", copy=False)
 
     L = x.shape[-1]
 
@@ -1342,18 +1360,20 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
         # the usual case is where L=1, i.e., there is just one input signal.
         #
         if obj.sn is not None:
-            x *= obj.sn[..., xp.newaxis]  # scaling factors
+            xk = x * obj.sn[..., xp.newaxis]  # scaling factors
+        else:
+            xk = x
         # TODO: cache FFT plans
         if xp == np:
-            xk = fftn(x, tuple(Kd), axes=range(x.ndim - 1))
+            xk = fftn(xk, tuple(Kd), axes=range(x.ndim - 1))
         else:
             xk = cupy_fftn(
-                x, tuple(Kd), axes=tuple(range(x.ndim - 1)), overwrite_x=True
+                xk, tuple(Kd), axes=tuple(range(x.ndim - 1)), overwrite_x=True
             )
 
         if obj.phase_before is not None:
             xk *= obj.phase_before[..., xp.newaxis]
-        xk = xk.reshape((np.prod(Kd), L), order="F")
+        xk = xk.reshape((reduce(mul, Kd), L), order="F")
 
         if obj.ortho:
             xk /= obj.scale_ortho
@@ -1402,7 +1422,7 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
     return x
 
 
-@profile
+# @profile
 def nufft_forward_exact(obj, x, copy_x=True, xp=None):
     """ Brute-force forward DTFT (image-space to k-space).
 
@@ -1544,7 +1564,7 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
         x *= obj.scale_ortho * obj.adjoint_scalefactor
     else:
         # undo default normalization of ifftn (as in matlab nufft_adj)
-        x *= np.prod(Kd) * obj.adjoint_scalefactor
+        x *= reduce(mul, Kd) * obj.adjoint_scalefactor
 
     # scaling factors
     if obj.sn is not None:
@@ -1557,6 +1577,7 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
     return x
 
 
+# @profile
 def nufft_adj_exact(obj, xk, copy=True, xp=None):
     """ Brute-force adjoint NUFFT (k-space to image-space).
 
@@ -1592,7 +1613,7 @@ def nufft_adj_exact(obj, xk, copy=True, xp=None):
 
     nrepetitions = xk.shape[-1]
 
-    x = xp.empty((np.prod(Nd), nrepetitions), dtype=xk.dtype, order="F")
+    x = xp.empty((reduce(mul, Nd), nrepetitions), dtype=xk.dtype, order="F")
     for rep in range(nrepetitions):
         x[..., rep] = dtft_adj(
             xk[:, rep], omega=obj.om, Nd=obj.Nd, n_shift=obj.n_shift

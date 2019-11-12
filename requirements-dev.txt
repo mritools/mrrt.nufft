@@ -1,5 +1,5 @@
 pytest==4.6.3
-coveralls
 pytest-cov
 flake8
 pre-commit
+# coveralls
