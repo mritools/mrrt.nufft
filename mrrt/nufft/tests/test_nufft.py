@@ -75,22 +75,23 @@ def test_nufft_init(xp, show_figure=False):
 
 
 @pytest.mark.parametrize(
-    "mode, phasing", product(["sparse", "table"], ["real", "complex"])
+    "xp, mode, phasing",
+    product(all_xp, ["sparse", "table"], ["real", "complex"]),
 )
-def test_nufft_adj(mode, phasing, verbose=False):
+def test_nufft_adj(xp, mode, phasing, verbose=False):
     """ test nufft_adj() """
-    xp = np
     N1 = 4
     N2 = 8
     n_shift = [2.7, 3.1]  # random shifts to stress it
     o1 = 2 * np.pi * xp.array([0.0, 0.1, 0.3, 0.4, 0.7, 0.9])
     o2 = o1[::-1].copy()
-    om = xp.vstack((o1.ravel(), o2.ravel())).T
+    om = xp.stack((o1, o2), axis=-1)
     st = NufftBase(
         om=om,
-        Nd=np.array([N1, N2]),
-        Jd=[4, 4],
+        Nd=(N1, N2),
+        Jd=[8, 8],
         Kd=2 * np.array([N1, N2]),
+        Ld=1024,
         n_shift=n_shift,
         kernel_type="kb:beatty",
         phasing=phasing,
@@ -98,24 +99,18 @@ def test_nufft_adj(mode, phasing, verbose=False):
         on_gpu=xp != np,
     )
 
-    X = xp.arange(1, o1.size + 1).ravel() ** 2  # test spectrum
-    xd = dtft_adj(X, om, Nd=[N1, N2], n_shift=n_shift)  # TODO...
-    XXX = xp.vstack((X, X, X)).T
-    xn = nufft_adj(st, XXX)
+    data = xp.arange(1, o1.size + 1).ravel() ** 2  # test spectrum
+    xd = dtft_adj(data, om, Nd=[N1, N2], n_shift=n_shift, xp=xp)
+
+    data_3reps = xp.stack((data,) * 3, axis=-1)
+    xn = nufft_adj(st, data_3reps)
     if verbose:
         print(
             "nufft vs dtft max%%diff = %g" % max_percent_diff(xd, xn[:, :, -1])
         )
-    # TODO: don't allow these failures
-    try:
-        xp.testing.assert_almost_equal(
-            np.squeeze(xd), np.squeeze(xn[:, :, -1]), decimal=1
-        )
-        if verbose:
-            print("Success for mode: {}, {}".format(mode, phasing))
-    except AssertionError:
-        if verbose:
-            print("Failed for mode: {}, {}".format(mode, phasing))
+    xp.testing.assert_array_almost_equal(
+        xp.squeeze(xd), xp.squeeze(xn[:, :, -1]), decimal=4
+    )
     return
 
 
@@ -129,7 +124,7 @@ def test_nufft_adj(mode, phasing, verbose=False):
         ["kb:beatty"],
     ),
 )
-def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
+def test_nufft_1d(xp, mode, precision, phasing, kernel_type, verbose=False):
     Nd = 64
     Kd = 128
     Jd = 6
@@ -140,8 +135,6 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
 
     rtol = 1e-3
     atol = 1e-5
-    maxdiff_forward = {}
-    maxdiff_adjoint = {}
     A = NufftBase(
         om=om,
         Nd=Nd,
@@ -154,7 +147,7 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
         precision=precision,
         phasing=phasing,
         on_gpu=xp != np,
-    )  # TODO:  'table' case
+    )
 
     x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
     y = A._nufft_forward(x)
@@ -166,30 +159,30 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type):
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
-    maxdiff_forward[(kernel_type, mode, precision, phasing)] = max_percent_diff(
-        y, y2
-    )
+    if verbose:
+        print(kernel_type, mode, precision, phasing)
+        print(f"\t{max_percent_diff(y, y2)} {max_percent_diff(x_adj, x_adj2)}")
 
-    maxdiff_adjoint[(kernel_type, mode, precision, phasing)] = max_percent_diff(
-        x_adj, x_adj2
-    )
+
+# TODO: test order='F'/'C'.
 
 
 @pytest.mark.parametrize(
-    "xp, mode, precision, phasing, kernel_type",
+    "xp, mode, precision, phasing, kernel_type, Kd, Jd",
     product(
         all_xp,
         ["sparse", "table"],
         ["single", "double"],
         ["real", "complex"],
         ["kb:beatty"],
+        [(32, 32), (33, 31)],  # test both even and odd
+        [6, 7],  # test both even and odd
     ),
 )
-def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
-    ndim = 2
-    Nd = [16] * ndim
-    Kd = [32] * ndim
-    Jd = [6] * ndim
+def test_nufft_2d(
+    xp, mode, precision, phasing, kernel_type, Kd, Jd, verbose=False
+):
+    Nd = (16, 16)
     Ld = 1024
     n_shift = np.asarray(Nd) / 2
     om = _perturbed_gridpoints(Nd, xp=xp)
@@ -197,8 +190,6 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
 
     rtol = 1e-3
     atol = 1e-5
-    maxdiff_forward = {}
-    maxdiff_adjoint = {}
     A = NufftBase(
         om=om,
         Nd=Nd,
@@ -211,26 +202,21 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
         precision=precision,
         phasing=phasing,
         on_gpu=xp != np,
-    )  # TODO:  'table' case
+    )
     x = rstate.standard_normal(Nd)
     x = x + 1j * rstate.standard_normal(Nd)
     y = A._nufft_forward(x)
     y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
 
-    # max_percent_diff(y, y2[:, 0])
     xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
 
     x_adj = A._nufft_adj(y)
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
-    maxdiff_forward[(kernel_type, mode, precision, phasing)] = max_percent_diff(
-        y, y2
-    )
-
-    maxdiff_adjoint[(kernel_type, mode, precision, phasing)] = max_percent_diff(
-        x_adj, x_adj2
-    )
+    if verbose:
+        print(kernel_type, mode, precision, phasing)
+        print(f"\t{max_percent_diff(y, y2)} {max_percent_diff(x_adj, x_adj2)}")
 
 
 @pytest.mark.parametrize(
@@ -243,7 +229,7 @@ def test_nufft_2d(xp, mode, precision, phasing, kernel_type):
         ["kb:beatty"],
     ),
 )
-def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
+def test_nufft_3d(xp, mode, precision, phasing, kernel_type, verbose=False):
     ndim = 3
     Nd = [8] * ndim
     Kd = [16] * ndim
@@ -254,8 +240,6 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
 
     rtol = 1e-2
     atol = 1e-4
-    maxdiff_forward = {}
-    maxdiff_adjoint = {}
     rstate = xp.random.RandomState(1234)
     A = NufftBase(
         om=om,
@@ -269,30 +253,20 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type):
         precision=precision,
         phasing=phasing,
         on_gpu=xp != np,
-    )  # TODO:  'table' case
+    )
     x = rstate.standard_normal(Nd)
     x = x + 1j * rstate.standard_normal(Nd)
     y = A._nufft_forward(x)
     y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
-    #    assert_(max_percent_diff(y, y2) < 0.02)
 
     x_adj = A._nufft_adj(y)
     x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
-    #    assert_(max_percent_diff(x_adj, x_adj2) < 0.02)
     xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
 
-    maxdiff_forward[(kernel_type, mode, precision, phasing)] = max_percent_diff(
-        y, y2
-    )
-
-    maxdiff_adjoint[(kernel_type, mode, precision, phasing)] = max_percent_diff(
-        x_adj, x_adj2
-    )
-
-
-# TODO: test other nshift, odd shape, odd Kd, etc
-# TODO: test order='F'/'C'
+    if verbose:
+        print(kernel_type, mode, precision, phasing)
+        print(f"\t{max_percent_diff(y, y2)} {max_percent_diff(x_adj, x_adj2)}")
 
 
 @pytest.mark.parametrize("precision, xp", product(["single", "double"], [np]))
@@ -317,7 +291,7 @@ def test_nufft_dtypes(precision, xp):
         kernel_type=kernel_type,
         precision=precision,
         on_gpu=xp != np,
-    )  # TODO:  'table' case
+    )
 
     if precision == "single":
         assert_equal(A._cplx_dtype, np.complex64)
@@ -364,11 +338,7 @@ def test_nufft_dtypes(precision, xp):
 
 @pytest.mark.parametrize(
     "xp, n, phasing",
-    product(
-        all_xp,
-        [64],  # [33, 64]:  # TODO: odd case doesn't pass
-        ["real", "complex"],
-    ),
+    product(all_xp, [64, 65], ["real", "complex"]),  # test both odd and even
 )
 def test_nufft_table_make1(xp, n, phasing):
     decimal = 6

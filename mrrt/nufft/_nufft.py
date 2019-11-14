@@ -375,26 +375,26 @@ class NufftBase(object):
 
     # @profile
     def _nufft_forward(self, x):
-        # if self.order == "C":
-        #     x = x.transpose()  # functions expect reps at end, not start
+        if self.order == "C":
+            x = x.transpose()  # functions expect reps at end, not start
         if self.mode == "exact":
             y = nufft_forward_exact(self, x=x)
         else:
             y = nufft_forward(self, x=x)
-        # if self.order == "C":
-        #     y = y.transpose()  # functions return reps at end, not start
+        if self.order == "C":
+            y = y.transpose()  # functions return reps at end, not start
         return y
 
     # @profile
     def _nufft_adj(self, x):
-        # if self.order == "C":
-        #     x = x.transpose()  # functions expect reps at end, not start
+        if self.order == "C":
+            x = x.transpose()  # functions expect reps at end, not start
         if self.mode == "exact":
             y = nufft_adj_exact(self, xk=x)
         else:
             y = nufft_adj(self, xk=x)
-        # if self.order == "C":
-        #     y = y.transpose()  # functions return reps at end, not start
+        if self.order == "C":
+            y = y.transpose()  # functions return reps at end, not start
         return y
 
     def _set_phase_funcs(self):
@@ -1222,14 +1222,7 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
                 elif ndim == 2:
                     args = (xk[:, r], obj.h[0], obj.h[1], tm, x[:, r])
                 elif ndim == 3:
-                    args = (
-                        xk[:, r],
-                        obj.h[0],
-                        obj.h[1],
-                        obj.h[2],
-                        tm,
-                        x[:, r],
-                    )
+                    args = (xk[:, r], obj.h[0], obj.h[1], obj.h[2], tm, x[:, r])
                 # obj.kern_adj(obj.block, obj.grid, args)
                 obj.kern_adj(obj.grid, obj.block, args)
 
@@ -1341,6 +1334,9 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
     Nd = obj.Nd
     Kd = obj.Kd
     xp, on_gpu = get_array_module(x, xp)
+
+    if not x.flags.f_contiguous:
+        x = xp.asfortranarray(x)
     try:
         # collapse all excess dimensions into just one
         # data_address_in = get_data_address(x)
@@ -1455,6 +1451,9 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
     Nd = obj.Nd
     xp, on_gpu = get_array_module(x, xp)
 
+    if not x.flags.f_contiguous:
+        x = xp.asfortranarray(x)
+
     try:
         # collapse all excess dimensions into just one
         data_address_in = get_data_address(x)
@@ -1512,6 +1511,8 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
     data_address_in = get_data_address(xk)
     if xk.size % obj.M != 0:
         raise ValueError("invalid size")
+    if not xk.flags.f_contiguous:
+        xk = xp.asfortranarray(xk)
     xk = complexify(xk, complex_dtype=obj._cplx_dtype)  # force complex
     xk = xp.reshape(xk, (obj.M, -1), order="F")  # [M,*L]
     if copy and (data_address_in == get_data_address(xk)):
@@ -1609,6 +1610,9 @@ def nufft_adj_exact(obj, xk, copy=True, xp=None):
     """
     Nd = obj.Nd
     xp, on_gpu = get_array_module(xk, xp)
+
+    if not xk.flags.f_contiguous:
+        xk = xp.asfortranarray(xk)
 
     data_address_in = get_data_address(xk)
     if xk.size % obj.M != 0:

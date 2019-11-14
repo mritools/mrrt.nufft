@@ -5,9 +5,7 @@ import numpy as np
 from mrrt.utils import get_array_module, profile
 
 
-__all__ = [
-    "outer_sum",
-]
+__all__ = ["outer_sum"]
 
 
 def outer_sum(

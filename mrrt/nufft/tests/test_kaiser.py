@@ -98,9 +98,7 @@ def test_kaiser_bessel_ft(xp, show_figure=False):
                 u, Yf[:, 2], "cx", u, Y[:, 2], "yo", uu, Yu[:, 2], "y-"
             )
             plt.legend(
-                (l1, l2, l3),
-                ["FFT", "FT coarse", "FT fine"],
-                loc="upper right",
+                (l1, l2, l3), ["FFT", "FT coarse", "FT fine"], loc="upper right"
             )
             plt.axis("tight")
             plt.grid(True)  # , axisx(range(uu)), grid
