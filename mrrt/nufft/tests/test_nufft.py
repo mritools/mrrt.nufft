@@ -16,9 +16,6 @@ if config.have_cupy:
 else:
     all_xp = [np]
 
-# TODO: test CuPy cases
-# TODO: test batch transform
-
 
 def _perturbed_gridpoints(Nd, rel_std=0.5, seed=1234, xp=np):
     """Generate a uniform cartesian frequency grid of shape Nd and then
@@ -115,16 +112,19 @@ def test_nufft_adj(xp, mode, phasing, verbose=False):
 
 
 @pytest.mark.parametrize(
-    "xp, mode, precision, phasing, kernel_type",
+    "xp, mode, precision, phasing, kernel_type, order",
     product(
         all_xp,
         ["sparse", "table"],
         ["single", "double"],
         ["real", "complex"],
         ["kb:beatty"],
+        ["C", "F"],
     ),
 )
-def test_nufft_1d(xp, mode, precision, phasing, kernel_type, verbose=False):
+def test_nufft_1d(
+    xp, mode, precision, phasing, kernel_type, order, verbose=False
+):
     Nd = 64
     Kd = 128
     Jd = 6
@@ -146,22 +146,46 @@ def test_nufft_1d(xp, mode, precision, phasing, kernel_type, verbose=False):
         kernel_type=kernel_type,
         precision=precision,
         phasing=phasing,
+        order=order,
         on_gpu=xp != np,
     )
 
     x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
+
+    # forward
     y = A._nufft_forward(x)
+    y_true = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+    xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
-    y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
-    xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
+    # multi-repetition forward
+    if order == "C":
+        x_reps = xp.stack((x,) * 2, axis=0)
+        sl1 = (0, Ellipsis)
+    else:
+        x_reps = xp.stack((x,) * 2, axis=-1)
+        sl1 = (Ellipsis, 0)
+    y_reps = A._nufft_forward(x_reps)
+    xp.testing.assert_allclose(y_reps[sl1], y_true, rtol=rtol, atol=atol)
 
+    # adjoint
     x_adj = A._nufft_adj(y)
-    x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
-    xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
+    x_adj_true = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
+    xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
+
+    # multi-repetition adjoint
+    if order == "C":
+        y_reps = xp.stack((y,) * 2, axis=0)
+    else:
+        y_reps = xp.stack((y,) * 2, axis=-1)
+    x_adj = A._nufft_adj(y_reps)
+    xp.testing.assert_allclose(x_adj[sl1], x_adj_true, rtol=rtol, atol=atol)
 
     if verbose:
         print(kernel_type, mode, precision, phasing)
-        print(f"\t{max_percent_diff(y, y2)} {max_percent_diff(x_adj, x_adj2)}")
+        print(
+            f"\t{max_percent_diff(y, y_true)} "
+            f"{max_percent_diff(x_adj, x_adj_true)}"
+        )
 
 
 # TODO: test order='F'/'C'.
@@ -205,31 +229,49 @@ def test_nufft_2d(
     )
     x = rstate.standard_normal(Nd)
     x = x + 1j * rstate.standard_normal(Nd)
+
+    # forward
     y = A._nufft_forward(x)
-    y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+    y_true = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+    xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
-    xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
+    # multi-repetition forward
+    x_reps = xp.stack((x,) * 2, axis=-1)
+    y_reps = A._nufft_forward(x_reps)
+    xp.testing.assert_allclose(y_reps[..., 0], y_true, rtol=rtol, atol=atol)
 
+    # adjoint
     x_adj = A._nufft_adj(y)
-    x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
-    xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
+    x_adj_true = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
+    xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
+
+    # multi-repetition adjoint
+    y_reps = xp.stack((y,) * 2, axis=-1)
+    x_adj = A._nufft_adj(y_reps)
+    xp.testing.assert_allclose(x_adj[..., 0], x_adj_true, rtol=rtol, atol=atol)
 
     if verbose:
         print(kernel_type, mode, precision, phasing)
-        print(f"\t{max_percent_diff(y, y2)} {max_percent_diff(x_adj, x_adj2)}")
+        print(
+            f"\t{max_percent_diff(y, y_true)} "
+            f"{max_percent_diff(x_adj, x_adj_true)}"
+        )
 
 
 @pytest.mark.parametrize(
-    "xp, mode, precision, phasing, kernel_type",
+    "xp, mode, precision, phasing, kernel_type, order",
     product(
         all_xp,
         ["sparse", "table"],
         ["single", "double"],
         ["real", "complex"],
         ["kb:beatty"],
+        ["F", "C"],
     ),
 )
-def test_nufft_3d(xp, mode, precision, phasing, kernel_type, verbose=False):
+def test_nufft_3d(
+    xp, mode, precision, phasing, kernel_type, order, verbose=False
+):
     ndim = 3
     Nd = [8] * ndim
     Kd = [16] * ndim
@@ -252,21 +294,46 @@ def test_nufft_3d(xp, mode, precision, phasing, kernel_type, verbose=False):
         kernel_type=kernel_type,
         precision=precision,
         phasing=phasing,
+        order=order,
         on_gpu=xp != np,
     )
     x = rstate.standard_normal(Nd)
     x = x + 1j * rstate.standard_normal(Nd)
-    y = A._nufft_forward(x)
-    y2 = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
-    xp.testing.assert_allclose(y, y2, rtol=rtol, atol=atol)
 
+    # forward
+    y = A._nufft_forward(x)
+    y_true = dtft(x, omega=om, Nd=Nd, n_shift=n_shift)
+    xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
+
+    # multi-repetition forward
+    if order == "C":
+        x_reps = xp.stack((x,) * 2, axis=0)
+        sl1 = (0, Ellipsis)
+    else:
+        x_reps = xp.stack((x,) * 2, axis=-1)
+        sl1 = (Ellipsis, 0)
+    y_reps = A._nufft_forward(x_reps)
+    xp.testing.assert_allclose(y_reps[sl1], y_true, rtol=rtol, atol=atol)
+
+    # adjoint
     x_adj = A._nufft_adj(y)
-    x_adj2 = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
-    xp.testing.assert_allclose(x_adj, x_adj2, rtol=rtol, atol=atol)
+    x_adj_true = dtft_adj(y, omega=om, Nd=Nd, n_shift=n_shift)
+    xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
+
+    # multi-repetition adjoint
+    if order == "C":
+        y_reps = xp.stack((y,) * 2, axis=0)
+    else:
+        y_reps = xp.stack((y,) * 2, axis=-1)
+    x_adj = A._nufft_adj(y_reps)
+    xp.testing.assert_allclose(x_adj[sl1], x_adj_true, rtol=rtol, atol=atol)
 
     if verbose:
         print(kernel_type, mode, precision, phasing)
-        print(f"\t{max_percent_diff(y, y2)} {max_percent_diff(x_adj, x_adj2)}")
+        print(
+            f"\t{max_percent_diff(y, y_true)} "
+            f"{max_percent_diff(x_adj, x_adj_true)}"
+        )
 
 
 @pytest.mark.parametrize("precision, xp", product(["single", "double"], [np]))
@@ -312,7 +379,7 @@ def test_nufft_dtypes(precision, xp):
         precision=None,
         kernel_type=kernel_type,
         on_gpu=xp != np,
-    )  # TODO:  'table' case
+    )
 
     if precision == "single":
         assert_equal(A2._cplx_dtype, np.complex64)
@@ -349,6 +416,7 @@ def test_nufft_table_make1(xp, n, phasing):
         K=2 * n,
         L=2048,
         phasing=phasing,
+        order="F",
         kernel_type="kb:beatty",
         kernel_kwargs={},
     )
@@ -359,6 +427,7 @@ def test_nufft_table_make1(xp, n, phasing):
         K=2 * n,
         L=2048,
         phasing=phasing,
+        order="F",
         kernel_type="kb:beatty",
         kernel_kwargs={},
     )
@@ -369,6 +438,7 @@ def test_nufft_table_make1(xp, n, phasing):
         K=2 * n,
         L=2048,
         phasing=phasing,
+        order="F",
         kernel_type="kb:beatty",
         kernel_kwargs={},
     )

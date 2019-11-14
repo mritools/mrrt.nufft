@@ -136,9 +136,7 @@ def test_kaiser_bessel_ft(xp, show_figure=False):
 
         plt.axis("tight")
         plt.legend((l1, l2, l3, l4), leg, loc="upper right")
-        plt.hold("on")
         plt.plot(u, Yf[:, 1], "y.")
-        plt.hold("off")
         plt.xlabel("u")
         plt.ylabel("Y(u)")
         plt.title(r"KB FT: $\alpha$=%g" % alpha)

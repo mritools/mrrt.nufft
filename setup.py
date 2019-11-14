@@ -25,19 +25,21 @@ omp_test_c = """#include <omp.h>
 int main(int argc, char** argv) { return(0); }"""
 
 msc_flag_defines = []
-gcc_flag_defines = [
-    [["-msse2", "-mfpmath=sse"], [], simple_test_c, "USING_GCC_SSE2"]
-]
+gcc_flag_defines = []
+# TODO: commented out SSE2 stuff. I don't think it was being used
+# gcc_flag_defines = [
+#     [["-msse2", "-mfpmath=sse"], [], simple_test_c, "USING_GCC_SSE2"]
+# ]
 if "NUFFT_DISABLE_OPENMP" not in os.environ:
     msc_flag_defines += [[["/openmp"], [], omp_test_c, "HAVE_VC_OPENMP"]]
     gcc_flag_defines += [
         [["-fopenmp"], ["-fopenmp"], omp_test_c, "HAVE_OPENMP"]
     ]
 
-# Test if it is a 32 bits version
-if not sys.maxsize > 2 ** 32:
-    # This flag is needed only on 32 bits
-    msc_flag_defines += [[["/arch:SSE2"], [], simple_test_c, "USING_VC_SSE2"]]
+# # Test if it is a 32 bits version
+# if not sys.maxsize > 2 ** 32:
+#     # This flag is needed only on 32 bits
+#     msc_flag_defines += [[["/arch:SSE2"], [], simple_test_c, "USING_VC_SSE2"]]
 
 flag_defines = (
     msc_flag_defines

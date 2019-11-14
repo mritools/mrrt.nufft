@@ -18,8 +18,6 @@ from mrrt.utils import max_percent_diff, reale
 from mrrt.nufft._simple_kernels import linear_kernel, nufft_diric, nufft_gauss
 from scipy.special import diric
 
-# some tests load results from Fessler's Matlab implementation for comparison
-
 if config.have_cupy:
     import cupy
 
@@ -49,8 +47,8 @@ def test_nufft_coef(xp):
         c, arg = _nufft_coef(0, 6, 128, linear_kernel)
     else:
         c, arg = _nufft_coef(xp.asarray([0]), 6, 128, linear_kernel)
-    # assert_equal(type(c), xp.ndarray)
-    # assert_equal(type(arg), xp.ndarray)
+    assert isinstance(c, xp.ndarray)
+    assert isinstance(arg, xp.ndarray)
     expected_arg = np.arange(2, -J // 2 - 1, -1, dtype=float).reshape(J, 1)
     expected_c = np.asarray([1 / 3, 2 / 3, 1, 2 / 3, 1 / 3, 0]).reshape(J, 1)
     xp.testing.assert_allclose(arg, expected_arg)
@@ -99,11 +97,14 @@ def test_nufft_samples(xp, show_figure=False):
     om1d = _nufft_samples("epi", 32, xp=xp)
     assert_(len(om1d) == 32)
     om2d = _nufft_samples("epi", [32, 32], xp=xp)
+    assert om2d.ndim == 2
+    assert om2d.shape[-1] == 2
+
     assert_equal(om2d.shape, (32 * 32, 2))
     if show_figure and xp == np:  # skip show_figure on GPU
         from matplotlib import pyplot as plt
 
-        plt.figure(), plt.plot(om1d, np.zeros((om1d.size, 1)), "b-x")
+        plt.figure(), plt.plot(om1d, np.zeros(om1d.size), "b-x")
         plt.title("1D EPI")
         plt.figure(), plt.plot(om2d[:, 0], om2d[:, 1], "b-x"), plt.show()
         plt.title("2D EPI")
