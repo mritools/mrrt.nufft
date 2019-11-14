@@ -315,6 +315,8 @@ class NufftBase(object):
             raise ValueError("Invalid NUFFT mode: {}".format(self.mode))
         self.fft = self._nufft_forward
         self.adj = self._nufft_adj
+        self.nargin = reduce(mul, self.Nd)
+        self.nargout = self.om.shape[0]
         self._update_array__precision()
         self._make_arrays_contiguous(order="F")
         self.__init_complete = True  # TODO: currently unused
@@ -373,28 +375,40 @@ class NufftBase(object):
         else:
             return np
 
+    def _swap_reps(self, x, narg):
+        if x.size != narg:
+            x = x.transpose(tuple(range(1, x.ndim)) + (0,))
+        return x
+
+    def _unswap_reps(self, x, narg):
+        if x.size != narg:
+            x = x.transpose((x.ndim - 1,) + tuple(range(x.ndim - 1)))
+        return x
+
     # @profile
     def _nufft_forward(self, x):
         if self.order == "C":
-            x = x.transpose()  # functions expect reps at end, not start
+            # functions expect reps at end, not start
+            x = self._swap_reps(x, self.nargin)
         if self.mode == "exact":
             y = nufft_forward_exact(self, x=x)
         else:
             y = nufft_forward(self, x=x)
         if self.order == "C":
-            y = y.transpose()  # functions return reps at end, not start
+            y = self._unswap_reps(y, self.nargout)
         return y
 
     # @profile
     def _nufft_adj(self, x):
         if self.order == "C":
-            x = x.transpose()  # functions expect reps at end, not start
+            # functions expect reps at end, not start
+            x = self._swap_reps(x, self.nargout)
         if self.mode == "exact":
             y = nufft_adj_exact(self, xk=x)
         else:
             y = nufft_adj(self, xk=x)
         if self.order == "C":
-            y = y.transpose()  # functions return reps at end, not start
+            y = self._unswap_reps(y, self.nargin)
         return y
 
     def _set_phase_funcs(self):
@@ -940,6 +954,7 @@ class NufftBase(object):
                 K=self.Kd[d],
                 L=self.Ld[d],
                 phasing=self.phasing,
+                order=self.order,
                 kernel_type=self.kernel.kernel_type,
                 kernel_kwargs=kernel_kwargs,
                 xp=xp,
@@ -1231,7 +1246,17 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
 
 # @profile
 def _nufft_table_make1(
-    how, N, J, K, L, kernel_type, phasing, debug=False, kernel_kwargs={}, xp=np
+    how,
+    N,
+    J,
+    K,
+    L,
+    kernel_type,
+    phasing,
+    order,
+    debug=False,
+    kernel_kwargs={},
+    xp=np,
 ):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
     nufft_args = dict(
@@ -1242,6 +1267,7 @@ def _nufft_table_make1(
         mode="sparse",
         phasing=phasing,
         sparse_format="csc",
+        order=order,
         on_gpu=(xp != np),
     )
     t0 = xp.arange(-J * L / 2.0, J * L / 2.0 + 1) / L  # [J*L+1]
