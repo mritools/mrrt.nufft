@@ -1,17 +1,16 @@
 NUFFT
 =====
-High performance NUFFT based on a port of Jeff Fessler's Matlab NUFFT code
-from his [image reconstruction toolbox](https://web.eecs.umich.edu/~fessler/code/).
+High performance CPU/GPU NUFFT operator for Python.
 
-Much of the code in this module is a based on Matlab routines originally
-created by Jeff Fessler and his students at the University of Michigan.  See
-COPYING for more license info.
+This library started as a port of the Matlab NUFFT code in the
+[Michigan image reconstruction toolbox](https://web.eecs.umich.edu/~fessler/code/),
+but has been substantially overhauled and GPU support has been added.
 
-"""
+See COPYING for more license info.
 
 Basic Usage
 ===========
-TODO
+It is recommended to use the simplified interface provided by:
 
 Documentation
 =============
@@ -27,4 +26,4 @@ Recommended Dependencies
 ------------------------
 - [matplotlib](https://matplotlib.org)  (for plotting)
 - [pyFFTW](https://github.com/pyFFTW/pyFFTW) (enable faster FFTS than numpy.fft)
-- [mrrt.cuda](https://github.com/grlee77/mrrt.cuda)  (code to support the GPU implementation is here)
+- [cupy](https://github.com/cupy/cupy)  (required for the GPU implementation)

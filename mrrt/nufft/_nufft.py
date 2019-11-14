@@ -140,6 +140,7 @@ class NufftBase(object):
         sparse_format="CSC",
         adjoint_scalefactor=1.0,
         kernel_kwargs={},
+        order="F",
         verbose=False,
         on_gpu=False,
     ):
@@ -202,6 +203,7 @@ class NufftBase(object):
         if self.verbose:
             print("Entering NufftBase init")
         self.__init_complete = False  # will be set true after __init__()
+        self.order = order
 
         self.__on_gpu = on_gpu
         # get the array module being used (based on state of self.on_gpu)
@@ -374,18 +376,26 @@ class NufftBase(object):
 
     # @profile
     def _nufft_forward(self, x):
+        # if self.order == "C":
+        #     x = x.transpose()  # functions expect reps at end, not start
         if self.mode == "exact":
             y = nufft_forward_exact(self, x=x)
         else:
             y = nufft_forward(self, x=x)
+        # if self.order == "C":
+        #     y = y.transpose()  # functions return reps at end, not start
         return y
 
     # @profile
     def _nufft_adj(self, x):
+        # if self.order == "C":
+        #     x = x.transpose()  # functions expect reps at end, not start
         if self.mode == "exact":
             y = nufft_adj_exact(self, xk=x)
         else:
             y = nufft_adj(self, xk=x)
+        # if self.order == "C":
+        #     y = y.transpose()  # functions return reps at end, not start
         return y
 
     def _set_phase_funcs(self):
