@@ -315,8 +315,8 @@ class NufftBase(object):
             raise ValueError("Invalid NUFFT mode: {}".format(self.mode))
         self.fft = self._nufft_forward
         self.adj = self._nufft_adj
-        self.nargin = reduce(mul, self.Nd)
-        self.nargout = self.om.shape[0]
+        self.nargin1 = reduce(mul, self.Nd)
+        self.nargout1 = self.om.shape[0]
         self._update_array__precision()
         self._make_arrays_contiguous(order="F")
         self.__init_complete = True  # TODO: currently unused
@@ -389,26 +389,26 @@ class NufftBase(object):
     def _nufft_forward(self, x):
         if self.order == "C":
             # functions expect reps at end, not start
-            x = self._swap_reps(x, self.nargin)
+            x = self._swap_reps(x, self.nargin1)
         if self.mode == "exact":
             y = nufft_forward_exact(self, x=x)
         else:
             y = nufft_forward(self, x=x)
         if self.order == "C":
-            y = self._unswap_reps(y, self.nargout)
+            y = self._unswap_reps(y, self.nargout1)
         return y
 
     # @profile
     def _nufft_adj(self, x):
         if self.order == "C":
             # functions expect reps at end, not start
-            x = self._swap_reps(x, self.nargout)
+            x = self._swap_reps(x, self.nargout1)
         if self.mode == "exact":
             y = nufft_adj_exact(self, xk=x)
         else:
             y = nufft_adj(self, xk=x)
         if self.order == "C":
-            y = self._unswap_reps(y, self.nargin)
+            y = self._unswap_reps(y, self.nargin1)
         return y
 
     def _set_phase_funcs(self):
