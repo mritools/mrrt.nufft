@@ -7,14 +7,7 @@ from math import sqrt
 import numpy as np
 
 
-__all__ = [
-    "nufft_gauss",
-    "nufft_best_gauss",
-    "get_diric_kernel",
-    "cos3diric_kernel",
-    "linear_kernel",
-    "nufft_diric",
-]
+__all__ = ["nufft_gauss", "get_diric_kernel", "linear_kernel", "nufft_diric"]
 
 
 def nufft_gauss(J=6, sig=None, xp=np):
@@ -58,92 +51,6 @@ def nufft_gauss(J=6, sig=None, xp=np):
     return kernel, kernel_ft
 
 
-def nufft_best_gauss(J, K_N=2, sn_type="ft", xp=np):
-    """ Return "sigma" of best (truncated) gaussian for NUFFT with previously
-    numerically-optimized width.
-
-    Parameters
-    ----------
-    J : int
-        # of neighbors used per frequency location
-    K_N : float, optional
-        K/N grid oversampling ratio
-    sn_type : {'zn', 'ft'}
-        method for calculating the rolloff prefilter ('ft' recommended)
-
-    Returns
-    -------
-    sig : float
-        best sigma
-    kernel:
-        string for inline kernel function, args (k,J)
-    kernel_ft:
-        string for Fourier transform function, arg: (t)
-
-    Notes
-    -----
-    Matlab vn. Copyright 2002-4-11, Jeff Fessler, The University of Michigan
-    """
-
-    if K_N != 2:
-        raise ValueError("ERROR in %s: only K/N=2 done")
-
-    Jgauss2 = np.arange(2, 16)
-    Sgauss2 = {}
-    Sgauss2["zn"] = [
-        0.4582,
-        0.5854,
-        0.6600,
-        0.7424,
-        0.8083,
-        0.8784,
-        0.9277,
-        0.9840,
-        1.0436,
-        1.0945,
-        1.1432,
-        1.1898,
-        1.2347,
-        1.2781,
-        1.3120,
-    ]
-
-    Sgauss2["ft"] = [
-        0.4441,
-        0.5508,
-        0.6240,
-        0.7245,
-        0.7838,
-        0.8519,
-        0.9221,
-        0.9660,
-        1.0246,
-        1.0812,
-        1.1224,
-        1.1826,
-        1.2198,
-        1.2626,
-        1.3120,
-    ]
-
-    if np.sum(J == Jgauss2) != 1:
-        print("user specified J = {}".format(J))
-        raise ValueError("only J in the range [2-15] available")
-    else:
-        Jidx = np.where(J == Jgauss2)[0][0]
-
-    sn_type = sn_type.lower()
-    if sn_type == "ft":
-        sig = Sgauss2["ft"][Jidx]
-    elif sn_type == "zn":
-        sig = Sgauss2["zn"][Jidx]
-    else:
-        raise ValueError("bad sn_type {}".format(sn_type))
-
-    [kernel, kernel_ft] = nufft_gauss(J, sig, xp=xp)
-    return sig, kernel, kernel_ft
-
-
 def linear_kernel(k, J):
     return (1 - abs(k / (J / 2.0))) * (abs(k) < J / 2.0)
 
@@ -168,13 +75,6 @@ def _scale_tri(N, J, K, n_mid, xp=np):
         tmp += xp.abs(fun(nc - ll * K)) ** 2
     sn = cent / tmp
     return sn
-
-
-def cos3diric_kernel(k, J, xp=np):
-    from scipy.special import diric
-
-    tmp = 2 * xp.pi * k / J
-    return diric(tmp, J) * xp.cos(tmp / 2.0) ** 3
 
 
 def nufft_diric(k, N, K, use_true_diric=False, xp=np):
