@@ -20,6 +20,8 @@ from ._extensions._nufft_table import (
     _interp3_table_adj,
 )
 
+__all__ = []
+
 
 def interp1_table(ck, h1, j1, os_table, tm):
     k1 = ck.shape[0]

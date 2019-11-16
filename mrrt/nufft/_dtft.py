@@ -1,5 +1,5 @@
 """
-Slow, brute force n-dimensional DTFT routines.  These can be used to
+Slow, brute force n-dimensional DTFT routines. These can be used to
 validate the NUFFT on small problem sizes.
 
 These are heavily modified (for n-dimensional support) from Matlab code
@@ -13,49 +13,66 @@ from mrrt.utils import get_array_module
 __all__ = ["dtft", "dtft_adj"]
 
 
-def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
-    """  Compute d-dimensional DTFT of signal x at frequency locations omega
+def dtft(x, omega, shape=None, n_shift=None, useloop=False, xp=None):
+    """Compute exact (slow) n-dimensional non-uniform Fourier transform.
+
+    This function is used as a reference for testing the NUFFT. It is not a
+    fast transform.
 
     Parameters
     ----------
-    x : array
-        signal values
-    omega : array, optional
-        frequency locations (radians)
-    n_shift : array, optional
-        indexed as range(0, N)-n_shift
+    x : ndarray
+        The data to transform.
+    omega : ndarray, optional
+        Frequency locations (radians).
+    shape : tuple of int, optional
+        The shape of the transform. If not specified and
+        ``x.ndim == omega.shape[1]`` all axes are transformed. Otherwise, all
+        but the last axis is transformed. User-specified shape can be used to
+        allow operator on raveled input, ``x``, but only if
+        ``x.ravel(order='F')`` was used.
+    n_shift : tuple of int, optional
+        Spatial indices correspond to ``np.arange(n) - n_shift`` where ``n``
+        is the size of x on a given axis.
     useloop : bool, optional
-        True to reduce memory use (slower)
+        If True, less memory is used (slower).
+    xp : {numpy, cupy}
+        The array module to use.
 
     Returns
     -------
     xk : array
         DTFT values
 
-    Requires enough memory to store M * prod(Nd) size matrices
+    Notes
+    -----
+    Requires enough memory to store M * prod(shape) size matrices
     (for testing only)
 
     Matlab version: Copyright 2001-9-17, Jeff Fessler,
                     The University of Michigan
     """
-    if xp is None:
-        xp, on_gpu = get_array_module(omega)
+    xp, on_gpu = get_array_module(omega, xp)
+    x = xp.asarray(x)
+    omega = xp.asarray(omega)
+    if omega.ndim != 2:
+        raise ValueError("omega must be 2d")
     dd = omega.shape[1]
-    if Nd is None:
+    if shape is None:
         if x.ndim == dd + 1:
-            Nd = x.shape[:-1]
+            shape = x.shape[:-1]
         elif x.ndim == dd:
-            Nd = x.shape
+            shape = x.shape
         else:
-            raise ValueError("Nd must be specified")
-    Nd = xp.atleast_1d(Nd)
+            raise ValueError("shape must be specified")
+    shape = xp.atleast_1d(shape)
 
-    if len(Nd) == dd:  # just one image
+    if len(shape) == dd:  # just one image
         x = x.ravel(order="F")
         x = x[:, xp.newaxis]
-    elif len(Nd) == dd + 1:  # multiple images
-        Nd = Nd[:-1]
-        x = xp.reshape(x, (xp.prod(Nd), -1))  # [*Nd,L]
+    elif len(shape) == dd + 1:  # multiple images
+        shape = shape[:-1]
+        x = xp.reshape(x, (xp.prod(shape), -1))  # [*shape,L]
     else:
         print("bad input signal size")
 
@@ -68,31 +85,32 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
     if np.any(n_shift != 0):
         nng = []
         for d in range(dd):
-            nng.append(xp.arange(0, Nd[d]) - n_shift[d])
+            nng.append(xp.arange(0, shape[d]) - n_shift[d])
         nng = xp.meshgrid(*nng, indexing="ij")
     else:
-        nng = xp.indices(Nd)
+        nng = xp.indices(shape)
 
     if useloop:
         #
         # loop way: slower but less memory
+        # Could make a numba version of this if desired
         #
-        M = len(omega)
+        m = len(omega)
         xk = xp.zeros(
-            (x.size // xp.prod(Nd), M),
+            (x.size // xp.prod(shape), m),
             dtype=xp.result_type(x.dtype, omega.dtype, xp.complex64),
-        )  # [L,M]
+        )  # [L,m]
         if omega.shape[1] < 3:
             # trick: make '3d'
             omega = xp.hstack((omega, xp.zeros(omega.shape[0])[:, xp.newaxis]))
         for d in range(dd):
             nng[d] = nng[d].ravel(order="F")
-        for mm in range(0, M):
+        for mm in range(0, m):
             tmp = omega[mm, 0] * nng[0]
             for d in range(1, dd):
                 tmp += omega[mm, d] * nng[d]
             xk[:, mm] = xp.dot(xp.exp(-1j * tmp), x)
-        xk = xk.T  # [M,L]
+        xk = xk.T  # [m,L]
     else:
         xk = xp.outer(omega[:, 0], nng[0].ravel(order="F"))
         for d in range(1, dd):
@@ -105,7 +123,7 @@ def dtft(x, omega, Nd=None, n_shift=None, useloop=False, xp=None):
     return xk
 
 
-def dtft_adj(xk, omega, Nd=None, n_shift=None, useloop=False, xp=None):
+def dtft_adj(xk, omega, shape=None, n_shift=None, useloop=False, xp=None):
     """Compute adjoint of d-dim DTFT for spectrum xk at frequency locations
     omega.
 
@@ -125,7 +143,7 @@ def dtft_adj(xk, omega, Nd=None, n_shift=None, useloop=False, xp=None):
     x : array
         signal values
 
-    Requires enough memory to store M * (*Nd) size matrices.
+    Requires enough memory to store m * (*shape) size matrices.
     (For testing only)
     """
     if xp is None:
@@ -133,49 +151,54 @@ def dtft_adj(xk, omega, Nd=None, n_shift=None, useloop=False, xp=None):
     else:
         on_gpu = xp != np
     dd = omega.shape[1]
-    if Nd is None:
+    if shape is None:
         if xk.ndim == dd + 1:
-            Nd = xk.shape[:-1]
+            shape = xk.shape[:-1]
         elif xk.ndim == dd:
-            Nd = xk.shape
+            shape = xk.shape
         else:
-            raise ValueError("Nd must be specified")
-    Nd = xp.atleast_1d(Nd)
-    if len(Nd) == dd:  # just one image
+            raise ValueError("shape must be specified")
+    shape = xp.atleast_1d(shape)
+    if len(shape) == dd:  # just one image
         xk = xk.ravel(order="F")
         xk = xk[:, xp.newaxis]
-    elif len(Nd) == dd + 1:  # multiple images
-        Nd = Nd[:-1]
-        xk = xp.reshape(xk, (xp.prod(Nd), -1))  # [*Nd,L]
+    elif len(shape) == dd + 1:  # multiple images
+        shape = shape[:-1]
+        xk = xp.reshape(xk, (xp.prod(shape), -1))  # [*shape,L]
     else:
         print("bad input signal size")
 
-    if len(Nd) != dd:
-        raise ValueError("length of Nd must match number of columns in omega")
+    if len(shape) != dd:
+        raise ValueError(
+            "length of shape must match number of columns in omega"
+        )
 
     if n_shift is None:
-        n_shift = np.zeros(dd)
-    n_shift = np.atleast_1d(np.squeeze(n_shift))
+        n_shift = (0,) * dd
+    elif np.isscalar(n_shift):
+        n_shift = (n_shift,) * dd
     if len(n_shift) != dd:
         raise ValueError("must specify one shift per axis")
+    n_shift = xp.asarray(n_shift)
 
-    if np.any(n_shift != 0):
+    if any(s != 0 for s in n_shift):
         nn = []
-        for id in range(dd):
-            nn.append(xp.arange(0, Nd[id]) - n_shift[id])
+        for idx in range(dd):
+            nn.append(xp.arange(0, shape[idx]) - n_shift[idx])
         nn = xp.meshgrid(*nn, indexing="ij")
     else:
-        nn = xp.indices(Nd)
+        nn = xp.indices(shape)
 
-    if on_gpu:
-        Nd = Nd.get()
-    Nd = tuple(Nd)
+    if on_gpu and isinstance(shape, xp.ndarray):
+        shape = shape.get()
+    shape = tuple(shape)
 
     if useloop:
         # slower, but low memory
-        M = omega.shape[0]
-        x = xp.zeros(Nd)  # [(Nd), M]
-        for mm in range(0, M):
+        # Could make a numba version of this if desired
+        m = omega.shape[0]
+        x = xp.zeros(shape)  # [(shape), m]
+        for mm in range(0, m):
             t = omega[mm, 0] * nn[0]
             for d in range(1, dd):
                 t += omega[mm, d] * nn[d]
@@ -184,8 +207,8 @@ def dtft_adj(xk, omega, Nd=None, n_shift=None, useloop=False, xp=None):
         x = xp.outer(nn[0].ravel(order="F"), omega[:, 0])
         for d in range(1, dd):
             x += xp.outer(nn[d].ravel(order="F"), omega[:, d])
-        x = xp.dot(xp.exp(1j * x[:, xp.newaxis]), xk)  # [(*Nd),L]
-        x = xp.reshape(x, Nd, order="F")  # [(Nd),L]
+        x = xp.dot(xp.exp(1j * x[:, xp.newaxis]), xk)  # [(*shape),L]
+        x = xp.reshape(x, shape, order="F")  # [(shape),L]
 
     if x.shape[-1] == 1:
         x.shape = x.shape[:-1]

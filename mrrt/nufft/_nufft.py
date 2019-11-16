@@ -36,13 +36,11 @@ from ._interp_table import (
     interp3_table_adj,
 )
 from ._kaiser_bessel import kaiser_bessel_ft
-from ._kernels import NufftKernel
+from ._kernels import BeattyKernel
 from .nufft_utils import (
-    _nufft_samples,
-    _nufft_interp_zn,
     _nufft_coef,
     _nufft_offset,
-    outer_sum,
+    _outer_sum,
     _as_1d_ints,
 )
 from mrrt.utils import (
@@ -53,7 +51,6 @@ from mrrt.utils import (
     reale,
 )
 
-from ._simple_kernels import _scale_tri
 from . import config
 
 if config.have_cupy:
@@ -132,13 +129,12 @@ class NufftBase(object):
         Ld=None,
         precision="single",
         mode="table",
-        kernel_type="kb:beatty",
+        kernel=None,
         ortho=False,
         n_shift=None,
         phasing="real",
         sparse_format="CSC",
         adjoint_scalefactor=1.0,
-        kernel_kwargs={},
         order="F",
         verbose=False,
         on_gpu=False,
@@ -152,8 +148,10 @@ class NufftBase(object):
         om : array
             Non-Cartesian sampling frequencies. (TODO: units)
         J : int or array-like, optional
-            Size of the NUFFT kernel on each axis. For GPU-based NUFFT, it is
-            currently required to use the same size on each axis.
+            Desired size of the NUFFT kernel on each axis. For GPU-based NUFFT,
+            it is currently required to use the same size on each axis. If a
+            user supplies their own ``kernel`` object the value of
+            ``kernel.shape`` is used and ``J`` is ignored.
         Kd : array-like, optional
             Oversampled cartesian grid size (default is ``1.5 * Nd``).
         Ld : array-like, optional
@@ -191,12 +189,7 @@ class NufftBase(object):
         adjoint_scalefactor : float, optional
             A custom, constant multiplicative scaling factor for the
             adjoint operation.
-        kernel_type : {'kb:beatty', ...}, optional
-            The type of gridding kernel to use.  'kb:beatty' is near optimal in
-            most cases and works well for grid oversampling factors
-             substantially less than 2.
-        kernel_kwargs : dict
-            Addtional kwargs to pass along to the NufftKernel object created.
+
         """
         self.verbose = verbose
         if self.verbose:
@@ -210,7 +203,6 @@ class NufftBase(object):
         # set the private version (__Nd not Nd) to avoid circular calls
         # also Nd, Kd, Jd, etc. should be on the CPU
         self.__Nd = _as_1d_ints(Nd, xp=np)
-        self.kernel_type = kernel_type
         self.__phasing = phasing
         self.__om = None  # will be set later below
         self._set_n_mid()
@@ -236,9 +228,7 @@ class NufftBase(object):
         self._cplx_dtype = None
         self._real_dtype = None
 
-        self._init_omega(
-            om
-        )  # TODO: force om to be an array. don't allow 'epi', etc.
+        self._init_omega(om)
 
         self.precision = precision
         self._forw = None
@@ -246,20 +236,18 @@ class NufftBase(object):
         self._init = None
         self.__mode = mode
         self.adjoint_scalefactor = adjoint_scalefactor
-        kernel_type = kernel_type.lower()
+
         # [M, *Kd]	sparse interpolation matrix (or empty if table-based)
         self.p = None
+
+        # initialize the interpolation kernel
         self.Jd = Jd
-        self.kernel = NufftKernel(
-            kernel_type,
-            ndim=self.ndim,
-            Nd=self.Nd,
-            Jd=self.Jd,
-            Kd=self.Kd,
-            n_mid=self.n_mid,
-            **kernel_kwargs,
+
+        self.kernel = BeattyKernel(
+            shape=self.Jd, grid_shape=self.Nd, os_grid_shape=self.Kd,
         )
         self._calc_scaling()
+
         self.M = 0
         if self.om is not None:
             self.M = self.om.shape[0]
@@ -337,7 +325,7 @@ class NufftBase(object):
                 "GPU case requires same gridding table size on each axis."
             )
 
-        # compile GPU kernels corresponding to this operator
+        # compile CUDA kernels corresponding to this operator
         self.kern_forward, self.kern_adj = _get_gridding_funcs(
             Kd=self.Kd,
             M=self.M,
@@ -495,11 +483,7 @@ class NufftBase(object):
     #     self._init_omega(om)
 
     def _init_omega(self, om):
-        xp = self.xp
         if om is not None:
-            if isinstance(om, str):
-                # special test cases of input sampling pattern
-                om = _nufft_samples(om, self.Nd, xp=xp)
             om = self.xp.asarray(om)
             if om.ndim == 1:
                 om = om[:, np.newaxis]
@@ -613,7 +597,7 @@ class NufftBase(object):
     def _set_n_mid(self):
         # midpoint of scaling factors
         if self.__phasing == "real":
-            self.n_mid = np.floor(self.Nd / 2.0)
+            self.n_mid = self.Nd // 2
         else:
             self.n_mid = (self.Nd - 1) / 2.0
         if self.phasing == "real" and (self.__om is not None):
@@ -730,47 +714,20 @@ class NufftBase(object):
         Nd = self.Nd
         Kd = self.Kd
         Jd = self.Jd
-        ktype = kernel.kernel_type.lower()
-        if ktype == "diric":
-            self.sn = xp.ones(Nd)
-        else:
-            self.sn = xp.array([1.0])
-            for d in range(self.ndim):
-                if kernel.is_kaiser_scale:
-                    # Note better to use NumPy than Cupy for these small 1d
-                    # arrays. Transfer tmp to the GPU later
-                    start = -self.n_mid[d]
-                    nc = np.arange(start, start + Nd[d])
-                    tmp = 1 / kaiser_bessel_ft(
-                        nc / Kd[d], Jd[d], kernel.kb_alf[d], kernel.kb_m[d], 1
-                    )
-                elif ktype == "inline":
-                    if self.phasing == "real":
-                        warnings.warn(
-                            "not sure if this is correct for real "
-                            "phasing case (n_mid is set differently)"
-                        )
-                    tmp = 1 / _nufft_interp_zn(
-                        0,
-                        Nd[d],
-                        Jd[d],
-                        Kd[d],
-                        kernel.kernel[d],
-                        self.n_mid[d],
-                        xp=xp,
-                    )
-                elif ktype == "linear":
-                    # TODO: untested
-                    tmp = _scale_tri(Nd[d], Jd[d], Kd[d], self.n_mid[d], xp=xp)
-                else:
-                    raise ValueError("Unsupported ktype: {}".format(ktype))
-                # tmp = reale(tmp)  #TODO: reale?
-                # TODO: replace outer with broadcasting?
-                self.sn = xp.outer(self.sn.ravel(), xp.asarray(tmp.conj()))
-        if len(Nd) > 1:
-            self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
-        else:
-            self.sn = self.sn.ravel()  # [(Nd)]
+        self.sn = xp.array([1.0])
+        for d in range(self.ndim):
+            # Note better to use NumPy than Cupy for these small 1d
+            # arrays. Transfer tmp to the GPU later
+            start = -self.n_mid[d]
+            nc = np.arange(start, start + Nd[d])
+            tmp = 1 / kaiser_bessel_ft(
+                nc / Kd[d], Jd[d], kernel.alpha[d], kernel.m[d], 1
+            )
+
+            # tmp = reale(tmp)  #TODO: reale?
+            # TODO: replace outer with broadcasting?
+            self.sn = xp.outer(self.sn.ravel(), xp.asarray(tmp.conj()))
+        self.sn = self.sn.reshape(tuple(Nd))  # [(Nd)]
 
     @profile
     def _init_sparsemat(self, highmem=None):
@@ -800,7 +757,7 @@ class NufftBase(object):
             K = self.Kd[d]
 
             # callable kernel:  kaiser, linear, etc
-            kernel_func = self.kernel.kernel[d]
+            kernel_func = self.kernel.kernels[d]
             if not isinstance(kernel_func, Callable):
                 raise ValueError("callable kernel function required")
 
@@ -813,7 +770,7 @@ class NufftBase(object):
             koff = _nufft_offset(om[:, d], J, K, xp=xp)
 
             # [J,M]
-            kd[d] = xp.mod(outer_sum(xp.arange(1, J + 1), koff, xp=xp), K)
+            kd[d] = xp.mod(_outer_sum(xp.arange(1, J + 1), koff), K)
 
             if self.phasing == "complex":
                 gam = 2 * np.pi / K
@@ -940,13 +897,6 @@ class NufftBase(object):
         self.h = []
         # build kernel lookup table (LUT) for each dimension
         for d in range(ndim):
-            if (
-                "kb_alf" in kernel_kwargs
-                and kernel_kwargs["kb_alf"] is not None
-            ):
-                kernel_kwargs["kb_alf"] = [self.kernel.params["kb_alf"][d]]
-                kernel_kwargs["kb_m"] = [self.kernel.params["kb_m"][d]]
-
             h, t0 = _nufft_table_make1(
                 how=how,
                 N=self.Nd[d],
@@ -955,8 +905,6 @@ class NufftBase(object):
                 L=self.Ld[d],
                 phasing=self.phasing,
                 order=self.order,
-                kernel_type=self.kernel.kernel_type,
-                kernel_kwargs=kernel_kwargs,
                 xp=xp,
             )
 
@@ -1246,24 +1194,13 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
 
 # @profile
 def _nufft_table_make1(
-    how,
-    N,
-    J,
-    K,
-    L,
-    kernel_type,
-    phasing,
-    order,
-    debug=False,
-    kernel_kwargs={},
-    xp=np,
+    how, N, J, K, L, phasing, order, debug=False, xp=np,
 ):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
+    # kernel_1d = BeattyKernel(shape=(J,), grid_shape=(N,), os_grid_shape=(K,))
     nufft_args = dict(
         Jd=J,
         n_shift=0,
-        kernel_type=kernel_type,
-        kernel_kwargs=kernel_kwargs,
         mode="sparse",
         phasing=phasing,
         sparse_format="csc",
@@ -1500,7 +1437,7 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
     xk = xp.empty((obj.M, L), dtype=x.dtype, order="F")
     for rep in range(L):
         xk[..., rep] = dtft(
-            x[:, rep], omega=obj.om, Nd=Nd, n_shift=obj.n_shift, xp=xp
+            x[:, rep], omega=obj.om, shape=Nd, n_shift=obj.n_shift, xp=xp
         )
 
     remove_singleton = True
@@ -1654,7 +1591,7 @@ def nufft_adj_exact(obj, xk, copy=True, xp=None):
     x = xp.empty((reduce(mul, Nd), nrepetitions), dtype=xk.dtype, order="F")
     for rep in range(nrepetitions):
         x[..., rep] = dtft_adj(
-            xk[:, rep], omega=obj.om, Nd=obj.Nd, n_shift=obj.n_shift
+            xk[:, rep], omega=obj.om, shape=obj.Nd, n_shift=obj.n_shift
         )
 
     if obj.ortho:

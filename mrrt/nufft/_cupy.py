@@ -1,7 +1,6 @@
 from math import ceil
 import warnings
 
-
 try:
     import cupy
 
@@ -11,10 +10,7 @@ except ImportError:
     default_device = None
     default_context = None
 
-
-def int_div_up(a, b):
-    """Round a / b to nearest higher integer value."""
-    return ceil(int(a) / int(b))
+__all__ = ["get_1D_block_table_gridding"]
 
 
 def get_1D_block_table_gridding(
@@ -39,5 +35,5 @@ def get_1D_block_table_gridding(
         1,
         1,
     )
-    blocks = (int_div_up(n_samples, BLOCKSIZE_TABLE), 1, 1)
+    blocks = (ceil(n_samples / BLOCKSIZE_TABLE), 1, 1)
     return threads, blocks

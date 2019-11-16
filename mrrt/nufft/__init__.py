@@ -1,6 +1,6 @@
 from . import config
 from ._dtft import dtft, dtft_adj
-from ._kernels import NufftKernel
+from ._kernels import BeattyKernel
 from ._nufft import NufftBase
 from ._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
 
@@ -8,7 +8,7 @@ __all__ = [
     "config",
     "dtft",
     "dtft_adj",
-    "NufftKernel",
+    "BeattyKernel",
     "NufftBase",
     "kaiser_bessel",
     "kaiser_bessel_ft",

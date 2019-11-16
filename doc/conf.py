@@ -78,7 +78,6 @@ extensions = [
     # 'sphinx.ext.mathjax',
     "math_dollar",  # has to go before numpydoc
     "numpydoc",
-    "github",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

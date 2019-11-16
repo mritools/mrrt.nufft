@@ -22,10 +22,10 @@ def test_kaiser_bessel(xp, show_figure=False):
     mlist = [-4, 0, 2, 7]
     leg = []
     yy = xp.zeros((len(x), len(mlist)))
-    for i, kb_m in enumerate(mlist):
-        yy[:, i] = kaiser_bessel(x, J, alpha, kb_m)
-        leg.append("m = %d" % kb_m)
-        func = functools.partial(kaiser_bessel, alpha=alpha, kb_m=kb_m)
+    for i, m in enumerate(mlist):
+        yy[:, i] = kaiser_bessel(x, J, alpha, m)
+        leg.append("m = %d" % m)
+        func = functools.partial(kaiser_bessel, alpha=alpha, m=m)
         yf = func(x, J)
         xp.testing.assert_array_equal(yf, yy[:, i])
 
@@ -75,18 +75,18 @@ def test_kaiser_bessel_ft(xp, show_figure=False):
     Yu = xp.zeros((len(uu), len(mlist)))
     fftshift = xp.fft.fftshift
     fft = xp.fft.fft
-    for ii, kb_m in enumerate(mlist):
-        kb_m = mlist[ii]
-        yy[:, ii] = kaiser_bessel(x, J, alpha, kb_m)
+    for ii, m in enumerate(mlist):
+        m = mlist[ii]
+        yy[:, ii] = kaiser_bessel(x, J, alpha, m)
         Yf[:, ii] = xp.real(fftshift(fft(fftshift(yy[:, ii])))) * dx
-        if kb_m < -1:
+        if m < -1:
             with pytest.warns(UserWarning):
-                Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
-                Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
+                Y[:, ii] = kaiser_bessel_ft(u, J, alpha, m, 1)
+                Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, m, 1)
         else:
-            Y[:, ii] = kaiser_bessel_ft(u, J, alpha, kb_m, 1)
-            Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, kb_m, 1)
-        leg.append("m=%d" % kb_m)
+            Y[:, ii] = kaiser_bessel_ft(u, J, alpha, m, 1)
+            Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, m, 1)
+        leg.append("m=%d" % m)
 
     if show_figure and xp == np:  # skip plotting if arrays are on the GPU
         # create plots similar to those in Fessler's matlab toolbox

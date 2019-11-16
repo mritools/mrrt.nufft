@@ -74,7 +74,7 @@ def _jv(x1, x2, xp):
 
 
 @profile
-def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
+def kaiser_bessel(x=None, J=6, alpha=None, m=0, K_N=None):
     """Generalized Kaiser-Bessel function for x in support [-J/2,J/2].
 
     Parameters
@@ -85,7 +85,7 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
         kernel size in each dimension
     alpha : float, optional
         shape parameter (default 2.34 * J)
-    kb_m : float, optional
+    m : float, optional
         order parameter
     K_N :
         grid oversampling factor (typically 1.25 < K_N <= 2)
@@ -105,17 +105,17 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
         Copyright 2001-3-30, Jeff Fessler, The University of Michigan
 
     Modification 2002-10-29 by Samuel Matej
-    - for Negative & NonInteger kb_m the besseli() function has
+    - for Negative & NonInteger m the besseli() function has
       singular behavior at the boundaries - KB values shooting-up/down
       (worse for small alpha) leading to unacceptable interpolators
     - for real arguments and higher/reasonable values of alpha the
-      besseli() gives similar values for positive and negative kb_m
-      except close to boundaries - tested for kb_m=-2.35:0.05:2.35
-      (besseli() gives exactly same values for integer +- kb_m)
-       => besseli(kb_m,...) approximated by besseli(abs(kb_m),...), which
+      besseli() gives similar values for positive and negative m
+      except close to boundaries - tested for m=-2.35:0.05:2.35
+      (besseli() gives exactly same values for integer +- m)
+       => besseli(m,...) approximated by besseli(abs(m),...), which
       behaves well at the boundaries
       WARNING: it is not clear how correct the FT formula (JOSA) is
-      for this approximation (for NonInteger Negative kb_m)
+      for this approximation (for NonInteger Negative m)
       NOTE: Even for the original KB formula, the JOSA FT formula
       is derived only for m > -1 !
     """
@@ -123,25 +123,25 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
     if alpha is None:
         alpha = 2.34 * J
 
-    """Warn about use of modified formula for negative kb_m"""
-    if (kb_m < 0) and ((abs(round(kb_m) - kb_m)) > np.finfo(float).eps):
-        wstr = "Negative NonInt kb_m=%g\n" % (kb_m)
+    """Warn about use of modified formula for negative m"""
+    if (m < 0) and ((abs(round(m) - m)) > np.finfo(float).eps):
+        wstr = "Negative NonInt m=%g\n" % (m)
         wstr += "\t- using modified definition of KB function\n"
         warnings.warn(wstr)
-    kb_m_bi = abs(kb_m)  # modified "kb_m" as described above
+    m_bi = abs(m)  # modified "m" as described above
     ii = (2 * np.abs(x) < J).nonzero()
     tmp = 2 * x[ii] / J
     tmp *= tmp
     f = np.sqrt(1 - tmp)
-    if kb_m_bi != 0:
-        denom = _iv(kb_m_bi, alpha, xp=xp)
+    if m_bi != 0:
+        denom = _iv(m_bi, alpha, xp=xp)
     else:
         denom = _i0(alpha, xp=xp)
     if denom == 0:
-        print("m=%g alpha=%g" % (kb_m, alpha))
+        print("m=%g alpha=%g" % (m, alpha))
     kb = xp.zeros_like(x)
-    if kb_m_bi != 0:
-        kb[ii] = (f ** kb_m * _iv(kb_m_bi, alpha * f, xp=xp)) / float(denom)
+    if m_bi != 0:
+        kb[ii] = (f ** m * _iv(m_bi, alpha * f, xp=xp)) / float(denom)
     else:
         kb[ii] = _i0(alpha * f, xp=xp) / float(denom)
     kb = kb.real
@@ -149,7 +149,7 @@ def kaiser_bessel(x=None, J=6, alpha=None, kb_m=0, K_N=None):
 
 
 @profile
-def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
+def kaiser_bessel_ft(u, J=6, alpha=None, m=0, d=1):
     """Fourier transform of generalized Kaiser-Bessel function, in dimension d.
 
     Parameters
@@ -160,7 +160,7 @@ def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
         kernel size in each dimension
     alpha : float, optional
         shape parameter (default: 2.34 J)
-    kb_m : float, optional
+    m : float, optional
         order parameter (default: 0)
     d : int, optional
         dimension (default: 1)
@@ -183,13 +183,13 @@ def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
     if not alpha:
         alpha = 2.34 * J
 
-    if kb_m < -1:  # Check for validity of FT formula
-        wstr = "kb_m=%g < -1" % (kb_m)
+    if m < -1:  # Check for validity of FT formula
+        wstr = "m=%g < -1" % (m)
         wstr += " in kaiser_bessel_ft()\n"
-        wstr += " - validity of FT formula uncertain for kb_m < -1\n"
+        wstr += " - validity of FT formula uncertain for m < -1\n"
         warnings.warn(wstr)
-    elif (kb_m < 0) & ((np.abs(np.round(kb_m) - kb_m)) > np.finfo(float).eps):
-        wstr = "\nNeg NonInt kb_m=%g in " % (kb_m)
+    elif (m < 0) & ((np.abs(np.round(m) - m)) > np.finfo(float).eps):
+        wstr = "\nNeg NonInt m=%g in " % (m)
         wstr += "kaiser_bessel_ft()\n\t- validity of FT formula uncertain\n"
         warnings.warn(wstr)
 
@@ -209,12 +209,12 @@ def kaiser_bessel_ft(u, J=6, alpha=None, kb_m=0, d=1):
         )
         z = xp.sqrt(tmp_cplx)
 
-    nu = d / 2.0 + kb_m
-    const1 = (2 * np.pi) ** (d / 2.0) * (J / 2.0) ** d * alpha ** kb_m
-    if kb_m == 0:
+    nu = d / 2.0 + m
+    const1 = (2 * np.pi) ** (d / 2.0) * (J / 2.0) ** d * alpha ** m
+    if m == 0:
         const1 /= _i0(alpha, xp=xp)
     else:
-        const1 /= _iv(kb_m, alpha, xp=xp)
+        const1 /= _iv(m, alpha, xp=xp)
     if nu == 0:
         y = const1 * _j0(z, xp=xp)
         y /= z

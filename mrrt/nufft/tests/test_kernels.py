@@ -1,11 +1,10 @@
 from itertools import product
 
 import numpy as np
-from numpy.testing import assert_equal, assert_raises, assert_
 import pytest
 
-from mrrt.nufft._nufft import NufftKernel
 from mrrt.nufft import config
+from mrrt.nufft._kernels import BeattyKernel
 
 if config.have_cupy:
     import cupy
@@ -14,54 +13,46 @@ if config.have_cupy:
 else:
     all_xp = [np]
 
-kernel_types = ["kb:beatty", "linear", "diric"]
-
 
 @pytest.mark.parametrize("xp, dtype", product(all_xp, [np.float32, np.float64]))
 def test_kernel(xp, dtype, show_figure=False):
 
-    J = 4
-    x = xp.linspace(-J / 2, J / 2, 1001, dtype=dtype)
+    j = 4
+    x = xp.linspace(-j / 2, j / 2, 1001, dtype=dtype)
 
     # can call with mixtures of integer, list or array input types
-    d1 = NufftKernel("kb:beatty", Kd=[32, 32], Jd=[J, J], Nd=[24, 16])
-    assert_equal(len(d1.kernel), 2)
-    y = d1.kernel[0](x)
-    assert_equal(x.dtype, y.dtype)
-
-    d2 = NufftKernel("linear", ndim=2, Jd=J)
-    assert_equal(len(d2.kernel), 2)
-    y = d2.kernel[0](x)
-    assert_equal(x.dtype, y.dtype)
-
-    d3 = NufftKernel("diric", ndim=1, Kd=32, Jd=32, Nd=16)
-    x = xp.linspace(-16, 16, 1001, dtype=dtype)
-    assert_equal(len(d3.kernel), 1)
-    y = d3.kernel[0](x)
-    assert_equal(x.dtype, y.dtype)
+    d1 = BeattyKernel(shape=(j, j), grid_shape=(24, 16), os_grid_shape=(32, 32))
+    assert len(d1.kernels) == 2
+    y = d1.kernels[0](x)
+    assert x.dtype == y.dtype
 
     # invalid kernel raises ValueError
-    assert_raises(ValueError, NufftKernel, "foo", ndim=2, Jd=4)
+    with pytest.raises(ValueError):
+        BeattyKernel(shape=(j, j), grid_shape=(8, 8, 8), os_grid_shape=(32, 32))
+    with pytest.raises(ValueError):
+        BeattyKernel(
+            shape=(j, j), grid_shape=(8, 8), os_grid_shape=(32, 32, 16)
+        )
 
     if show_figure:
         d1.plot()
-        d2.plot()
-        d3.plot()
+
+    # 1d case: can call with integers
+    BeattyKernel(shape=j, grid_shape=24, os_grid_shape=32)
 
 
 def test_kernel_range(show_figure=False):
-    Jd = np.asarray([3, 4])
-    kernel_types = ["kb:beatty"]
-    for ktype in kernel_types:
-        kernel = NufftKernel(
-            ktype, ndim=2, Nd=[64, 64], Jd=Jd, Kd=[128, 128], Nmid=[32, 32]
-        )
+    shape = np.asarray([3, 4])
+    kernel = BeattyKernel(
+        shape=shape, grid_shape=(64, 64), os_grid_shape=(128, 128)
+    )
+    for d in range(kernel.ndim):
+        # non-zero within extent of J
+        x = np.linspace(-shape[d] / 2 + 0.001, shape[d] / 2 - 0.001, 100)
+        assert np.all(kernel.kernels[d](x) > 0)
 
-        for d in range(kernel.ndim):
-            # non-zero within extent of J
-            x = np.linspace(-Jd[d] / 2 + 0.001, Jd[d] / 2 - 0.001, 100)
-            assert_(np.all(kernel.kernel[d](x) > 0))
-
-            # 0 outside range of J
-            assert_(kernel.kernel[d](np.asarray([Jd[d] / 2]))[0] == 0)
-            assert_(kernel.kernel[d](np.asarray([-Jd[d] / 2]))[0] == 0)
+        # 0 outside range of J
+        assert kernel.kernels[d](np.asarray([shape[d] / 2]))[0] == 0
+        assert kernel.kernels[d](np.asarray([shape[d] / 2 + 10]))[0] == 0
+        assert kernel.kernels[d](np.asarray([-shape[d] / 2]))[0] == 0
+        assert kernel.kernels[d](np.asarray([-shape[d] / 2 - 10]))[0] == 0
