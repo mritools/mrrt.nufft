@@ -8,7 +8,7 @@ import functools
 
 import numpy as np
 
-from . import config
+from mrrt.utils import config
 
 if config.have_pyfftw:
     _default_lib = "pyfftw"

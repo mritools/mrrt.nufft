@@ -1,15 +1,11 @@
-"""
-The code in this module is a based on Matlab routines originally created by
-Jeff Fessler and his students at the University of Michigan.  The original
-license for the Matlab code is reproduced below.
+"""Non-uniform fast Fourier transform.
 
- License
+The main class here is NufftBase. For MRI, it is recommended to use the class
+MRI_Operator in ``mrrt.operators`` instead (which is built on this object
+internally).
 
-    You may freely use and distribute this software as long as you retain the
-    author's name (myself and/or my students) with the software.
-    It would also be courteous for you to cite the toolbox and any related
-    publications in any papers that present results based on this software.
-    UM and the authors make all the usual disclaimers about liability etc.
+
+
 """
 
 try:
@@ -45,13 +41,12 @@ from .nufft_utils import (
 )
 from mrrt.utils import (
     complexify,
+    config,
     get_array_module,
     get_data_address,
     profile,
     reale,
 )
-
-from . import config
 
 if config.have_cupy:
     import cupy
@@ -85,7 +80,6 @@ supported_cplx_types = [np.complex64, np.complex128]
 #       Kd -> gridded_shape
 #       Ld -> table_sizes
 #       Jd -> kernel_sizes
-#       om -> omega
 
 
 def _get_legend_text(ax):
@@ -113,9 +107,6 @@ def _block_outer_prod(x1, x2, xp=None):
     return xx1 * xx2  # (J1, J2, M)
 
 
-# TODO: change default n_shift to Nd/2?
-
-
 class NufftBase(object):
     """Base NUFFT Class"""
 
@@ -123,13 +114,12 @@ class NufftBase(object):
     def __init__(
         self,
         Nd,
-        om,
+        omega,
         Jd=4,
         Kd=None,
         Ld=None,
         precision="single",
         mode="table",
-        kernel=None,
         ortho=False,
         n_shift=None,
         phasing="real",
@@ -145,22 +135,20 @@ class NufftBase(object):
         ----------
         Nd : array-like
             Shape of the Cartesian grid in the spatial domain.
-        om : array
+        omega : array
             Non-Cartesian sampling frequencies. (TODO: units)
         J : int or array-like, optional
             Desired size of the NUFFT kernel on each axis. For GPU-based NUFFT,
-            it is currently required to use the same size on each axis. If a
-            user supplies their own ``kernel`` object the value of
-            ``kernel.shape`` is used and ``J`` is ignored.
+            it is currently required to use the same size on each axis.
         Kd : array-like, optional
-            Oversampled cartesian grid size (default is ``1.5 * Nd``).
+            Oversampled cartesian grid size (default is ``int(1.5 * Nd)``).
         Ld : array-like, optional
             When ``mode != 'sparse'``, this controls the size of the kernel
             lookup table used. The table size will be ``J[i] * Ld[i]`` for axis
             ``i``.
         precision : {'single', 'double', 'auto'}, optional
             Precision of the NUFFT operations. If 'auto' the precision will be
-            set to match the provided ``om`` array.
+            set to match the provided ``omega`` array.
         mode : {'sparse', 'table'}, optional
             The NUFFT implementation to use. ``sparse`` corresponds to
             precomputation of a sparse matrix corresponding to the operation.
@@ -192,8 +180,6 @@ class NufftBase(object):
 
         """
         self.verbose = verbose
-        if self.verbose:
-            print("Entering NufftBase init")
         self.__init_complete = False  # will be set true after __init__()
         self.order = order
 
@@ -204,13 +190,13 @@ class NufftBase(object):
         # also Nd, Kd, Jd, etc. should be on the CPU
         self.__Nd = _as_1d_ints(Nd, xp=np)
         self.__phasing = phasing
-        self.__om = None  # will be set later below
+        self.__omega = None  # will be set later below
         self._set_n_mid()
         self.ndim = len(self.Nd)  # number of dimensions
         self._Jd = _as_1d_ints(Jd, n=self.ndim, xp=np)
 
         if Kd is None:
-            Kd = 1.5 * self.__Nd
+            Kd = int(1.5 * self.__Nd)
         self.__Kd = _as_1d_ints(Kd, n=self.ndim, xp=np)
 
         # normalization for orthogonal FFT
@@ -228,7 +214,7 @@ class NufftBase(object):
         self._cplx_dtype = None
         self._real_dtype = None
 
-        self._init_omega(om)
+        self._init_omega(omega)
 
         self.precision = precision
         self._forw = None
@@ -249,8 +235,8 @@ class NufftBase(object):
         self._calc_scaling()
 
         self.M = 0
-        if self.om is not None:
-            self.M = self.om.shape[0]
+        if self.omega is not None:
+            self.M = self.omega.shape[0]
         if n_shift is None:
             self.__n_shift = (0,) * self.ndim  # TODO: set to self.Nd //2?
         else:
@@ -288,10 +274,10 @@ class NufftBase(object):
                 )
             self._init_table()
 
-            tm = self.xp.zeros_like(self.om)
+            tm = self.xp.zeros_like(self.omega)
             for d in range(0, self.ndim):
                 gam = 2 * np.pi / self.Kd[d]
-                tm[:, d] = self.om[:, d] / gam  # t = omega / gamma
+                tm[:, d] = self.omega[:, d] / gam  # t = omega / gamma
             self.tm = tm
             self.interp_table = _nufft_table_interp  # TODO: remove?
             self.interp_table_adj = _nufft_table_adj  # TODO: remove?
@@ -304,18 +290,16 @@ class NufftBase(object):
         self.fft = self._nufft_forward
         self.adj = self._nufft_adj
         self.nargin1 = reduce(mul, self.Nd)
-        self.nargout1 = self.om.shape[0]
+        self.nargout1 = self.omega.shape[0]
         self._update_array__precision()
         self._make_arrays_contiguous(order="F")
-        self.__init_complete = True  # TODO: currently unused
-        if self.verbose:
-            print("Exiting NufftBase init")
+        self.__init_complete = True
         if self.on_gpu:
             self._init_gpu()
 
     @profile
     def _init_gpu(self):
-        M = self.om.shape[0]
+        M = self.omega.shape[0]
         if not len(np.unique(self.Jd)):
             raise ValueError(
                 "GPU case requires same gridding kernel size on each axis."
@@ -404,7 +388,7 @@ class NufftBase(object):
         if self.phasing == "real":
             self.phase_before = self._phase_before(self.Kd, self.n_mid)
             self.phase_after = self._phase_after(
-                self.om, self.n_mid, self.n_shift
+                self.omega, self.n_mid, self.n_shift
             )
         elif self.phasing == "complex":
             # complex kernel incorporates the FFTshift phase
@@ -451,12 +435,12 @@ class NufftBase(object):
 
     @precision.setter
     def precision(self, precision):
-        # default precision based on self.om
+        # default precision based on self.omega
         if precision in [None, "auto"]:
-            if isinstance(self.__om, np.ndarray):
-                if self.__om.dtype in [np.float32]:
+            if isinstance(self.__omega, np.ndarray):
+                if self.__omega.dtype in [np.float32]:
                     precision = "single"
-                elif self.__om.dtype in [np.float64]:
+                elif self.__omega.dtype in [np.float64]:
                     precision = "double"
             else:
                 precision = "double"
@@ -474,31 +458,33 @@ class NufftBase(object):
             self._update_array__precision()
 
     @property
-    def om(self):
-        return self.__om
+    def omega(self):
+        return self.__omega
 
-    # disallow setting om after object creation
-    # @om.setter
-    # def om(self, om):
-    #     self._init_omega(om)
+    # disallow setting omega after object creation
+    # @omega.setter
+    # def omega(self, omega):
+    #     self._init_omega(omega)
 
-    def _init_omega(self, om):
-        if om is not None:
-            om = self.xp.asarray(om)
-            if om.ndim == 1:
-                om = om[:, np.newaxis]
-            if om.shape[1] != self.ndim:
+    def _init_omega(self, omega):
+        if omega is not None:
+            omega = self.xp.asarray(omega)
+            if omega.ndim == 1:
+                omega = omega[:, np.newaxis]
+            if omega.shape[1] != self.ndim:
                 raise ValueError("number of cols must match NUFFT dimension")
-            if om.dtype not in supported_real_types:
+            if omega.dtype not in supported_real_types:
                 raise ValueError(
-                    "om must be one of the following types: "
+                    "omega must be one of the following types: "
                     "{}".format(supported_real_types)
                 )
-            if self.ndim != om.shape[1]:
+            if self.ndim != omega.shape[1]:
                 raise ValueError("omega needs {} columns".format(self.ndim))
-        self.__om = om
+        self.__omega = omega
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_after = self._phase_after(om, self.n_mid, self.__n_shift)
+            self.phase_after = self._phase_after(
+                omega, self.n_mid, self.__n_shift
+            )
         if self.__init_complete:
             self._reinitialize()
 
@@ -590,7 +576,7 @@ class NufftBase(object):
         self.__n_shift = np.asarray(n_shift)
         if self.ndim != n_shift.size:
             raise ValueError("n_shift needs %d columns" % (self.ndim))
-        self.phase_after = self._phase_after(self.__om, self.n_mid, n_shift)
+        self.phase_after = self._phase_after(self.__omega, self.n_mid, n_shift)
         if self.__init_complete:
             self._reinitialize()
 
@@ -600,9 +586,9 @@ class NufftBase(object):
             self.n_mid = self.Nd // 2
         else:
             self.n_mid = (self.Nd - 1) / 2.0
-        if self.phasing == "real" and (self.__om is not None):
+        if self.phasing == "real" and (self.__omega is not None):
             self.phase_after = self._phase_after(
-                self.__om, self.n_mid, self.__n_shift
+                self.__omega, self.n_mid, self.__n_shift
             )
         if self.__init_complete:
             self._reinitialize()
@@ -629,8 +615,8 @@ class NufftBase(object):
         # update the data types of other members
         # TODO: warn if losing precision during conversion?
         xp = self.xp
-        if isinstance(self.__om, xp.ndarray):
-            self.__om = self._update_dtype(self.om, "real", xp=xp)
+        if isinstance(self.__omega, xp.ndarray):
+            self.__omega = self._update_dtype(self.omega, "real", xp=xp)
         if isinstance(self.__n_shift, np.ndarray):
             self.__n_shift = self._update_dtype(self.__n_shift, "real", xp=np)
         if isinstance(self.phase_before, xp.ndarray):
@@ -664,7 +650,7 @@ class NufftBase(object):
             contig_func_xp = xp.ascontiguousarray
         else:
             raise ValueError("order must be 'F' or 'C'")
-        self.__om = contig_func_xp(self.__om)
+        self.__omega = contig_func_xp(self.__omega)
         self.__Kd = contig_func(self.__Kd)
         self.__Nd = contig_func(self.__Nd)
         self._Jd = contig_func(self._Jd)
@@ -695,12 +681,12 @@ class NufftBase(object):
             )
         return xp.exp(1j * phase).astype(self._cplx_dtype)  # [(Kd)]
 
-    def _phase_after(self, om, n_mid, n_shift):
+    def _phase_after(self, omega, n_mid, n_shift):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
         xp = self.xp
         phase = xp.exp(
-            1j * xp.dot(om, xp.asarray(n_shift - n_mid).reshape(-1, 1))
+            1j * xp.dot(omega, xp.asarray(n_shift - n_mid).reshape(-1, 1))
         )
         return xp.squeeze(phase).astype(self._cplx_dtype)  # [M,1]
 
@@ -737,11 +723,11 @@ class NufftBase(object):
         tstart = time()
         ud = {}
         kd = {}
-        om = self.om
-        if om.ndim == 1:
-            om = om[:, np.newaxis]
+        omega = self.omega
+        if omega.ndim == 1:
+            omega = omega[:, np.newaxis]
 
-        xp, on_gpu = get_array_module(om)
+        xp, on_gpu = get_array_module(omega)
         if on_gpu:
             coo_matrix = cupyx.scipy.sparse.coo_matrix
         else:
@@ -762,12 +748,12 @@ class NufftBase(object):
                 raise ValueError("callable kernel function required")
 
             # [J?,M]
-            [c, arg] = _nufft_coef(om[:, d], J, K, kernel_func, xp=xp)
+            [c, arg] = _nufft_coef(omega[:, d], J, K, kernel_func, xp=xp)
 
             # indices into oversampled FFT components
             #
             # [M,1] to leftmost near nbr
-            koff = _nufft_offset(om[:, d], J, K, xp=xp)
+            koff = _nufft_offset(omega[:, d], J, K, xp=xp)
 
             # [J,M]
             kd[d] = xp.mod(_outer_sum(xp.arange(1, J + 1), koff), K)
@@ -791,7 +777,7 @@ class NufftBase(object):
         """
         build sparse matrix that is shape (M, *Kd)
         """
-        M = self.om.shape[0]
+        M = self.omega.shape[0]
         kk = kd[0]  # [J1,M]
         uu = ud[0]  # [J1,M]
 
@@ -815,7 +801,7 @@ class NufftBase(object):
         if self.phasing == "complex":
             if np.any(self.n_shift != 0):
                 phase = xp.exp(
-                    1j * xp.dot(om, xp.asarray(self.n_shift.ravel()))
+                    1j * xp.dot(omega, xp.asarray(self.n_shift.ravel()))
                 )  # [1,M]
                 phase = phase.reshape((1, -1), order="F")
                 uu *= phase  # use broadcasting along first dimension
@@ -883,7 +869,7 @@ class NufftBase(object):
         how = "fast"
         if self.phasing == "complex" and np.any(np.asarray(self.n_shift) != 0):
             self.phase_shift = xp.exp(
-                1j * xp.dot(self.om, xp.asarray(self.n_shift.ravel()))
+                1j * xp.dot(self.omega, xp.asarray(self.n_shift.ravel()))
             )  # [M 1]
         else:
             self.phase_shift = None  # compute on-the-fly
@@ -891,7 +877,7 @@ class NufftBase(object):
             self.Ld = 2 ** 10
         if ndim != len(self.Jd) or ndim != len(self.Ld) or ndim != len(self.Kd):
             raise ValueError("inconsistent dimensions among ndim, Jd, Ld, Kd")
-        if ndim != self.om.shape[1]:
+        if ndim != self.omega.shape[1]:
             raise ValueError("omega needs %d columns" % (ndim))
 
         self.h = []
@@ -981,7 +967,7 @@ class NufftBase(object):
 
 
 @profile
-def _nufft_table_interp(obj, xk, om=None, xp=None):
+def _nufft_table_interp(obj, xk, omega=None, xp=None):
     """ Forward NUFFT based on kernel lookup table (image-space to k-space).
 
     Parameters
@@ -999,8 +985,8 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
     x : array
         DTFT coefficients (k-space)
     """
-    if om is None:
-        om = obj.om
+    if omega is None:
+        omega = obj.omega
 
     ndim = len(obj.Kd)
     _xp, on_gpu = get_array_module(xk, xp)
@@ -1014,11 +1000,11 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
         on_gpu = False
     xp = obj.xp
 
-    # tm = xp.zeros_like(om)
+    # tm = xp.zeros_like(omega)
     # pi = np.pi
     # for d in range(0, ndim):
     #     gam = 2 * pi / obj.Kd[d]
-    #     tm[:, d] = om[:, d] / gam  # t = omega / gamma
+    #     tm[:, d] = omega[:, d] / gam  # t = omega / gamma
     tm = obj.tm
 
     if xk.ndim == 1:
@@ -1091,7 +1077,7 @@ def _nufft_table_interp(obj, xk, om=None, xp=None):
 
 
 @profile
-def _nufft_table_adj(obj, x, om=None, xp=None):
+def _nufft_table_adj(obj, x, omega=None, xp=None):
     """ Adjoint NUFFT based on kernel lookup table (k-space to image-space).
 
     Parameters
@@ -1100,7 +1086,7 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
         instance of NufftBase (contains k-space locations, kernel, etc.)
     x : array
         DTFT values (k-space) [nsamples, ncoils*nrepetitions]
-    om : ndarray, optional
+    omega : ndarray, optional
         Frequency locations corresponding to the samples.  By default this is
         obtained from obj.
 
@@ -1109,8 +1095,8 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
     xk : array
         DFT coefficients
     """
-    if om is None:
-        om = obj.om
+    if omega is None:
+        omega = obj.omega
     _xp, on_gpu = get_array_module(x, xp)
     if obj.on_gpu and not on_gpu:
         # if GPU-based NUFFT and numpy input we have to transfer x to the GPU
@@ -1124,14 +1110,14 @@ def _nufft_table_adj(obj, x, om=None, xp=None):
 
     ndim = len(obj.Kd)
 
-    # tm = xp.zeros_like(om)
+    # tm = xp.zeros_like(omega)
     # pi = np.pi
     # for d in range(0, ndim):
     #     gam = 2 * pi / obj.Kd[d]
-    #     tm[:, d] = om[:, d] / gam  # t = omega / gamma
+    #     tm[:, d] = omega[:, d] / gam  # t = omega / gamma
     tm = obj.tm
 
-    if x.shape[0] != om.shape[0]:
+    if x.shape[0] != omega.shape[0]:
         raise ValueError("x size problem")
 
     if x.ndim == 1:
@@ -1203,7 +1189,7 @@ def _nufft_table_make1(
         n_shift=0,
         mode="sparse",
         phasing=phasing,
-        sparse_format="csc",
+        sparse_format="CSC",
         order=order,
         on_gpu=(xp != np),
     )
@@ -1219,8 +1205,8 @@ def _nufft_table_make1(
     # This is a slow and inefficient (but simple) way to get the table
     # because it builds a huge sparse matrix but only uses 1 column!
     if how == "slow":
-        om0 = t0 * 2 * pi / K  # gam
-        s1 = NufftBase(om=om0, Nd=N, Kd=K, **nufft_args)
+        omega0 = t0 * 2 * pi / K  # gam
+        s1 = NufftBase(omega=omega0, Nd=N, Kd=K, **nufft_args)
         h = xp.asarray(s1.p[:, 0].todense()).ravel()  # [J*L + 1]
     # This way is "J times faster" than the slow way, but still not ideal.
     # It works for any user-specified interpolator.
@@ -1230,8 +1216,8 @@ def _nufft_table_make1(
             t1 = J / 2.0 - 1 + xp.arange(L) / L  # [L]
         else:
             t1 = J / 2.0 - 1 + xp.arange(1, L + 1) / L  # [L]
-        om1 = t1 * 2 * pi / K  # * gam
-        s1 = NufftBase(om=om1, Nd=N, Kd=K, **nufft_args)
+        omega1 = t1 * 2 * pi / K  # * gam
+        s1 = NufftBase(omega=omega1, Nd=N, Kd=K, **nufft_args)
         try:
             h = xp.asarray(s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(
                 order="F"
@@ -1255,8 +1241,8 @@ def _nufft_table_make1(
             print("N={},J={},K={}".format(N, J, K))
             print("Nfake={},Kfake={}".format(Nfake, Kfake))
         t1 = J / 2.0 - 1 + xp.arange(L) / L  # [L]
-        om1 = t1 * 2 * pi / Kfake  # gam
-        s1 = NufftBase(om=om1, Nd=Nfake, Kd=Kfake, **nufft_args)
+        omega1 = t1 * 2 * pi / Kfake  # gam
+        s1 = NufftBase(omega=omega1, Nd=Nfake, Kd=Kfake, **nufft_args)
         try:
             h = xp.asarray(s1.p[:, np.arange(J - 1, -1, -1)].todense()).ravel(
                 order="F"
@@ -1437,7 +1423,7 @@ def nufft_forward_exact(obj, x, copy_x=True, xp=None):
     xk = xp.empty((obj.M, L), dtype=x.dtype, order="F")
     for rep in range(L):
         xk[..., rep] = dtft(
-            x[:, rep], omega=obj.om, shape=Nd, n_shift=obj.n_shift, xp=xp
+            x[:, rep], omega=obj.omega, shape=Nd, n_shift=obj.n_shift, xp=xp
         )
 
     remove_singleton = True
@@ -1591,7 +1577,7 @@ def nufft_adj_exact(obj, xk, copy=True, xp=None):
     x = xp.empty((reduce(mul, Nd), nrepetitions), dtype=xk.dtype, order="F")
     for rep in range(nrepetitions):
         x[..., rep] = dtft_adj(
-            xk[:, rep], omega=obj.om, shape=obj.Nd, n_shift=obj.n_shift
+            xk[:, rep], omega=obj.omega, shape=obj.Nd, n_shift=obj.n_shift
         )
 
     if obj.ortho:

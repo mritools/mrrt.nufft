@@ -22,10 +22,11 @@ implementation there.
 
 """
 import warnings
+
 import numpy as np
+
 from scipy.special import iv, jv, i0, j0
-from mrrt.utils import reale, profile, get_array_module
-from . import config
+from mrrt.utils import config, get_array_module, profile, reale
 
 if config.have_cupy:
     from cupyx.scipy.special import j0 as j0_cupy, i0 as i0_cupy

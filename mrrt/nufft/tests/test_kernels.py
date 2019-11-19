@@ -3,7 +3,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from mrrt.nufft import config
+from mrrt.utils import config
 from mrrt.nufft._kernels import BeattyKernel
 
 if config.have_cupy:

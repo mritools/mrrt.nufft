@@ -4,7 +4,7 @@ import os
 import numpy as np
 from jinja2 import Template
 
-from .. import config
+from mrrt.utils import config
 
 template_path = os.path.join(os.path.dirname(__file__), "jinja")
 

@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from mrrt.nufft import dtft, dtft_adj, config
-from mrrt.utils import max_percent_diff
+from mrrt.nufft import dtft, dtft_adj
+from mrrt.utils import config, max_percent_diff
 
 if config.have_cupy:
     import cupy

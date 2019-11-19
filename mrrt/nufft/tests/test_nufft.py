@@ -4,9 +4,9 @@ import numpy as np
 from numpy.testing import assert_equal
 import pytest
 
-from mrrt.nufft import config, dtft, dtft_adj
+from mrrt.nufft import dtft, dtft_adj
 from mrrt.nufft._nufft import NufftBase, nufft_adj, _nufft_table_make1
-from mrrt.utils import max_percent_diff
+from mrrt.utils import config, max_percent_diff
 from mrrt.nufft.tests.test_dtft import _uniform_freqs
 
 if config.have_cupy:
@@ -68,9 +68,9 @@ def test_nufft_adj(xp, mode, phasing, verbose=False):
     n_shift = [2.7, 3.1]  # random shifts to stress it
     o1 = 2 * np.pi * xp.array([0.0, 0.1, 0.3, 0.4, 0.7, 0.9])
     o2 = o1[::-1].copy()
-    om = xp.stack((o1, o2), axis=-1)
+    omega = xp.stack((o1, o2), axis=-1)
     st = NufftBase(
-        om=om,
+        omega=omega,
         Nd=(N1, N2),
         Jd=[8, 8],
         Kd=2 * np.array([N1, N2]),
@@ -82,7 +82,7 @@ def test_nufft_adj(xp, mode, phasing, verbose=False):
     )
 
     data = xp.arange(1, o1.size + 1).ravel() ** 2  # test spectrum
-    xd = dtft_adj(data, om, shape=(N1, N2), n_shift=n_shift, xp=xp)
+    xd = dtft_adj(data, omega, shape=(N1, N2), n_shift=n_shift, xp=xp)
 
     data_3reps = xp.stack((data,) * 3, axis=-1)
     xn = nufft_adj(st, data_3reps)
@@ -112,13 +112,13 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
     Jd = 6
     Ld = 1024
     n_shift = Nd // 2
-    om = _perturbed_gridpoints(Nd, xp=xp)
+    omega = _perturbed_gridpoints(Nd, xp=xp)
     rstate = xp.random.RandomState(1234)
 
     rtol = 1e-3
     atol = 1e-5
     A = NufftBase(
-        om=om,
+        omega=omega,
         Nd=Nd,
         Jd=Jd,
         Kd=Kd,
@@ -135,7 +135,7 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
 
     # forward
     y = A._nufft_forward(x)
-    y_true = dtft(x, omega=om, shape=Nd, n_shift=n_shift)
+    y_true = dtft(x, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
     # multi-repetition forward
@@ -150,7 +150,7 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
 
     # adjoint
     x_adj = A._nufft_adj(y)
-    x_adj_true = dtft_adj(y, omega=om, shape=Nd, n_shift=n_shift)
+    x_adj_true = dtft_adj(y, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
     # multi-repetition adjoint
@@ -187,13 +187,13 @@ def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
     Nd = (16, 16)
     Ld = 1024
     n_shift = np.asarray(Nd) / 2
-    om = _perturbed_gridpoints(Nd, xp=xp)
+    omega = _perturbed_gridpoints(Nd, xp=xp)
     rstate = xp.random.RandomState(1234)
 
     rtol = 1e-3
     atol = 1e-5
     A = NufftBase(
-        om=om,
+        omega=omega,
         Nd=Nd,
         Jd=Jd,
         Kd=Kd,
@@ -209,7 +209,7 @@ def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
 
     # forward
     y = A._nufft_forward(x)
-    y_true = dtft(x, omega=om, shape=Nd, n_shift=n_shift)
+    y_true = dtft(x, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
     # multi-repetition forward
@@ -219,7 +219,7 @@ def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
 
     # adjoint
     x_adj = A._nufft_adj(y)
-    x_adj_true = dtft_adj(y, omega=om, shape=Nd, n_shift=n_shift)
+    x_adj_true = dtft_adj(y, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
     # multi-repetition adjoint
@@ -252,13 +252,13 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
     Jd = [6] * ndim  # use odd kernel for variety (even in 1D, 2D tests)
     Ld = 1024
     n_shift = np.asarray(Nd) / 2
-    om = _perturbed_gridpoints(Nd, xp=xp)
+    omega = _perturbed_gridpoints(Nd, xp=xp)
 
     rtol = 1e-2
     atol = 1e-4
     rstate = xp.random.RandomState(1234)
     A = NufftBase(
-        om=om,
+        omega=omega,
         Nd=Nd,
         Jd=Jd,
         Kd=Kd,
@@ -275,7 +275,7 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
 
     # forward
     y = A._nufft_forward(x)
-    y_true = dtft(x, omega=om, shape=Nd, n_shift=n_shift)
+    y_true = dtft(x, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
     # multi-repetition forward
@@ -290,7 +290,7 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
 
     # adjoint
     x_adj = A._nufft_adj(y)
-    x_adj_true = dtft_adj(y, omega=om, shape=Nd, n_shift=n_shift)
+    x_adj_true = dtft_adj(y, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
     # multi-repetition adjoint
@@ -316,11 +316,11 @@ def test_nufft_dtypes(precision, xp):
     Jd = 6
     Ld = 4096
     n_shift = Nd // 2
-    om = _perturbed_gridpoints(Nd, xp=xp)
+    omega = _perturbed_gridpoints(Nd, xp=xp)
 
     mode = "table"
     A = NufftBase(
-        om=om,
+        omega=omega,
         Nd=Nd,
         Jd=Jd,
         Kd=Kd,
@@ -338,9 +338,9 @@ def test_nufft_dtypes(precision, xp):
         assert_equal(A._cplx_dtype, np.complex128)
         assert_equal(A._real_dtype, np.float64)
 
-    # set based on precision of om rather than the precision argument
+    # set based on precision of omega rather than the precision argument
     A2 = NufftBase(
-        om=om.astype(A._real_dtype),
+        omega=omega.astype(A._real_dtype),
         Nd=Nd,
         Jd=Jd,
         Kd=Kd,

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from mrrt.nufft._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
-from mrrt.nufft import config
+from mrrt.utils import config
 
 if config.have_cupy:
     import cupy
