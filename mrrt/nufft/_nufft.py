@@ -43,11 +43,7 @@ from ._interp_table import (
 )
 from ._kaiser_bessel import kaiser_bessel_ft
 from ._kernels import BeattyKernel
-from ._utils import (
-    _nufft_coef,
-    _nufft_offset,
-    _as_1d_ints,
-)
+from ._utils import _nufft_coef, _nufft_offset, _as_1d_ints
 
 if config.have_cupy:
     import cupy
@@ -231,7 +227,7 @@ class NufftBase(object):
         self.Jd = Jd
 
         self.kernel = BeattyKernel(
-            shape=self.Jd, grid_shape=self.Nd, os_grid_shape=self.Kd,
+            shape=self.Jd, grid_shape=self.Nd, os_grid_shape=self.Kd
         )
         self._calc_scaling()
 
@@ -1180,9 +1176,7 @@ def _nufft_table_adj(obj, x, omega=None, xp=None):
 
 
 # @profile
-def _nufft_table_make1(
-    how, N, J, K, L, phasing, order, debug=False, xp=np,
-):
+def _nufft_table_make1(how, N, J, K, L, phasing, order, debug=False, xp=np):
     """ make LUT for 1 dimension by creating a dummy 1D NUFFT object """
     # kernel_1d = BeattyKernel(shape=(J,), grid_shape=(N,), os_grid_shape=(K,))
     nufft_args = dict(

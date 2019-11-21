@@ -380,13 +380,13 @@ def test_nufft_dtypes(precision, xp):
 def test_nufft_table_make1(xp, n, phasing):
     decimal = 6
     h0, t0 = _nufft_table_make1(
-        how="slow", N=n, J=6, K=2 * n, L=2048, phasing=phasing, order="F",
+        how="slow", N=n, J=6, K=2 * n, L=2048, phasing=phasing, order="F"
     )
     h1, t1 = _nufft_table_make1(
-        how="fast", N=n, J=6, K=2 * n, L=2048, phasing=phasing, order="F",
+        how="fast", N=n, J=6, K=2 * n, L=2048, phasing=phasing, order="F"
     )
     h2, t2 = _nufft_table_make1(
-        how="ratio", N=n, J=6, K=2 * n, L=2048, phasing=phasing, order="F",
+        how="ratio", N=n, J=6, K=2 * n, L=2048, phasing=phasing, order="F"
     )
     xp.testing.assert_array_almost_equal(h0, h1, decimal=decimal)
     xp.testing.assert_array_almost_equal(h0, h2, decimal=decimal)

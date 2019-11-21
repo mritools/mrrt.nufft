@@ -1,2 +1,4 @@
 [run]
-omit = mrrt/nufft/tests/*
+omit =
+    mrrt/nufft/tests/*
+    mrrt/nufft/_version.py

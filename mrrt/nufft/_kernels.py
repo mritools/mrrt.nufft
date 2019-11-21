@@ -12,11 +12,7 @@ from ._kaiser_bessel import kaiser_bessel
 from ._utils import _as_1d_ints
 
 
-__all__ = [
-    "BeattyKernel",
-    "KaiserBesselKernel",
-    "NufftKernelBase",
-]
+__all__ = ["BeattyKernel", "KaiserBesselKernel", "NufftKernelBase"]
 
 
 class NufftKernelBase(ABC):
@@ -124,7 +120,7 @@ class KaiserBesselKernel(NufftKernelBase):
         kernels = []
         for j, alpha, m in zip(self.shape, alpha, m):
             kernels.append(
-                functools.partial(kaiser_bessel, J=j, alpha=alpha, m=m),
+                functools.partial(kaiser_bessel, J=j, alpha=alpha, m=m)
             )
             kernels[-1].__doc__ = kernel_docstr
         return kernels
