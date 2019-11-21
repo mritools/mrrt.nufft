@@ -9,7 +9,7 @@ from math import sqrt
 import numpy as np
 
 from ._kaiser_bessel import kaiser_bessel
-from .nufft_utils import _as_1d_ints
+from ._utils import _as_1d_ints
 
 
 __all__ = [

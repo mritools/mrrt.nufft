@@ -18,11 +18,21 @@ from math import sqrt
 from time import time
 import warnings
 
+from mrrt.utils import (
+    complexify,
+    config,
+    fftn,
+    get_array_module,
+    get_data_address,
+    ifftn,
+    outer_sum,
+    profile,
+    reale,
+)
 import numpy as np
 import scipy.sparse
 
 from ._dtft import dtft, dtft_adj
-from ._fft_cpu import fftn, ifftn
 from ._interp_table import (
     interp1_table,
     interp2_table,
@@ -33,19 +43,10 @@ from ._interp_table import (
 )
 from ._kaiser_bessel import kaiser_bessel_ft
 from ._kernels import BeattyKernel
-from .nufft_utils import (
+from ._utils import (
     _nufft_coef,
     _nufft_offset,
-    _outer_sum,
     _as_1d_ints,
-)
-from mrrt.utils import (
-    complexify,
-    config,
-    get_array_module,
-    get_data_address,
-    profile,
-    reale,
 )
 
 if config.have_cupy:
@@ -756,7 +757,7 @@ class NufftBase(object):
             koff = _nufft_offset(omega[:, d], J, K, xp=xp)
 
             # [J,M]
-            kd[d] = xp.mod(_outer_sum(xp.arange(1, J + 1), koff), K)
+            kd[d] = xp.mod(outer_sum(xp.arange(1, J + 1), koff), K)
 
             if self.phasing == "complex":
                 gam = 2 * np.pi / K

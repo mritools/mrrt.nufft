@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_equal
 
-from mrrt.nufft.nufft_utils import _nufft_offset
+from mrrt.nufft._utils import _nufft_offset
 from mrrt.utils import config
 
 if config.have_cupy:

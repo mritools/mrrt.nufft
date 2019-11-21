@@ -16,19 +16,6 @@ Python port: Gregory R. Lee
 """
 
 
-def _outer_sum(a, b):
-    """Outer sum.
-
-    Equivalent to np.add.outer(a, b), but will also work for CuPy arrays.
-
-    Returns
-    -------
-    s : ndarray
-        ``s = a[:, np.newaxis] + b[np.newaxis, :]``
-    """
-    return a[:, np.newaxis] + b[np.newaxis, :]
-
-
 @profile
 def _nufft_offset(om, j, k, xp=None):
     """ offset for NUFFT
