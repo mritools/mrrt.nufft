@@ -5,7 +5,7 @@ from numpy.testing import assert_equal
 import pytest
 
 from mrrt.nufft import dtft, dtft_adj
-from mrrt.nufft._nufft import NufftBase, nufft_adj, _nufft_table_make1
+from mrrt.nufft._nufft import NufftBase, _nufft_table_make1
 from mrrt.utils import config, max_percent_diff
 from mrrt.nufft.tests.test_dtft import _uniform_freqs
 
@@ -85,7 +85,7 @@ def test_nufft_adj(xp, mode, phasing, verbose=False):
     xd = dtft_adj(data, omega, shape=(N1, N2), n_shift=n_shift, xp=xp)
 
     data_3reps = xp.stack((data,) * 3, axis=-1)
-    xn = nufft_adj(st, data_3reps)
+    xn = st.adj(data_3reps)
     if verbose:
         print(
             "nufft vs dtft max%%diff = %g" % max_percent_diff(xd, xn[:, :, -1])
@@ -134,7 +134,7 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
     x = rstate.randn(Nd) + 1j * rstate.randn(Nd)
 
     # forward
-    y = A._nufft_forward(x)
+    y = A.fft(x)
     y_true = dtft(x, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
@@ -145,11 +145,11 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
     else:
         x_reps = xp.stack((x,) * 2, axis=-1)
         sl1 = (Ellipsis, 0)
-    y_reps = A._nufft_forward(x_reps)
+    y_reps = A.fft(x_reps)
     xp.testing.assert_allclose(y_reps[sl1], y_true, rtol=rtol, atol=atol)
 
     # adjoint
-    x_adj = A._nufft_adj(y)
+    x_adj = A.adj(y)
     x_adj_true = dtft_adj(y, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
@@ -158,7 +158,7 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
         y_reps = xp.stack((y,) * 2, axis=0)
     else:
         y_reps = xp.stack((y,) * 2, axis=-1)
-    x_adj = A._nufft_adj(y_reps)
+    x_adj = A.adj(y_reps)
     xp.testing.assert_allclose(x_adj[sl1], x_adj_true, rtol=rtol, atol=atol)
 
     if verbose:
@@ -208,23 +208,23 @@ def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
     x = x + 1j * rstate.standard_normal(Nd)
 
     # forward
-    y = A._nufft_forward(x)
+    y = A.fft(x)
     y_true = dtft(x, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
     # multi-repetition forward
     x_reps = xp.stack((x,) * 2, axis=-1)
-    y_reps = A._nufft_forward(x_reps)
+    y_reps = A.fft(x_reps)
     xp.testing.assert_allclose(y_reps[..., 0], y_true, rtol=rtol, atol=atol)
 
     # adjoint
-    x_adj = A._nufft_adj(y)
+    x_adj = A.adj(y)
     x_adj_true = dtft_adj(y, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
     # multi-repetition adjoint
     y_reps = xp.stack((y,) * 2, axis=-1)
-    x_adj = A._nufft_adj(y_reps)
+    x_adj = A.adj(y_reps)
     xp.testing.assert_allclose(x_adj[..., 0], x_adj_true, rtol=rtol, atol=atol)
 
     if verbose:
@@ -274,7 +274,7 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
     x = x + 1j * rstate.standard_normal(Nd)
 
     # forward
-    y = A._nufft_forward(x)
+    y = A.fft(x)
     y_true = dtft(x, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
@@ -285,11 +285,11 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
     else:
         x_reps = xp.stack((x,) * 2, axis=-1)
         sl1 = (Ellipsis, 0)
-    y_reps = A._nufft_forward(x_reps)
+    y_reps = A.fft(x_reps)
     xp.testing.assert_allclose(y_reps[sl1], y_true, rtol=rtol, atol=atol)
 
     # adjoint
-    x_adj = A._nufft_adj(y)
+    x_adj = A.adj(y)
     x_adj_true = dtft_adj(y, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
@@ -298,7 +298,7 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
         y_reps = xp.stack((y,) * 2, axis=0)
     else:
         y_reps = xp.stack((y,) * 2, axis=-1)
-    x_adj = A._nufft_adj(y_reps)
+    x_adj = A.adj(y_reps)
     xp.testing.assert_allclose(x_adj[sl1], x_adj_true, rtol=rtol, atol=atol)
 
     if verbose:
@@ -347,7 +347,7 @@ def test_nufft_dtypes(precision, xp):
         n_shift=n_shift,
         mode=mode,
         Ld=Ld,
-        precision=None,
+        precision="auto",
         on_gpu=xp != np,
     )
 
@@ -361,15 +361,15 @@ def test_nufft_dtypes(precision, xp):
     x = xp.random.randn(Nd) + 1j * xp.random.randn(Nd)
 
     # output matches operator dtype regardless of input dtype
-    y = A._nufft_forward(x.astype(np.complex64))
+    y = A.fft(x.astype(np.complex64))
     assert_equal(y.dtype, A._cplx_dtype)
-    y = A._nufft_forward(x.astype(np.complex128))
+    y = A.fft(x.astype(np.complex128))
     assert_equal(y.dtype, A._cplx_dtype)
 
     # real input also gives complex output
-    y = A._nufft_forward(x.real.astype(np.float32))
+    y = A.fft(x.real.astype(np.float32))
     assert_equal(y.dtype, A._cplx_dtype)
-    y = A._nufft_forward(x.real.astype(np.float64))
+    y = A.fft(x.real.astype(np.float64))
     assert_equal(y.dtype, A._cplx_dtype)
 
 

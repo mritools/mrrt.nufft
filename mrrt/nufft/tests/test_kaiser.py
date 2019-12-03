@@ -29,7 +29,7 @@ def test_kaiser_bessel(xp, show_figure=False):
         yf = func(x, J)
         xp.testing.assert_array_equal(yf, yy[:, i])
 
-    if show_figure and xp == np:  # skip plotting if arrays are on the GPU
+    if show_figure and xp is np:  # skip plotting if arrays are on the GPU
         # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
 
@@ -88,7 +88,7 @@ def test_kaiser_bessel_ft(xp, show_figure=False):
             Yu[:, ii] = kaiser_bessel_ft(uu, J, alpha, m, 1)
         leg.append("m=%d" % m)
 
-    if show_figure and xp == np:  # skip plotting if arrays are on the GPU
+    if show_figure and xp is np:  # skip plotting if arrays are on the GPU
         # create plots similar to those in Fessler's matlab toolbox
         from matplotlib import pyplot as plt
 

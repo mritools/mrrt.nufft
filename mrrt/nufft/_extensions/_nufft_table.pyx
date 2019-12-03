@@ -5,8 +5,8 @@ developed by Jeff Fessler and his students at the University of Michigan.
 OpenMP support and the Cython wrappers were added by Gregory R. Lee
 (Cincinnati Childrens Hospital Medical Center).
 
-Note:  The adjoint NUFFT is only threaded across multiple coils and/or
-repetitions.  This was done for simplicity to avoid any potential thread
+Note: The adjoint NUFFT is only threaded across multiple coils and / or
+repetitions. This was done for simplicity to avoid any potential thread
 conflicts.
 """
 from __future__ import division, print_function, absolute_import
@@ -212,14 +212,12 @@ def _interp1_table_adj(
 
 
 def _interp2_table_forward(
-    ck, Kd, h1, h2, Jd, Ld, tm, int M, int N):
+    ck, Kd, h1, h2, Jd, int L1, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
         int K1 = Kd[0]
         int K2 = Kd[1]
-        int L1 = Ld[0]
-        int L2 = Ld[1]
         float_interp2_forward_cplx_t floatfunc_cplx
         float_interp2_forward_real_t floatfunc_real
         double_interp2_forward_cplx_t doublefunc_cplx
@@ -261,12 +259,11 @@ def _interp2_table_forward(
                 K2,
                 <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <float*>cnp.PyArray_DATA(i_h1),
-                <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+                <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
                 <float*>cnp.PyArray_DATA(i_h2),
                 J1,
                 J2,
                 L1,
-                L2,
                 <float*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -279,12 +276,11 @@ def _interp2_table_forward(
                 K2,
                 <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <double*>cnp.PyArray_DATA(i_h1),
-                <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+                <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
                 <double*>cnp.PyArray_DATA(i_h2),
                 J1,
                 J2,
                 L1,
-                L2,
                 <double*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -296,11 +292,10 @@ def _interp2_table_forward(
                 K1,
                 K2,
                 <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-                <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+                <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
                 J1,
                 J2,
                 L1,
-                L2,
                 <float*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -312,11 +307,10 @@ def _interp2_table_forward(
                 K1,
                 K2,
                 <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-                <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+                <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
                 J1,
                 J2,
                 L1,
-                L2,
                 <double*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -330,14 +324,12 @@ def _interp2_table_forward(
 
 
 def _interp2_table_adj(
-        fm, Kd, h1, h2, Jd, Ld, tm, int M, int N):
+        fm, Kd, h1, h2, Jd, int L1, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
         int K1 = Kd[0]
         int K2 = Kd[1]
-        int L1 = Ld[0]
-        int L2 = Ld[1]
         float_interp2_adj_cplx_t floatfunc_cplx
         float_interp2_adj_real_t floatfunc_real
         double_interp2_adj_cplx_t doublefunc_cplx
@@ -380,12 +372,11 @@ def _interp2_table_adj(
             K2,
             <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <float*>cnp.PyArray_DATA(i_h1),
-            <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+            <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
             <float*>cnp.PyArray_DATA(i_h2),
             J1,
             J2,
             L1,
-            L2,
             <float*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -399,12 +390,11 @@ def _interp2_table_adj(
             K2,
             <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <double*>cnp.PyArray_DATA(i_h1),
-            <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+            <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
             <double*>cnp.PyArray_DATA(i_h2),
             J1,
             J2,
             L1,
-            L2,
             <double*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -417,11 +407,10 @@ def _interp2_table_adj(
             K1,
             K2,
             <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-            <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+            <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
             J1,
             J2,
             L1,
-            L2,
             <float*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -434,11 +423,10 @@ def _interp2_table_adj(
             K1,
             K2,
             <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-            <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+            <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
             J1,
             J2,
             L1,
-            L2,
             <double*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -452,7 +440,7 @@ def _interp2_table_adj(
 
 
 def _interp3_table_forward(
-    ck, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N):
+    ck, Kd, h1, h2, h3, Jd, int L1, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -460,9 +448,6 @@ def _interp3_table_forward(
         int K1 = Kd[0]
         int K2 = Kd[1]
         int K3 = Kd[2]
-        int L1 = Ld[0]
-        int L2 = Ld[1]
-        int L3 = Ld[2]
         float_interp3_forward_cplx_t floatfunc_cplx
         float_interp3_forward_real_t floatfunc_real
         double_interp3_forward_cplx_t doublefunc_cplx
@@ -507,7 +492,7 @@ def _interp3_table_forward(
                 K3,
                 <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <float*>cnp.PyArray_DATA(i_h1),
-                <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+                <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
                 <float*>cnp.PyArray_DATA(i_h2),
                 <float*>cnp.PyArray_DATA(r_h3),
                 <float*>cnp.PyArray_DATA(i_h3),
@@ -515,8 +500,6 @@ def _interp3_table_forward(
                 J2,
                 J3,
                 L1,
-                L2,
-                L3,
                 <float*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -530,7 +513,7 @@ def _interp3_table_forward(
                 K3,
                 <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
                 <double*>cnp.PyArray_DATA(i_h1),
-                <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+                <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
                 <double*>cnp.PyArray_DATA(i_h2),
                 <double*>cnp.PyArray_DATA(r_h3),
                 <double*>cnp.PyArray_DATA(i_h3),
@@ -538,8 +521,6 @@ def _interp3_table_forward(
                 J2,
                 J3,
                 L1,
-                L2,
-                L3,
                 <double*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -552,14 +533,12 @@ def _interp3_table_forward(
                 K2,
                 K3,
                 <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-                <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-                <float*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
+                <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
+                <float*>cnp.PyArray_DATA(r_h3), # [J3*L1+1,1] in
                 J1,
                 J2,
                 J3,
                 L1,
-                L2,
-                L3,
                 <float*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -572,14 +551,12 @@ def _interp3_table_forward(
                 K2,
                 K3,
                 <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-                <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-                <double*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
+                <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
+                <double*>cnp.PyArray_DATA(r_h3), # [J3*L1+1,1] in
                 J1,
                 J2,
                 J3,
                 L1,
-                L2,
-                L3,
                 <double*>cnp.PyArray_DATA(tm), # [M,2] in
                 M,
                 <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -592,7 +569,7 @@ def _interp3_table_forward(
 
 
 def _interp3_table_adj(
-        fm, Kd, h1, h2, h3, Jd, Ld, tm, int M, int N):
+        fm, Kd, h1, h2, h3, Jd, int L1, tm, int M, int N):
     cdef:
         int J1 = Jd[0]
         int J2 = Jd[1]
@@ -600,9 +577,6 @@ def _interp3_table_adj(
         int K1 = Kd[0]
         int K2 = Kd[1]
         int K3 = Kd[2]
-        int L1 = Ld[0]
-        int L2 = Ld[1]
-        int L3 = Ld[2]
         float_interp3_adj_cplx_t floatfunc_cplx
         float_interp3_adj_real_t floatfunc_real
         double_interp3_adj_cplx_t doublefunc_cplx
@@ -647,7 +621,7 @@ def _interp3_table_adj(
             K3,
             <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <float*>cnp.PyArray_DATA(i_h1),
-            <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+            <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
             <float*>cnp.PyArray_DATA(i_h2),
             <float*>cnp.PyArray_DATA(r_h3),
             <float*>cnp.PyArray_DATA(i_h3),
@@ -655,8 +629,6 @@ def _interp3_table_adj(
             J2,
             J3,
             L1,
-            L2,
-            L3,
             <float*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -671,7 +643,7 @@ def _interp3_table_adj(
             K3,
             <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
             <double*>cnp.PyArray_DATA(i_h1),
-            <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
+            <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
             <double*>cnp.PyArray_DATA(i_h2),
             <double*>cnp.PyArray_DATA(r_h3),
             <double*>cnp.PyArray_DATA(i_h3),
@@ -679,8 +651,6 @@ def _interp3_table_adj(
             J2,
             J3,
             L1,
-            L2,
-            L3,
             <double*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -694,14 +664,12 @@ def _interp3_table_adj(
             K2,
             K3,
             <float*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-            <float*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-            <float*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
+            <float*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
+            <float*>cnp.PyArray_DATA(r_h3), # [J3*L1+1,1] in
             J1,
             J2,
             J3,
             L1,
-            L2,
-            L3,
             <float*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <float*>cnp.PyArray_DATA(r_fm),     # [M,1] out
@@ -715,14 +683,12 @@ def _interp3_table_adj(
             K2,
             K3,
             <double*>cnp.PyArray_DATA(r_h1), # [J1*L1+1,1] in
-            <double*>cnp.PyArray_DATA(r_h2), # [J2*L2+1,1] in
-            <double*>cnp.PyArray_DATA(r_h3), # [J3*L3+1,1] in
+            <double*>cnp.PyArray_DATA(r_h2), # [J2*L1+1,1] in
+            <double*>cnp.PyArray_DATA(r_h3), # [J3*L1+1,1] in
             J1,
             J2,
             J3,
             L1,
-            L2,
-            L3,
             <double*>cnp.PyArray_DATA(tm), # [M,2] in
             M,
             <double*>cnp.PyArray_DATA(r_fm),     # [M,1] out

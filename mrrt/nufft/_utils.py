@@ -125,3 +125,13 @@ def _as_1d_ints(arr, n=None, xp=None):
                     "array did not have the expected size of {}".format(n)
                 )
     return arr.astype(np.intp)  # case to ints
+
+
+def _as_int_tuple(seq, n=None):
+    if np.isscalar(seq):
+        if n is None:
+            raise ValueError("for scalar, seq, n must be specified")
+        return (int(seq),) * n
+    elif n is not None and len(seq) != n:
+        raise ValueError("array did not have the expected size of {}".format(n))
+    return tuple(int(s) for s in seq)

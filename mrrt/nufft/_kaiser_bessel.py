@@ -36,7 +36,7 @@ __all__ = ["kaiser_bessel", "kaiser_bessel_ft"]
 
 def _i0(x, xp):
     """Wrapper for i0 that calls either the CPU or GPU implementation."""
-    if xp == np:
+    if xp is np:
         return i0(x)
     else:
         return i0_cupy(x)
@@ -44,7 +44,7 @@ def _i0(x, xp):
 
 def _j0(x, xp):
     """Wrapper for j0 that calls either the CPU or GPU implementation."""
-    if xp == np:
+    if xp is np:
         return j0(x)
     else:
         return j0_cupy(x)
@@ -198,7 +198,7 @@ def kaiser_bessel_ft(u, J=6, alpha=None, m=0, d=1):
     tmp = (np.pi * J) * u
     tmp *= tmp
     tmp -= alpha * alpha
-    if xp == np:
+    if xp is np:
         # lib.scimath.sqrt gives complex value instead of NaN for negative
         # inputs
         z = np.lib.scimath.sqrt(tmp)

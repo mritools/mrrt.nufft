@@ -107,11 +107,10 @@ void CAT(TYPE, _interp2_table1_real_adj)(
     const int K1,
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
     const int J1,
     const int J2,
     const int L1,
-    const int L2,
     const TYPE *p_tm, /* [M,2] in */
     const int M,
     const TYPE *r_fm,     /* [M,1] out */
@@ -130,12 +129,11 @@ void CAT(TYPE, _interp2_table1_complex_adj)(
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *i_h1,
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
     const TYPE *i_h2,
     const int J1,
     const int J2,
     const int L1,
-    const int L2,
     const TYPE *p_tm, /* [M,2] in */
     const int M,
     const TYPE *r_fm,     /* [M,1] out */
@@ -152,11 +150,10 @@ void CAT(TYPE, _interp2_table1_real_forward)(
     const int K1,
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
     const int J1,
     const int J2,
     const int L1,
-    const int L2,
     const TYPE *p_tm, /* [M,2] in */
     const int M,
     TYPE *r_fm,       /* [M,1] out */
@@ -174,12 +171,11 @@ void CAT(TYPE, _interp2_table1_complex_forward)(
     const int K2,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *i_h1,
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
     const TYPE *i_h2,
     const int J1,
     const int J2,
     const int L1,
-    const int L2,
     const TYPE *p_tm, /* [M,2] in */
     const int M,
     TYPE *r_fm,       /* [M,1] out */
@@ -197,16 +193,14 @@ void CAT(TYPE, _interp3_table1_complex_forward)(
     const int K3,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *i_h1,
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
     const TYPE *i_h2,
-    const TYPE *r_h3, /* [J3*L3+1,1] in */
+    const TYPE *r_h3, /* [J3*L1+1,1] in */
     const TYPE *i_h3,
     const int J1,
     const int J2,
     const int J3,
     const int L1,
-    const int L2,
-    const int L3,
     const TYPE *p_tm, /* [M,3] in */
     const int M,
     TYPE *r_fm,       /* [M,1] out */
@@ -223,14 +217,12 @@ void CAT(TYPE, _interp3_table1_real_forward)(
     const int K2,
     const int K3,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
-    const TYPE *r_h3, /* [J3*L3+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
+    const TYPE *r_h3, /* [J3*L1+1,1] in */
     const int J1,
     const int J2,
     const int J3,
     const int L1,
-    const int L2,
-    const int L3,
     const TYPE *p_tm, /* [M,3] in */
     const int M,
     TYPE *r_fm,       /* [M,1] out */
@@ -248,16 +240,14 @@ void CAT(TYPE, _interp3_table1_complex_adj)(
     const int K3,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
     const TYPE *i_h1,
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
     const TYPE *i_h2,
-    const TYPE *r_h3, /* [J3*L3+1,1] in */
+    const TYPE *r_h3, /* [J3*L1+1,1] in */
     const TYPE *i_h3,
     const int J1,
     const int J2,
     const int J3,
     const int L1,
-    const int L2,
-    const int L3,
     const TYPE *p_tm, /* [M,2] in */
     const int M,
     const TYPE *r_fm,     /* [M,1] out */
@@ -275,14 +265,12 @@ void CAT(TYPE, _interp3_table1_real_adj)(
     const int K2,
     const int K3,
     const TYPE *r_h1, /* [J1*L1+1,1] in */
-    const TYPE *r_h2, /* [J2*L2+1,1] in */
-    const TYPE *r_h3, /* [J3*L3+1,1] in */
+    const TYPE *r_h2, /* [J2*L1+1,1] in */
+    const TYPE *r_h3, /* [J3*L1+1,1] in */
     const int J1,
     const int J2,
     const int J3,
     const int L1,
-    const int L2,
-    const int L3,
     const TYPE *p_tm, /* [M,2] in */
     const int M,
     const TYPE *r_fm,     /* [M,1] out */

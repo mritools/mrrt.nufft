@@ -139,8 +139,7 @@ def _get_gridding_funcs(
 
     ndim = len(Kd)
     if ndim < 3:
-        Kd = np.asarray(Kd)
-        Kd = np.concatenate((Kd, np.ones(3 - ndim)))
+        Kd = Kd + ((1,) * (3 - ndim))
 
     ncenter = int(np.floor(J * L / 2))
 

@@ -311,11 +311,10 @@ TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const int J1,
 const int J2,
 const int L1,
-const int L2,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 const TYPE * restrict r_fm, /* [M,1] in */
@@ -329,7 +328,7 @@ const TYPE * restrict i_fm)
     r_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor((double) (J2 * L2/2.));
+    const int ncenter2 = floor((double) (J2 * L1/2.));
     r_h2 += ncenter2;
     }
 
@@ -348,7 +347,7 @@ const TYPE * restrict i_fm)
         int k2 = 1 + floor(t2 - J2 / 2.);
 
         for (jj2=0; jj2 < J2; jj2++, k2++) {
-            const TYPE p2 = (t2 - k2) * L2;
+            const TYPE p2 = (t2 - k2) * L1;
             const int n2 = floor(p2);
             const TYPE alf2 = p2 - n2;
             register const TYPE * restrict ph2 = r_h2 + n2;
@@ -390,11 +389,10 @@ TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const int J1,
 const int J2,
 const int L1,
-const int L2,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 const TYPE * restrict r_fm,     /* [M,1] out */
@@ -409,7 +407,7 @@ const int N)
        CAT(TYPE, _interp2_table1_real_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2,
                         r_h1, r_h2,
-                        J1, J2, L1, L2,
+                        J1, J2, L1,
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
 
@@ -423,12 +421,11 @@ const int K1,
 const int K2,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const TYPE * restrict i_h1,
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
-const int L2,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 const TYPE * restrict r_fm, /* [M,1] in */
@@ -443,7 +440,7 @@ const TYPE * restrict i_fm)
     i_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor(J2 * L2/2);
+    const int ncenter2 = floor(J2 * L1/2);
     r_h2 += ncenter2;
     i_h2 += ncenter2;
     }
@@ -463,7 +460,7 @@ const TYPE * restrict i_fm)
         int k2 = 1 + floor(t2 - J2 / 2.);
 
         for (jj2=0; jj2 < J2; jj2++, k2++) {
-            const TYPE p2 = (t2 - k2) * L2;
+            const TYPE p2 = (t2 - k2) * L1;
             const int n2 = floor(p2);
             const TYPE alf2 = p2 - n2;
             register const TYPE * restrict r_ph2 = r_h2 + n2;
@@ -508,12 +505,11 @@ const int K1,
 const int K2,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const TYPE * restrict i_h1,
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
-const int L2,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 const TYPE * restrict r_fm,     /* [M,1] out */
@@ -528,7 +524,7 @@ const int N)
        CAT(TYPE, _interp2_table1_complex_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2,
                         r_h1, i_h1, r_h2, i_h2,
-                        J1, J2, L1, L2,
+                        J1, J2, L1,
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
 
@@ -545,11 +541,10 @@ const TYPE * restrict i_ck,
 const int K1,
 const int K2,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const int J1,
 const int J2,
 const int L1,
-const int L2,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 TYPE * restrict r_fm,       /* [M,1] out */
@@ -563,7 +558,7 @@ TYPE * restrict i_fm)
     r_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor((double) (J2 * L2/2.));
+    const int ncenter2 = floor((double) (J2 * L1/2.));
     r_h2 += ncenter2;
     }
 
@@ -583,7 +578,7 @@ TYPE * restrict i_fm)
         int k2 = 1 + floor(t2 - J2 / 2.);
 
         for (jj2=0; jj2 < J2; jj2++, k2++) {
-            const TYPE p2 = (t2 - k2) * L2;
+            const TYPE p2 = (t2 - k2) * L1;
             const int n2 = floor(p2);
             const TYPE alf2 = p2 - n2;
             register const TYPE * restrict ph2 = r_h2 + n2;
@@ -632,12 +627,11 @@ const int K1,
 const int K2,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const TYPE * restrict i_h1,
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const TYPE * restrict i_h2,
 const int J1,
 const int J2,
 const int L1,
-const int L2,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 TYPE * restrict r_fm,       /* [M,1] out */
@@ -652,7 +646,7 @@ TYPE * restrict i_fm)
     i_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor(J2 * L2/2);
+    const int ncenter2 = floor(J2 * L1/2);
     r_h2 += ncenter2;
     i_h2 += ncenter2;
     }
@@ -669,7 +663,7 @@ TYPE * restrict i_fm)
         int k2 = 1 + floor(t2 - J2 / 2.);
 
         for (jj2=0; jj2 < J2; jj2++, k2++) {
-            const TYPE p2 = (t2 - k2) * L2;
+            const TYPE p2 = (t2 - k2) * L1;
             const int n2 = floor(p2);
                     const TYPE alf2 = p2 - n2;
                     register const TYPE * restrict r_ph2 = r_h2 + n2;
@@ -721,16 +715,14 @@ const int K2,
 const int K3,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const TYPE * restrict i_h1,
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const TYPE * restrict i_h2,
-const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L1+1,1] in */
 const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
-const int L2,
-const int L3,
 const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
 TYPE * restrict r_fm,       /* [M,1] out */
@@ -745,12 +737,12 @@ TYPE * restrict i_fm)
     i_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor(J2 * L2/2);
+    const int ncenter2 = floor(J2 * L1/2);
     r_h2 += ncenter2;
     i_h2 += ncenter2;
     }
     {
-    const int ncenter3 = floor(J3 * L3/2);
+    const int ncenter3 = floor(J3 * L1/2);
     r_h3 += ncenter3;
     i_h3 += ncenter3;
     }
@@ -769,7 +761,7 @@ TYPE * restrict i_fm)
         int k3 = 1 + floor(t3 - J3 / 2.);
 
         for (jj3=0; jj3 < J3; jj3++, k3++) {
-            const TYPE p3 = (t3 - k3) * L3;
+            const TYPE p3 = (t3 - k3) * L1;
             const int n3 = floor(p3);
             const TYPE alf3 = p3 - n3;
             TYPE coef3r = (1 - alf3) * r_h3[n3] + alf3 * r_h3[n3+1];
@@ -781,7 +773,7 @@ TYPE * restrict i_fm)
             int k2 = koff2;
 
             for (jj2=0; jj2 < J2; jj2++, k2++) {
-                const TYPE p2 = (t2 - k2) * L2;
+                const TYPE p2 = (t2 - k2) * L1;
                 const int n2 = floor(p2);
                 const TYPE alf2 = p2 - n2;
                 TYPE coef2r = (1 - alf2) * r_h2[n2] + alf2 * r_h2[n2+1];
@@ -834,14 +826,12 @@ const int K1,
 const int K2,
 const int K3,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
-const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L1+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
-const int L2,
-const int L3,
 const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
 TYPE * restrict r_fm,       /* [M,1] out */
@@ -855,11 +845,11 @@ TYPE * restrict i_fm)
     r_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor(J2 * L2/2);
+    const int ncenter2 = floor(J2 * L1/2);
     r_h2 += ncenter2;
     }
     {
-    const int ncenter3 = floor(J3 * L3/2);
+    const int ncenter3 = floor(J3 * L1/2);
     r_h3 += ncenter3;
     }
 
@@ -877,7 +867,7 @@ TYPE * restrict i_fm)
         int k3 = 1 + floor(t3 - J3 / 2.);
 
         for (jj3=0; jj3 < J3; jj3++, k3++) {
-            const TYPE p3 = (t3 - k3) * L3;
+            const TYPE p3 = (t3 - k3) * L1;
             const int n3 = floor(p3);
             const TYPE alf3 = p3 - n3;
             TYPE coef3r = (1 - alf3) * r_h3[n3] + alf3 * r_h3[n3+1];
@@ -889,7 +879,7 @@ TYPE * restrict i_fm)
             int k2 = koff2;
 
             for (jj2=0; jj2 < J2; jj2++, k2++) {
-                const TYPE p2 = (t2 - k2) * L2;
+                const TYPE p2 = (t2 - k2) * L1;
                 const int n2 = floor(p2);
                 const TYPE alf2 = p2 - n2;
                 TYPE coef2r = (1 - alf2) * r_h2[n2] + alf2 * r_h2[n2+1];
@@ -939,16 +929,14 @@ const int K2,
 const int K3,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const TYPE * restrict i_h1,
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const TYPE * restrict i_h2,
-const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L1+1,1] in */
 const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
-const int L2,
-const int L3,
 const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
 const TYPE * restrict r_fm, /* [M,1] in */
@@ -963,12 +951,12 @@ const TYPE * restrict i_fm)
     i_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor(J2 * L2/2);
+    const int ncenter2 = floor(J2 * L1/2);
     r_h2 += ncenter2;
     i_h2 += ncenter2;
     }
     {
-    const int ncenter3 = floor(J3 * L3/2);
+    const int ncenter3 = floor(J3 * L1/2);
     r_h3 += ncenter3;
     i_h3 += ncenter3;
     }
@@ -990,7 +978,7 @@ const TYPE * restrict i_fm)
         int k3 = 1 + floor(t3 - J3 / 2.);
 
         for (jj3=0; jj3 < J3; jj3++, k3++) {
-            const TYPE p3 = (t3 - k3) * L3;
+            const TYPE p3 = (t3 - k3) * L1;
             const int n3 = floor(p3);
             const TYPE alf3 = p3 - n3;
             register const TYPE * restrict r_ph3 = r_h3 + n3;
@@ -1004,7 +992,7 @@ const TYPE * restrict i_fm)
             int k2 = koff2;
 
             for (jj2=0; jj2 < J2; jj2++, k2++) {
-                const TYPE p2 = (t2 - k2) * L2;
+                const TYPE p2 = (t2 - k2) * L1;
                 const int n2 = floor(p2);
                 const TYPE alf2 = p2 - n2;
                         register const TYPE * restrict r_ph2 = r_h2 + n2;
@@ -1052,16 +1040,14 @@ const int K2,
 const int K3,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
 const TYPE * restrict i_h1,
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
 const TYPE * restrict i_h2,
-const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L1+1,1] in */
 const TYPE * restrict i_h3,
 const int J1,
 const int J2,
 const int J3,
 const int L1,
-const int L2,
-const int L3,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 const TYPE * restrict r_fm,     /* [M,1] out */
@@ -1076,7 +1062,7 @@ const int N)
        CAT(TYPE, _interp3_table1_complex_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, K3,
                         r_h1, i_h1, r_h2, i_h2, r_h3, i_h3,
-                        J1, J2, J3, L1, L2, L3,
+                        J1, J2, J3, L1,
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
 
@@ -1090,14 +1076,12 @@ const int K1,
 const int K2,
 const int K3,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
-const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L1+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
-const int L2,
-const int L3,
 const TYPE * restrict p_tm, /* [M,3] in */
 const int M,
 const TYPE * restrict r_fm, /* [M,1] in */
@@ -1111,11 +1095,11 @@ const TYPE * restrict i_fm)
     r_h1 += ncenter1;
     }
     {
-    const int ncenter2 = floor(J2 * L2/2);
+    const int ncenter2 = floor(J2 * L1/2);
     r_h2 += ncenter2;
     }
     {
-    const int ncenter3 = floor(J3 * L3/2);
+    const int ncenter3 = floor(J3 * L1/2);
     r_h3 += ncenter3;
     }
 
@@ -1136,7 +1120,7 @@ const TYPE * restrict i_fm)
         int k3 = 1 + floor(t3 - J3 / 2.);
 
         for (jj3=0; jj3 < J3; jj3++, k3++) {
-            const TYPE p3 = (t3 - k3) * L3;
+            const TYPE p3 = (t3 - k3) * L1;
             const int n3 = floor(p3);
             const TYPE alf3 = p3 - n3;
             register const TYPE * restrict ph3 = r_h3 + n3;
@@ -1149,7 +1133,7 @@ const TYPE * restrict i_fm)
             int k2 = koff2;
 
             for (jj2=0; jj2 < J2; jj2++, k2++) {
-                const TYPE p2 = (t2 - k2) * L2;
+                const TYPE p2 = (t2 - k2) * L1;
                 const int n2 = floor(p2);
                 const TYPE alf2 = p2 - n2;
                 register const TYPE * restrict ph2 = r_h2 + n2;
@@ -1191,14 +1175,12 @@ const int K1,
 const int K2,
 const int K3,
 const TYPE * restrict r_h1, /* [J1*L1+1,1] in */
-const TYPE * restrict r_h2, /* [J2*L2+1,1] in */
-const TYPE * restrict r_h3, /* [J3*L3+1,1] in */
+const TYPE * restrict r_h2, /* [J2*L1+1,1] in */
+const TYPE * restrict r_h3, /* [J3*L1+1,1] in */
 const int J1,
 const int J2,
 const int J3,
 const int L1,
-const int L2,
-const int L3,
 const TYPE * restrict p_tm, /* [M,2] in */
 const int M,
 const TYPE * restrict r_fm,     /* [M,1] out */
@@ -1213,7 +1195,7 @@ const int N)
        CAT(TYPE, _interp3_table1_real_adj_inner)(&r_ck[nn*K], &i_ck[nn*K],
                         K1, K2, K3,
                         r_h1, r_h2, r_h3,
-                        J1, J2, J3, L1, L2, L3,
+                        J1, J2, J3, L1,
                         p_tm, M, &r_fm[nn*M], &i_fm[nn*M]);
     }
 

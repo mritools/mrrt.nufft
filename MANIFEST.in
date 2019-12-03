@@ -1,2 +1,4 @@
 include versioneer.py
 include mrrt/nufft/_version.py
+include COPYING
+include LICENSES_bundled.txt
