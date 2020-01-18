@@ -169,11 +169,8 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
         )
 
 
-# TODO: test order='F'/'C'.
-
-
 @pytest.mark.parametrize(
-    "xp, mode, precision, phasing, Kd, Jd",
+    "xp, mode, precision, phasing, Kd, Jd, order",
     product(
         all_xp,
         ["sparse", "table"],
@@ -181,9 +178,10 @@ def test_nufft_1d(xp, mode, precision, phasing, order, verbose=False):
         ["real", "complex"],
         [(32, 32), (33, 31)],  # test both even and odd
         [6, 7],  # test both even and odd
+        ["F", "C"],
     ),
 )
-def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
+def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, order, verbose=False):
     Nd = (16, 16)
     Ld = 1024
     n_shift = np.asarray(Nd) / 2
@@ -203,6 +201,7 @@ def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
         precision=precision,
         phasing=phasing,
         on_gpu=xp != np,
+        order=order,
     )
     x = rstate.standard_normal(Nd)
     x = x + 1j * rstate.standard_normal(Nd)
@@ -213,9 +212,14 @@ def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
     # multi-repetition forward
-    x_reps = xp.stack((x,) * 2, axis=-1)
+    if order == "F":
+        x_reps = xp.stack((x,) * 2, axis=-1)
+        sl1 = (Ellipsis, 0)
+    else:
+        x_reps = xp.stack((x,) * 2, axis=0)
+        sl1 = (0, Ellipsis)
     y_reps = A.fft(x_reps)
-    xp.testing.assert_allclose(y_reps[..., 0], y_true, rtol=rtol, atol=atol)
+    xp.testing.assert_allclose(y_reps[sl1], y_true, rtol=rtol, atol=atol)
 
     # adjoint
     x_adj = A.adj(y)
@@ -223,9 +227,14 @@ def test_nufft_2d(xp, mode, precision, phasing, Kd, Jd, verbose=False):
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
     # multi-repetition adjoint
-    y_reps = xp.stack((y,) * 2, axis=-1)
+    if order == "F":
+        y_reps = xp.stack((y,) * 2, axis=-1)
+        sl1 = (Ellipsis, 0)
+    else:
+        y_reps = xp.stack((y,) * 2, axis=0)
+        sl1 = (0, Ellipsis)
     x_adj = A.adj(y_reps)
-    xp.testing.assert_allclose(x_adj[..., 0], x_adj_true, rtol=rtol, atol=atol)
+    xp.testing.assert_allclose(x_adj[sl1], x_adj_true, rtol=rtol, atol=atol)
 
     if verbose:
         print(mode, precision, phasing)
