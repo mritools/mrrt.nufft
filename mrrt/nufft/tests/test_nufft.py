@@ -287,12 +287,12 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
     y_true = dtft(x, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(y, y_true, rtol=rtol, atol=atol)
 
-    # multi-repetition forward
+    # multi-repetition forward with 2 additional axes at start or end
     if order == "C":
-        x_reps = xp.stack((x,) * 2, axis=0)
+        x_reps = xp.stack((x,) * 4, axis=0).reshape((2, 2) + x.shape)
         sl1 = (0, Ellipsis)
     else:
-        x_reps = xp.stack((x,) * 2, axis=-1)
+        x_reps = xp.stack((x,) * 4, axis=-1).reshape(x.shape + (2, 2))
         sl1 = (Ellipsis, 0)
     y_reps = A.fft(x_reps)
     xp.testing.assert_allclose(y_reps[sl1], y_true, rtol=rtol, atol=atol)
@@ -302,11 +302,11 @@ def test_nufft_3d(xp, mode, precision, phasing, order, verbose=False):
     x_adj_true = dtft_adj(y, omega=omega, shape=Nd, n_shift=n_shift)
     xp.testing.assert_allclose(x_adj, x_adj_true, rtol=rtol, atol=atol)
 
-    # multi-repetition adjoint
+    # multi-repetition adjoint with 2 additional axes at start or end
     if order == "C":
-        y_reps = xp.stack((y,) * 2, axis=0)
+        y_reps = xp.stack((y,) * 4, axis=0).reshape((2, 2) + x.shape)
     else:
-        y_reps = xp.stack((y,) * 2, axis=-1)
+        y_reps = xp.stack((y,) * 4, axis=-1).reshape(x.shape + (2, 2))
     x_adj = A.adj(y_reps)
     xp.testing.assert_allclose(x_adj[sl1], x_adj_true, rtol=rtol, atol=atol)
 

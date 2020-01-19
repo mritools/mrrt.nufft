@@ -62,7 +62,7 @@ from ._interp_table import (
 )
 from ._kaiser_bessel import kaiser_bessel_ft
 from ._kernels import BeattyKernel
-from ._utils import _nufft_coef, _nufft_offset, _as_int_tuple
+from ._utils import _nufft_coef, _nufft_offset, _as_tuple
 
 if config.have_cupy:
     import cupy
@@ -87,11 +87,11 @@ __all__ = [
 supported_real_types = [np.float32, np.float64]
 supported_cplx_types = [np.complex64, np.complex128]
 
-# TODO: use more pythonic names for Kd, Jd, Ld, Nd, etc
-#       Nd -> shape
-#       Kd -> gridded_shape
-#       Ld -> table_sizes
-#       Jd -> kernel_sizes
+# TODO: use more pythonic names for Kd, Jd, Ld, Nd, etc?
+#     Nd -> shape
+#     Kd -> gridded_shape
+#     Ld -> table_sizes
+#     Jd -> kernel_sizes
 
 
 def _get_legend_text(ax):
@@ -246,16 +246,16 @@ class NufftBase(object):
         # also Nd, Kd, Jd, etc. should be on the CPU
         if np.isscalar(Nd):
             Nd = (Nd,)
-        self.__Nd = _as_int_tuple(Nd)
+        self.__Nd = _as_tuple(Nd, type=int)
         self.__phasing = phasing
         self.__omega = None  # will be set later below
         self._set_n_mid()
         self.ndim = len(self.Nd)  # number of dimensions
-        self.__Jd = _as_int_tuple(Jd, n=self.ndim)
+        self.__Jd = _as_tuple(Jd, type=int, n=self.ndim)
 
         if Kd is None:
             Kd = tuple([int(1.5 * n) for n in self.__Nd])
-        self.__Kd = _as_int_tuple(Kd, n=self.ndim)
+        self.__Kd = _as_tuple(Kd, type=int, n=self.ndim)
 
         # normalization for orthogonal FFT
         self.ortho = ortho
@@ -305,9 +305,7 @@ class NufftBase(object):
             # not self.Nd // 2 because this is in addition to self.n_mid
             self.__n_shift = (0.0,) * self.ndim
         else:
-            if np.isscalar(n_shift):
-                n_shift = (float(n_shift),)
-            self.__n_shift = tuple(n_shift)
+            self.__n_shift = _as_tuple(n_shift, type=float, n=self.ndim)
         if (self.ndim != len(self.Jd)) or (self.ndim != len(self.Kd)):
             raise ValueError("Inconsistent Dimensions")
 
@@ -346,7 +344,7 @@ class NufftBase(object):
             self.interp_table_adj = _nufft_table_adj  # TODO: remove?
         elif self.mode == "exact":
             # TODO: wrap calls to dtft, dtft_adj
-            raise ValueError("not implemented")
+            raise ValueError("mode exact not implemented")
             pass
         else:
             raise ValueError("Invalid NUFFT mode: {}".format(self.mode))
@@ -438,6 +436,10 @@ class NufftBase(object):
         k : ndarray
             The non-uniformly samples Fourier domain values.
         """
+        if self.order == "F":
+            x = x.reshape(self.Nd + (-1,))
+        elif self.order == "C":
+            x = x.reshape((-1,) + self.Nd)
         if self.order == "C":
             # functions expect reps at end, not start
             x = self._swap_reps(x, self.nargin1)
@@ -456,7 +458,7 @@ class NufftBase(object):
         ----------
         k : ndarray
             This should contain Fourier domain values. It should have size
-            equal to the number of frrequency samples, ``self.omega.shape[0]``.
+            equal to the number of frequency samples, ``self.omega.shape[0]``.
 
         Returns
         -------
@@ -464,6 +466,10 @@ class NufftBase(object):
             The uniform spatial domain data. This will have shape equal to
             ``self.Nd``.
         """
+        if self.order == "F":
+            k = k.reshape((self.omega.shape[0], -1))
+        elif self.order == "C":
+            k = k.reshape((-1, self.omega.shape[0]))
         if self.order == "C":
             # functions expect reps at end, not start
             k = self._swap_reps(k, self.nargout1)
@@ -698,22 +704,24 @@ class NufftBase(object):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
         xp = self.xp
-        phase = (2 * np.pi / Kd[0] * n_mid[0]) * xp.arange(Kd[0])
+        rdt = self._real_dtype
+        phase = (2 * np.pi / Kd[0] * n_mid[0]) * xp.arange(Kd[0], dtype=rdt)
         for d in range(1, self.ndim):
-            tmp = (2 * np.pi / Kd[d] * n_mid[d]) * xp.arange(Kd[d])
+            tmp = (2 * np.pi / Kd[d] * n_mid[d]) * xp.arange(Kd[d], dtype=rdt)
             # fast outer sum via broadcasting
             phase = phase.reshape((phase.shape) + (1,)) + tmp.reshape(
                 (1,) * d + (tmp.size,)
             )
-        return xp.exp(1j * phase).astype(self._cplx_dtype)  # [(Kd)]
+        return xp.exp(1j * phase).astype(self._cplx_dtype, copy=False)
 
     def _phase_after(self, omega, n_mid, n_shift):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
         xp = self.xp
+        rdt = self._real_dtype
         shift_vec = [(s - m) for s, m in zip(n_shift, n_mid)]
-        phase = xp.exp(1j * xp.dot(omega, xp.asarray(shift_vec)))
-        return xp.squeeze(phase).astype(self._cplx_dtype)  # [M,1]
+        phase = xp.exp(1j * xp.dot(omega, xp.asarray(shift_vec, dtype=rdt)))
+        return phase.astype(self._cplx_dtype, copy=False)
 
     @profile
     def _calc_scaling(self):
@@ -728,15 +736,14 @@ class NufftBase(object):
         self.sn = xp.array([1.0])
         for d in range(self.ndim):
             # Note better to use NumPy than Cupy for these small 1d
-            # arrays. Transfer tmp to the GPU later
+            # arrays. Transfer tmp to the GPU after kaiser_bessel_ft
             start = -self.n_mid[d]
             nc = np.arange(start, start + Nd[d])
             tmp = 1 / kaiser_bessel_ft(
                 nc / Kd[d], Jd[d], kernel.alpha[d], kernel.m[d], 1
             )
 
-            # tmp = reale(tmp)  #TODO: reale?
-            # TODO: replace outer with broadcasting?
+            tmp = reale(tmp)
             self.sn = xp.outer(self.sn.ravel(), xp.asarray(tmp.conj()))
         self.sn = self.sn.reshape(Nd)  # [(Nd)]
 
@@ -837,13 +844,9 @@ class NufftBase(object):
         # else:
         #    raise ValueError("Invalid phasing: {}".format(self.phasing))
 
-        if self.ndim >= 3:  # TODO: move elsewhere
+        if self.verbose:
             RAM_GB = prod(self.Jd) * M * sparse_dtype.itemsize / 10 ** 9
-            if self.verbose:
-                print(
-                    "NUFFT sparse matrix storage will require "
-                    + "%g GB" % (RAM_GB)
-                )
+            print(f"NUFFT sparse matrix storage will require {RAM_GB} GB")
 
         # shape (*Jd, M)
         mm = xp.tile(xp.arange(M), (prod(self.Jd), 1))
@@ -1135,12 +1138,6 @@ def _nufft_table_adj(obj, x, omega=None, xp=None):
     xp = obj.xp
 
     ndim = len(obj.Kd)
-
-    # tm = xp.zeros_like(omega)
-    # pi = np.pi
-    # for d in range(0, ndim):
-    #     gam = 2 * pi / obj.Kd[d]
-    #     tm[:, d] = omega[:, d] / gam  # t = omega / gamma
     tm = obj.tm
 
     if x.shape[0] != omega.shape[0]:
@@ -1165,7 +1162,6 @@ def _nufft_table_adj(obj, x, omega=None, xp=None):
 
     if not obj.on_gpu:
         arg = [obj.Jd, obj.Ld, tm, obj.Kd[0:ndim]]
-
         if ndim == 1:
             arg = [obj.Jd[0], obj.Ld, tm, obj.Kd[0]]
             xk = interp1_table_adj(x, obj.h[0], *arg)
