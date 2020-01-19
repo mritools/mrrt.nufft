@@ -156,13 +156,14 @@ class NufftBase(object):
         When ``mode != 'sparse'``, this controls the size of the kernel
         lookup table used. The total lookup table size will be ``J[i] * Ld[i]``
         for axis ``i``.
-    n_shift : array-like, optional
-        Controls the shift applied (e.g. default is an N/2 shift like
+    n_shift : tuple of float, optional
+        Controls the shift applied (e.g. default is an N // 2 shift like
         fftshift)
     ortho : bool, optional
         If True, an orthogonal FFT with normalization factor (1/sqrt(n)) is
         used in each direction. Otherwise normalization 1/n is applied
-        during the inverse FFT. (TODO: double check this)
+        during the inverse FFT and no scaling is applied to the forward
+        transform.
     phasing : {'real', 'complex'}, optional
         If complex, the gridding kernel is complex-valued and the phase
         roll corresponding to ``n_shift`` is built into the kernel.
@@ -301,11 +302,12 @@ class NufftBase(object):
         if self.omega is not None:
             self.M = self.omega.shape[0]
         if n_shift is None:
-            self.__n_shift = np.asarray(
-                (0,) * self.ndim
-            )  # TODO: set to self.Nd //2?
+            # not self.Nd // 2 because this is in addition to self.n_mid
+            self.__n_shift = (0.0,) * self.ndim
         else:
-            self.__n_shift = np.asarray(n_shift)
+            if np.isscalar(n_shift):
+                n_shift = (float(n_shift),)
+            self.__n_shift = tuple(n_shift)
         if (self.ndim != len(self.Jd)) or (self.ndim != len(self.Kd)):
             raise ValueError("Inconsistent Dimensions")
 
@@ -615,9 +617,9 @@ class NufftBase(object):
     def _set_n_mid(self):
         # midpoint of scaling factors
         if self.__phasing == "real":
-            self.n_mid = np.asarray(self.Nd) // 2
+            self.n_mid = tuple([n // 2 for n in self.Nd])
         else:
-            self.n_mid = (np.asarray(self.Nd) - 1) / 2.0
+            self.n_mid = tuple([(n - 1) / 2.0 for n in self.Nd])
         if self.phasing == "real" and (self.__omega is not None):
             self.phase_after = self._phase_after(
                 self.__omega, self.n_mid, self.__n_shift
@@ -649,8 +651,6 @@ class NufftBase(object):
         xp = self.xp
         if isinstance(self.__omega, xp.ndarray):
             self.__omega = self._update_dtype(self.omega, "real", xp=xp)
-        if isinstance(self.__n_shift, np.ndarray):
-            self.__n_shift = self._update_dtype(self.__n_shift, "real", xp=np)
         if isinstance(self.phase_before, xp.ndarray):
             self.phase_before = self._update_dtype(
                 self.phase_before, "complex", xp=xp
@@ -673,37 +673,34 @@ class NufftBase(object):
 
     def _make_arrays_contiguous(self, order="F"):
         xp = self.xp
-        # arrays potentially stored on the GPU use contig_func_xp
+        # arrays potentially stored on the GPU use contig_func
         if order == "F":
-            contig_func = np.asfortranarray
-            contig_func_xp = xp.asfortranarray
+            contig_func = xp.asfortranarray
         elif order == "C":
-            contig_func = np.asfortranarray
-            contig_func_xp = xp.ascontiguousarray
+            contig_func = xp.ascontiguousarray
         else:
             raise ValueError("order must be 'F' or 'C'")
-        self.__omega = contig_func_xp(self.__omega)
-        self.__n_shift = contig_func(self.__n_shift)
+        self.__omega = contig_func(self.__omega)
         if isinstance(self.phase_before, np.ndarray):
-            self.phase_before = contig_func_xp(self.phase_before)
+            self.phase_before = contig_func(self.phase_before)
         if isinstance(self.phase_after, np.ndarray):
-            self.phase_after = contig_func_xp(self.phase_after)
+            self.phase_after = contig_func(self.phase_after)
         if hasattr(self, "sn") and self.sn is not None:
-            self.sn = contig_func_xp(self.sn)
+            self.sn = contig_func(self.sn)
         if self.mode == "sparse":
             pass
         if "table" in self.mode:
             if hasattr(self, "h") and self.h is not None:
                 for h in self.h:
-                    h = contig_func_xp(h)
+                    h = contig_func(h)
 
     def _phase_before(self, Kd, n_mid):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
         xp = self.xp
-        phase = 2 * np.pi * xp.arange(Kd[0]) / Kd[0] * n_mid[0]
+        phase = (2 * np.pi / Kd[0] * n_mid[0]) * xp.arange(Kd[0])
         for d in range(1, self.ndim):
-            tmp = 2 * np.pi * xp.arange(Kd[d]) / Kd[d] * n_mid[d]
+            tmp = (2 * np.pi / Kd[d] * n_mid[d]) * xp.arange(Kd[d])
             # fast outer sum via broadcasting
             phase = phase.reshape((phase.shape) + (1,)) + tmp.reshape(
                 (1,) * d + (tmp.size,)
@@ -714,9 +711,8 @@ class NufftBase(object):
         """Needed to realize desired FFT shift for real-valued NUFFT kernel.
         """
         xp = self.xp
-        phase = xp.exp(
-            1j * xp.dot(omega, xp.asarray(n_shift - n_mid).reshape(-1, 1))
-        )
+        shift_vec = [(s - m) for s, m in zip(n_shift, n_mid)]
+        phase = xp.exp(1j * xp.dot(omega, xp.asarray(shift_vec)))
         return xp.squeeze(phase).astype(self._cplx_dtype)  # [M,1]
 
     @profile
@@ -828,9 +824,9 @@ class NufftBase(object):
             uu = uu.conj()
 
         if self.phasing == "complex":
-            if np.any(self.n_shift != 0):
+            if any([s != 0 for s in self.n_shift]):
                 phase = xp.exp(
-                    1j * xp.dot(omega, xp.asarray(self.n_shift.ravel()))
+                    1j * xp.dot(omega, xp.asarray(self.n_shift))
                 )  # [1,M]
                 phase = phase.reshape((1, -1), order="F")
                 uu *= phase  # use broadcasting along first dimension
@@ -896,9 +892,9 @@ class NufftBase(object):
         # how = 'ratio'  #currently a bug in ratio case for non-integer K/N
         #     else:
         how = "fast"
-        if self.phasing == "complex" and np.any(np.asarray(self.n_shift) != 0):
+        if self.phasing == "complex" and any([s != 0 for s in self.n_shift]):
             self.phase_shift = xp.exp(
-                1j * xp.dot(self.omega, xp.asarray(self.n_shift.ravel()))
+                1j * xp.dot(self.omega, xp.asarray(self.n_shift))
             )  # [M 1]
         else:
             self.phase_shift = None  # compute on-the-fly
