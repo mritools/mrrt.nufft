@@ -130,13 +130,6 @@ def _get_gridding_funcs(
 
     """ compile with many things hardcoded to reduce the number of
     registers needed."""
-    if M is None:
-        raise ValueError("M required")
-    if J is None:
-        raise ValueError("J required")
-    if L is None:
-        raise ValueError("L required")
-
     ndim = len(Kd)
     if ndim < 3:
         Kd = Kd + ((1,) * (3 - ndim))
@@ -144,13 +137,10 @@ def _get_gridding_funcs(
     ncenter = int(np.floor(J * L / 2))
 
     template_kwargs = dict(
-        # kernel_to_shared_template=kernel_to_shared_template,
-        # explicit_kernel_template=explicit_kernel_template,
         grid_includes_template=grid_includes_template,
         real_type=real_type,
         complex_kernel=is_complex_kernel,
         order=order,
-        # cuda_gte_8=cuda_version >= 8000,  # CUDA version is >= 8.0
         J=J,
         L=L,
         ncenter=ncenter,

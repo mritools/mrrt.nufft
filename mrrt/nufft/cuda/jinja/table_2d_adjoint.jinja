@@ -94,7 +94,7 @@ void interp2_table{{order}}_{{funcstr}}_{{real_type}}_per_adj_GPUkernel(
                     {% endif %}
                 {% endif %}
                 const int k1mod = mymodi(k1, {{K1}});
-                const int kk = k12mod + k1mod; /* 3D array index */
+                const int kk = k12mod + k1mod; /* 2D array index */
 
 
                 {% if complex_kernel == True %}

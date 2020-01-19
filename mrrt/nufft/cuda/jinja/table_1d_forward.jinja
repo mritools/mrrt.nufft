@@ -12,7 +12,7 @@
     {% set complex_type = 'complex<double>' %}
 {% endif %}
 
-// This versions is to be compiled with hard-coded J, L, ncenter, K1, K2, K3, M, J_2
+// This versions is to be compiled with hard-coded J, L, ncenter, K1, M, J_2
 
 /*
  * interp1_table{{order}}_{{funcstr}}_{{real_type}}_per()
@@ -21,7 +21,7 @@
 
 extern "C" __global__
 void interp1_table{{order}}_{{funcstr}}_{{real_type}}_per_GPUkernel(
-        const {{complex_type}} * __restrict__ ck,    /* [{{K1}},{{K2}},{{K3}}] in */
+        const {{complex_type}} * __restrict__ ck,    /* [{{K1}}] in */
         {% if complex_kernel == True %}
         const {{complex_type}} * __restrict__ h1,    /* [{{J}}*{{L}}+1,1] in */
         {% else %}

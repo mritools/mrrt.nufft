@@ -340,8 +340,8 @@ class NufftBase(object):
                 gam = 2 * np.pi / self.Kd[d]
                 tm[:, d] = self.omega[:, d] / gam  # t = omega / gamma
             self.tm = tm
-            self.interp_table = _nufft_table_interp  # TODO: remove?
-            self.interp_table_adj = _nufft_table_adj  # TODO: remove?
+            self.interp_table = _nufft_table_interp
+            self.interp_table_adj = _nufft_table_adj
         elif self.mode == "exact":
             # TODO: wrap calls to dtft, dtft_adj
             raise ValueError("mode exact not implemented")
@@ -1028,13 +1028,7 @@ def _nufft_table_interp(obj, xk, omega=None, xp=None):
         on_gpu = False
     xp = obj.xp
 
-    # tm = xp.zeros_like(omega)
-    # pi = np.pi
-    # for d in range(0, ndim):
-    #     gam = 2 * pi / obj.Kd[d]
-    #     tm[:, d] = omega[:, d] / gam  # t = omega / gamma
     tm = obj.tm
-
     if xk.ndim == 1:
         xk = xk[:, xp.newaxis]
     elif xk.shape[1] > xk.shape[0]:
@@ -1045,7 +1039,6 @@ def _nufft_table_interp(obj, xk, omega=None, xp=None):
         raise ValueError("xk size problem")
 
     xk = complexify(xk, complex_dtype=obj._cplx_dtype)  # force complex
-
     if not obj.on_gpu:
         arg = [obj.Jd, obj.Ld, tm]
         if ndim == 1:
@@ -1071,7 +1064,6 @@ def _nufft_table_interp(obj, xk, omega=None, xp=None):
                 args = (xk, obj.h[0], obj.h[1], tm, x)
             elif ndim == 3:
                 args = (xk, obj.h[0], obj.h[1], obj.h[2], tm, x)
-            # obj.kern_forward(obj.block, obj.grid, args)
             obj.kern_forward(obj.grid, obj.block, args)
         else:
             for r in range(nreps):

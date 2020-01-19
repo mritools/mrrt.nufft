@@ -13,7 +13,7 @@
 {% endif %}
 
 
-// This versions is to be compiled with hard-coded J, L, ncenter, K1, K2, K3, M, J_2
+// This versions is to be compiled with hard-coded J, L, ncenter, K1, K2, M, J_2
 
 /*
  * interp2_table{{order}}_{{funcstr}}_{{real_type}}_per()
@@ -22,7 +22,7 @@
 
 extern "C" __global__
 void interp2_table{{order}}_{{funcstr}}_{{real_type}}_per_GPUkernel(
-        const {{complex_type}} * __restrict__ ck,    /* [{{K1}},{{K2}},{{K3}}] in */
+        const {{complex_type}} * __restrict__ ck,    /* [{{K1}},{{K2}}] in */
         {% if complex_kernel == True %}
         const {{complex_type}} * __restrict__ h1,    /* [{{J}}*{{L}}+1,1] in */
         const {{complex_type}} * __restrict__ h2,    /* [{{J}}*{{L}}+1,1] in */
@@ -89,7 +89,7 @@ void interp2_table{{order}}_{{funcstr}}_{{real_type}}_per_GPUkernel(
                     {% endif %}
                 {% endif %}
                 const int k1mod = mymodi(k1, {{K1}});
-                const int kk = k12mod + k1mod; /* 3D array index */
+                const int kk = k12mod + k1mod; /* 2D array index */
                 {% if complex_kernel == True %}
                     const {{complex_type}} v1(coef1 * ck[kk]);
                 {% else %}
