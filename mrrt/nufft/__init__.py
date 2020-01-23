@@ -1,7 +1,8 @@
-from ._dtft import dtft, dtft_adj
-from ._kernels import BeattyKernel, KaiserBesselKernel
-from ._nufft import NufftBase
-from ._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft
+from ._dtft import dtft, dtft_adj  # noqa
+from ._kernels import BeattyKernel, KaiserBesselKernel  # noqa
+from ._nufft import NufftBase  # noqa
+from ._kaiser_bessel import kaiser_bessel, kaiser_bessel_ft  # noqa
+from .version import __version__  # noqa
 
 __all__ = [
     "dtft",
@@ -12,8 +13,3 @@ __all__ = [
     "kaiser_bessel",
     "kaiser_bessel_ft",
 ]
-
-from ._version import get_versions
-
-__version__ = get_versions()["version"]
-del get_versions

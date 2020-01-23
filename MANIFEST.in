@@ -1,4 +1,23 @@
-include versioneer.py
-include mrrt/nufft/_version.py
-include COPYING
+include setup.py
+include setup.cfg
+include pyproject.toml
+include README.md
+include LICENSE.txt
 include LICENSES_bundled.txt
+include *.txt
+include MANIFEST.in
+include Makefile
+include mrrt/nufft/version.py
+
+# All source files
+recursive-include mrrt *
+recursive-include examples *
+recursive-include doc *
+
+# Exclude what we don't want to include
+prune build
+prune doc/build
+prune */__pycache__
+
+global-exclude *.py[cod] *.egg *.egg-info
+global-exclude *~ *.bak *.swp

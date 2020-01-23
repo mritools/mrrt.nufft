@@ -7,9 +7,22 @@ from setuptools.command.test import test as TestCommand
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
-import versioneer
 
 from setup_helpers import add_flag_checking, make_np_ext_builder
+
+PACKAGES = find_packages()
+
+# Get version and release info, which is all stored in mrrt/nufft/version.py
+ver_file = os.path.join("mrrt", "nufft", "version.py")
+with open(ver_file) as f:
+    exec(f.read())
+# Give setuptools a hint to complain if it's too old a version
+# 24.2.0 added the python_requires option
+# Should match pyproject.toml
+SETUP_REQUIRES = ["setuptools >= 24.2.0"]
+# This enables setuptools to install wheel on-the-fly
+SETUP_REQUIRES += ["wheel"] if "bdist_wheel" in sys.argv else []
+
 
 # Note if rpath errors related to libgomp occur on OsX, try adding the path
 # containing libgomp to the link arguments.  e.g.
@@ -97,7 +110,6 @@ class PyTest(TestCommand):
 extra_compile_args = ["-ffast-math"]
 # if use_OpenMP:
 cmdclass = {"build_ext": extbuilder, "test": PyTest}
-cmdclass.update(versioneer.get_cmdclass())
 
 src_path = pjoin("mrrt", "nufft")
 
@@ -135,37 +147,90 @@ ext_modules = cythonize(
     ext_modules, compiler_directives=cythonize_opts, language_level=2
 )
 
-setup(
-    name="mrrt.nufft",
-    author="Gregory R. Lee",
-    version=versioneer.get_version(),
-    ext_modules=ext_modules,
-    cmdclass=cmdclass,
-    packages=find_packages(),
-    namespace_package=["mrrt"],
-    # scripts=[],
-    # since the package has c code, the egg cannot be zipped
-    zip_safe=False,
-    # data_files=[('mrrt.nufft/data', glob('mrrt.nufft/data/*.npy')), ],
-    package_data={"mrrt.nufft": [pjoin("tests", "data", "*")]},
-    # maintainer="",
-    # maintainer_email="grlee77@gmail.com",
-    url="https://github.com/mritools/mrrt.nufft",
-    download_url="https://github.com/mritools/mrrt.nufft/releases",
-    license="BSD-3",
-    description="Non-uniform FFT in 1D, 2D and 3D for CPU and GPU (CUDA)",
-    long_description="""\
-        mrrt.nufft includes:
+# setup(
+#     name="mrrt.nufft",
+#     author="Gregory R. Lee",
+#     version=VERSION,
+#     ext_modules=ext_modules,
+#     cmdclass=cmdclass,
+#     packages=find_packages(),
+#     namespace_package=["mrrt"],
+#     # scripts=[],
+#     # since the package has c code, the egg cannot be zipped
+#     zip_safe=False,
+#     # data_files=[('mrrt.nufft/data', glob('mrrt.nufft/data/*.npy')), ],
+#     package_data={"mrrt.nufft": [pjoin("tests", "data", "*")]},
+#     # maintainer="",
+#     # maintainer_email="grlee77@gmail.com",
+#     url="https://github.com/mritools/mrrt.nufft",
+#     download_url="https://github.com/mritools/mrrt.nufft/releases",
+#     license="BSD-3",
+#     description="Non-uniform FFT in 1D, 2D and 3D for CPU and GPU (CUDA)",
+#     long_description="""\
+#         mrrt.nufft includes:
 
-        * 1D, 2D and 3D Transform from uniformly spaced spatial grid to
-        non-uniformly spaced Fourier samples.
-        * 1D, 2D and 3D Inverse Transform non-uniformly spaced Fourier samples
-        to uniformly sampled spatial.
-        * All transforms have both low memory and sparse-matrix (precomputed)
-        variants.
-        * Transforms can be applied to NumPy arrays (CPU) or to CuPy arrays
-        (GPU).
-        """,
+#         * 1D, 2D and 3D Transform from uniformly spaced spatial grid to
+#         non-uniformly spaced Fourier samples.
+#         * 1D, 2D and 3D Inverse Transform non-uniformly spaced Fourier samples
+#         to uniformly sampled spatial.
+#         * All transforms have both low memory and sparse-matrix (precomputed)
+#         variants.
+#         * Transforms can be applied to NumPy arrays (CPU) or to CuPy arrays
+#         (GPU).
+#         """,
+#     keywords=[
+#         "non-uniform fast Fourier transform",
+#         "NFFT",
+#         "NUFFT",
+#         "scientific",
+#         "non-cartesian MRI",
+#         "magnetic resonance imaging",
+#     ],
+#     classifiers=[
+#         "Development Status :: 4 - Beta",
+#         "Intended Audience :: Science/Research",
+#         "License :: OSI Approved :: BSD 3-Clause 'New' or 'Revised' License",
+#         "Operating System :: OS Independent",
+#         "Programming Language :: C",
+#         "Programming Language :: CUDA",
+#         "Programming Language :: Python",
+#         "Programming Language :: Python :: 3",
+#         "Programming Language :: Python :: 3.6",
+#         "Programming Language :: Python :: 3.7",
+#         "Programming Language :: Python :: 3.8",
+#         "Programming Language :: Python :: 3 :: Only",
+#         "Programming Language :: Python :: Implementation :: CPython",
+#         "Topic :: Software Development :: Libraries :: Python Modules",
+#     ],
+#     platforms=["Windows", "Linux", "Solaris", "Mac OS-X", "Unix"],
+#     tests_require=["pytest"],
+#     install_requires=["numpy>=1.14.5"],
+#     setup_requires=["numpy>=1.14.5"],
+#     python_requires=">=3.6",
+# )
+
+opts = dict(
+    name=NAME,
+    maintainer=MAINTAINER,
+    maintainer_email=MAINTAINER_EMAIL,
+    description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
+    url=URL,
+    download_url=DOWNLOAD_URL,
+    license=LICENSE,
+    classifiers=CLASSIFIERS,
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    platforms=PLATFORMS,
+    version=VERSION,
+    packages=PACKAGES,
+    package_data=PACKAGE_DATA,
+    install_requires=REQUIRES,
+    python_requires=PYTHON_REQUIRES,
+    setup_requires=SETUP_REQUIRES,
+    requires=REQUIRES,
+    cmdclass=cmdclass,
+    ext_modules=ext_modules,
     keywords=[
         "non-uniform fast Fourier transform",
         "NFFT",
@@ -174,25 +239,7 @@ setup(
         "non-cartesian MRI",
         "magnetic resonance imaging",
     ],
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: BSD 3-Clause 'New' or 'Revised' License",
-        "Operating System :: OS Independent",
-        "Programming Language :: C",
-        "Programming Language :: CUDA",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: Implementation :: CPython",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-    ],
-    platforms=["Windows", "Linux", "Solaris", "Mac OS-X", "Unix"],
-    tests_require=["pytest"],
-    install_requires=["numpy>=1.14.5"],
-    setup_requires=["numpy>=1.14.5"],
-    python_requires=">=3.6",
 )
+
+if __name__ == "__main__":
+    setup(**opts)

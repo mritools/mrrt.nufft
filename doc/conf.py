@@ -13,26 +13,19 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
+import sys
 
 # General information about the project.
 project = "mrrt.nufft"
 copyright = "2015-2017, Gregory R. Lee"
 
 currentdir = os.path.abspath(os.path.dirname(__file__))
-if False:
-    ver_file = os.path.join(
-        currentdir, "..", project.replace(".", os.path.sep), "_version.py"
-    )
-    with open(ver_file) as f:
-        exec(f.read())
-    source_version = get_versions()["version"]
-else:
-    from mrrt.nufft._version import get_versions
+ver_file = os.path.join(currentdir, "..", "mrrt", "nufft", "version.py")
+with open(ver_file) as f:
+    exec(f.read())
+source_version = __version__
 
-    __version__ = get_versions()["version"]
-    source_version = get_versions()["version"]
 print("source_version = {}".format(source_version))
 print("type(source_version) = {}".format(type(source_version)))
 
