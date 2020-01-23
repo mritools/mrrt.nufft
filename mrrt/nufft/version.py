@@ -82,5 +82,5 @@ VERSION = __version__
 PACKAGE_DATA = {
     "mrrt.nufft": [pjoin("tests", "*"), pjoin("tests", "data", "*")]
 }
-REQUIRES = ["numpy", "cython"]
+REQUIRES = ["numpy", "cython", "mrrt.utils"]
 PYTHON_REQUIRES = ">= 3.6"

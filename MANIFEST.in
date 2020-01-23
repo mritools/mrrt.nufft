@@ -8,6 +8,7 @@ include *.txt
 include MANIFEST.in
 include Makefile
 include mrrt/nufft/version.py
+include requirements/*.txt
 
 # All source files
 recursive-include mrrt *
