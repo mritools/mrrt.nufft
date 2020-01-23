@@ -211,6 +211,7 @@ ext_modules = cythonize(
 
 opts = dict(
     name=NAME,
+    namespace_package=["mrrt"],
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
     description=DESCRIPTION,
