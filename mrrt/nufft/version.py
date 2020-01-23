@@ -80,7 +80,11 @@ MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
 PACKAGE_DATA = {
-    "mrrt.nufft": [pjoin("tests", "*"), pjoin("tests", "data", "*")]
+    "mrrt.nufft": [
+        pjoin("tests", "*"),
+        pjoin("tests", "data", "*"),
+        pjoin("cuda", "jinja", "*"),
+    ]
 }
 REQUIRES = ["numpy", "cython", "mrrt.utils"]
 PYTHON_REQUIRES = ">= 3.6"
