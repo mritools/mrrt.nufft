@@ -436,10 +436,10 @@ class NufftBase(object):
         k : ndarray
             The non-uniformly samples Fourier domain values.
         """
-        if self.order == "F":
-            x = x.reshape(self.Nd + (-1,))
-        elif self.order == "C":
-            x = x.reshape((-1,) + self.Nd)
+        # if self.order == "F":
+        #     x = x.reshape(self.Nd + (-1,))
+        # elif self.order == "C":
+        #     x = x.reshape((-1,) + self.Nd)
         if self.order == "C":
             # functions expect reps at end, not start
             x = self._swap_reps(x, self.nargin1)
@@ -466,10 +466,10 @@ class NufftBase(object):
             The uniform spatial domain data. This will have shape equal to
             ``self.Nd``.
         """
-        if self.order == "F":
-            k = k.reshape((self.omega.shape[0], -1))
-        elif self.order == "C":
-            k = k.reshape((-1, self.omega.shape[0]))
+        # if self.order == "F":
+        #     k = k.reshape((self.omega.shape[0], -1))
+        # elif self.order == "C":
+        #     k = k.reshape((-1, self.omega.shape[0]))
         if self.order == "C":
             # functions expect reps at end, not start
             k = self._swap_reps(k, self.nargout1)
