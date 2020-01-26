@@ -3,7 +3,7 @@ from os.path import join as pjoin
 # Format expected by setup.py and doc/source/conf.py: string of form "X.Y.Z"
 _version_major = 0
 _version_minor = 2
-_version_micro = ""  # use "" for first of series, number for 1 and above
+_version_micro = 1  # use "" for first of series, number for 1 and above
 _version_extra = ""  # use "dev0" for developemnt, "" for full release
 
 # Construct full version string from these.
@@ -40,14 +40,10 @@ mrrt.nufft
 ==========
 mrrt.nufft includes:
 
-* 1D, 2D and 3D Transform from uniformly spaced spatial grid to
-non-uniformly spaced Fourier samples.
-* 1D, 2D and 3D Inverse Transform non-uniformly spaced Fourier samples
-to uniformly sampled spatial.
-* All transforms have both low memory and sparse-matrix (precomputed)
-variants.
-* Transforms can be applied to NumPy arrays (CPU) or to CuPy arrays
-(GPU).
+- 1D, 2D and 3D Transform from uniformly spaced spatial grid to non-uniformly spaced Fourier samples.
+- 1D, 2D and 3D Inverse Transform non-uniformly spaced Fourier samples to uniformly sampled spatial.
+- All transforms have both low memory and sparse-matrix (precomputed) variants.
+- Transforms can be applied to NumPy arrays (CPU) or to CuPy arrays (GPU).
 
 .. _README: https://github.com/mritools/mrrt.nufft/blob/master/README.md
 
