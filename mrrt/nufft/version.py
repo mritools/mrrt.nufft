@@ -40,14 +40,10 @@ mrrt.nufft
 ==========
 mrrt.nufft includes:
 
-* 1D, 2D and 3D Transform from uniformly spaced spatial grid to
-non-uniformly spaced Fourier samples.
-* 1D, 2D and 3D Inverse Transform non-uniformly spaced Fourier samples
-to uniformly sampled spatial.
-* All transforms have both low memory and sparse-matrix (precomputed)
-variants.
-* Transforms can be applied to NumPy arrays (CPU) or to CuPy arrays
-(GPU).
+- 1D, 2D and 3D Transform from uniformly spaced spatial grid to non-uniformly spaced Fourier samples.
+- 1D, 2D and 3D Inverse Transform non-uniformly spaced Fourier samples to uniformly sampled spatial.
+- All transforms have both low memory and sparse-matrix (precomputed) variants.
+- Transforms can be applied to NumPy arrays (CPU) or to CuPy arrays (GPU).
 
 .. _README: https://github.com/mritools/mrrt.nufft/blob/master/README.md
 
