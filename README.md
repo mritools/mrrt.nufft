@@ -70,44 +70,41 @@ TODO
 Installation
 =============
 
-Binary packages have not yet been built and uploaded to PyPI or conda-forge.
+Binary packages have not yet been built and uploaded to PyPI or conda-forge,
+but the package can be built from source tarballs hosted on PyPI.
 
-For now, installation from source can be performed either by checking out the
-source from github, navigating to the source directory and running:
-
-pip install --upgrade https://github.com/mritools/mrrt.nufft/tarball/master
-
-
-Contributing
-============
-
-TODO
+```
+pip install mrrt.utils
+```
 
 Required Dependencies
 ---------------------
-- [NumPy]
-- [SciPy]
+- [NumPy]  (>=1.14)
+- [SciPy]  (>=0.19)
+- [Cython]  (>=0.29.13)
 - [mrrt.utils]
 
 Recommended Dependencies
 ------------------------
 - [Matplotlib]  (for plotting)
-- [pyFFTW]  (enable faster FFTS than numpy.fft)
-- [CuPy]  (required for the GPU implementation)
+- [pyFFTW]  (>=0.11) (enable faster FFTS than numpy.fft)
+- [CuPy]  (>=6.1) (required for the GPU implementation)
 
 
 [BART]: https://mrirecon.github.io/bart/
 [Copying]: https://github.com/mritools/mrrt.nufft/blob/master/COPYING
 [CuPy]: https://github.com/cupy/cupy
+[Cython]: https://cython.org/
 [FINUFFT]: https://finufft.readthedocs.io/en/latest/index.html
 [Gadgetron]: https://gadgetron.github.io/
 [gpuNUFFT]: https://github.com/andyschwarzl/gpuNUFFT
 [LICENSES_bundled.txt]: https://github.com/mritools/mrrt.nufft/blob/master/LICENSES_bundled.txt
 [Matplotlib]: https://matplotlib.org
 [Michigan image reconstruction toolbox]: https://web.eecs.umich.edu/~fessler/code/
-[mrrt.utils]: https://github.com/grlee77/mrrt.utils
+[mrrt.utils]: https://github.com/mritools/mrrt.utils
 [NFFT library]: https://www-user.tu-chemnitz.de/~potts/nfft/
 [NumPy]: https://github.com/numpy/numpy
 [pyFFTW]: https://matplotlib.org
 [pyNFFT]: https://github.com/pyNFFT/pyNFFT
+[pytest]: https://docs.pytest.org/en/latest/
 [SciPy]: https://scipy.org
