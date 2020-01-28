@@ -33,6 +33,7 @@ def _interp1_table_forward(
         float_interp1_forward_real_t floatfunc_real
         double_interp1_forward_cplx_t doublefunc_cplx
         double_interp1_forward_real_t doublefunc_real
+        int nn = 0
 
     kernel_dtype, cplx_dtype, cplx_kernel = _determine_dtypes(h1)
     fm = np.zeros((M, N), dtype=cplx_dtype, order='F')
@@ -218,6 +219,7 @@ def _interp2_table_forward(
         int J2 = Jd[1]
         int K1 = Kd[0]
         int K2 = Kd[1]
+        int nn = 0
         float_interp2_forward_cplx_t floatfunc_cplx
         float_interp2_forward_real_t floatfunc_real
         double_interp2_forward_cplx_t doublefunc_cplx
@@ -448,6 +450,7 @@ def _interp3_table_forward(
         int K1 = Kd[0]
         int K2 = Kd[1]
         int K3 = Kd[2]
+        int nn = 0
         float_interp3_forward_cplx_t floatfunc_cplx
         float_interp3_forward_real_t floatfunc_real
         double_interp3_forward_cplx_t doublefunc_cplx
