@@ -1,0 +1,86 @@
+# After changing this file, check it on:
+#   http://lint.travis-ci.org/
+language: python
+os: linux
+
+jobs:
+  include:
+    - os: linux
+      python: 3.6
+      env:
+        - NUMPYSPEC="numpy==1.14.5"
+        - SCIPYSPEC="scipy==0.19.0"
+    - os: linux
+      python: 3.7
+      env:
+        - NUMPYSPEC=numpy
+        - SCIPYSPEC=scipy
+        - USE_SDIST=1
+    - os: linux
+      python: 3.7
+      env:
+        - NUMPYSPEC=numpy
+        - SCIPYSPEC=scipy
+        - USE_WHEEL=1
+    - os: linux
+      python: 3.8
+      env:
+        - NUMPYSPEC=numpy
+        - SCIPYSPEC=scipy
+    - os: osx
+      language: generic
+      env:
+        - PYTHON=3.7.6
+        - NUMPYSPEC=numpy
+        - SCIPYSPEC=scipy
+
+cache: pip
+
+before_install:
+  - |
+    if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+      brew update
+      brew install openssl readline
+      brew outdated pyenv || brew upgrade pyenv
+      brew install pyenv-virtualenv
+      pyenv install $PYTHON
+      export PYENV_VERSION=$PYTHON
+      export PATH="/Users/travis/.pyenv/shims:${PATH}"
+      pyenv-virtualenv venv
+      source venv/bin/activate
+    fi
+    which python; python --version
+    pip install --upgrade pip
+    pip install --upgrade wheel
+    pip install $NUMPYSPEC $SCIPYSPEC
+    pip install pytest pytest-cov coverage codecov
+    pip install mrrt.utils
+
+script:
+  # Define a fixed build dir so next step works
+  - |
+    if [ "${USE_WHEEL}" == "1" ]; then
+        # Need verbose output or TravisCI will terminate after 10 minutes
+        pip wheel . -v
+        pip install mrrt.nufft*.whl -v
+        mkdir for_test
+        pushd for_test
+        pytest --pyargs mrrt.nufft
+        popd
+    elif [ "${USE_SDIST}" == "1" ]; then
+        python setup.py sdist
+        # Move out of source directory to avoid finding local pywt
+        pushd dist
+        pip install mrrt.nufft* -v
+        pytest --pyargs mrrt.nufft
+        popd
+    else
+        pip install -e . -v
+        mkdir for_test
+        pushd for_test
+        pytest --pyargs mrrt.nufft --cov=mrrt.nufft --cov-config=../.coveragerc
+        cp .coverage ..
+        popd
+    fi
+
+
