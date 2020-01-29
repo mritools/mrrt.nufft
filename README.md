@@ -89,6 +89,7 @@ Recommended Dependencies
 - [Matplotlib]  (for plotting)
 - [pyFFTW]  (>=0.11) (enable faster FFTS than numpy.fft)
 - [CuPy]  (>=6.1) (required for the GPU implementation)
+- [jinja2]  (required for GPU implementation)
 
 
 [BART]: https://mrirecon.github.io/bart/
@@ -98,6 +99,7 @@ Recommended Dependencies
 [FINUFFT]: https://finufft.readthedocs.io/en/latest/index.html
 [Gadgetron]: https://gadgetron.github.io/
 [gpuNUFFT]: https://github.com/andyschwarzl/gpuNUFFT
+[jinja2]: https://palletsprojects.com/p/jinja/
 [LICENSES_bundled.txt]: https://github.com/mritools/mrrt.nufft/blob/master/LICENSES_bundled.txt
 [Matplotlib]: https://matplotlib.org
 [Michigan image reconstruction toolbox]: https://web.eecs.umich.edu/~fessler/code/
