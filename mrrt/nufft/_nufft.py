@@ -367,7 +367,7 @@ class NufftBase(object):
             )
 
         if self.preplan_cufft:
-            dummy = np.empty(self.Kd, dtype=self._cplx_dtype)
+            dummy = np.empty(self.Kd, dtype=self._cplx_dtype, order=self.order)
             self.cufft_plan = get_fft_plan(dummy, shape=dummy.shape)
             del dummy
         else:
@@ -1331,24 +1331,40 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
             xk = fftn(xk, Kd, axes=range(x.ndim - 1))
         else:
             axes = tuple(range(x.ndim - 1))
+
             if hasattr(obj.cufft_plan, "shape"):
-                if obj.cufft_plan.shape == Kd:
-                    with obj.cufft_plan:
-                        if n_reps == 1:
-                            xk = cupy_fftn(xk, Kd, axes=axes, overwrite_x=True)
-                        else:
-                            xk_in = xk.copy()
-                            xk = cupy.empty(Kd + (n_reps,), dtype=xk_in.dtype)
-                            for rep in range(n_reps):
-                                xk[..., rep] = cupy_fftn(
-                                    xk_in[..., rep],
-                                    Kd,
-                                    axes=axes,
-                                    overwrite_x=True,
+                try:
+                    if obj.order == "C":
+                        expected_shape = Kd
+                    elif obj.order == "F":
+                        expected_shape = Kd[::-1]
+                    if obj.cufft_plan.shape == expected_shape:
+                        with obj.cufft_plan:
+                            if n_reps == 1:
+                                xk = cupy_fftn(
+                                    xk, Kd, axes=axes, overwrite_x=True
                                 )
-                            del xk_in
-                else:
-                    raise ValueError("unexpected pre-planned cuFFT shape")
+                            else:
+                                xk_in = xk.copy(order=obj.order)
+                                xk = cupy.empty(
+                                    Kd + (n_reps,),
+                                    dtype=xk_in.dtype,
+                                    order=obj.order,
+                                )
+                                for rep in range(n_reps):
+                                    xk[..., rep] = cupy_fftn(
+                                        xk_in[..., rep],
+                                        Kd,
+                                        axes=axes,
+                                        overwrite_x=True,
+                                    )
+                                del xk_in
+                    else:
+                        raise ValueError("unexpected pre-planned cuFFT shape")
+                except ValueError:
+                    # workaround until the following CuPy fix is merged:
+                    #     https://github.com/cupy/cupy/pull/3034 is merged
+                    xk = cupy_fftn(xk, Kd, axes=axes, overwrite_x=True)
             else:
                 xk = cupy_fftn(xk, Kd, axes=axes, overwrite_x=True)
         if obj.phase_before is not None:
@@ -1539,21 +1555,37 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
         x = ifftn(xk_all, Kd, axes=axes)
     else:
         if hasattr(obj.cufft_plan, "shape"):
-            if obj.cufft_plan.shape == Kd:
-                with obj.cufft_plan:
-                    if n_reps == 1:
-                        x = cupy_ifftn(xk_all, Kd, axes=axes, overwrite_x=True)
-                    else:
-                        x = cupy.empty(Kd + (n_reps,), dtype=xk_all.dtype)
-                        for rep in range(n_reps):
-                            x[..., rep] = cupy_ifftn(
-                                xk_all[..., rep],
-                                Kd,
-                                axes=axes,
-                                overwrite_x=True,
+            try:
+                if obj.order == "C":
+                    expected_shape = Kd
+                else:
+                    # Plan object has reversed shape for order="F" case
+                    expected_shape = Kd[::-1]
+                if obj.cufft_plan.shape == expected_shape:
+                    with obj.cufft_plan:
+                        if n_reps == 1:
+                            x = cupy_ifftn(
+                                xk_all, Kd, axes=axes, overwrite_x=True
                             )
-            else:
-                raise ValueError("unexpected pre-planned cuFFT shape")
+                        else:
+                            x = cupy.empty(
+                                Kd + (n_reps,),
+                                dtype=xk_all.dtype,
+                                order=obj.order,
+                            )
+                            for rep in range(n_reps):
+                                x[..., rep] = cupy_ifftn(
+                                    xk_all[..., rep],
+                                    Kd,
+                                    axes=axes,
+                                    overwrite_x=True,
+                                )
+                else:
+                    raise ValueError("unexpected pre-planned cuFFT shape")
+            except ValueError:
+                # workaround until the following CuPy fix is merged:
+                #     https://github.com/cupy/cupy/pull/3034 is merged
+                x = cupy_ifftn(xk_all, Kd, axes=axes, overwrite_x=True)
         else:
             x = cupy_ifftn(xk_all, Kd, axes=axes, overwrite_x=True)
     # eliminate zero padding from ends
