@@ -74,7 +74,7 @@ Binary packages have not yet been built and uploaded to PyPI or conda-forge,
 but the package can be built from source tarballs hosted on PyPI.
 
 ```
-pip install mrrt.utils
+pip install mrrt.nufft
 ```
 
 Required Dependencies
