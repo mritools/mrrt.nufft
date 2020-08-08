@@ -16,8 +16,7 @@ __all__ = ["get_1D_block_table_gridding"]
 def get_1D_block_table_gridding(
     n_samples, dev, BLOCKSIZE_TABLE=512, kernel=None
 ):
-    from cupy.cuda.runtime import CUDARuntimeError
-    from cupy.cuda.driver import CUDADriverError
+    from cupy.cuda import driver, runtime
 
     try:
         if kernel is not None:
@@ -26,7 +25,12 @@ def get_1D_block_table_gridding(
         else:
             # device limit
             max_threads_per_block = dev.attributes["MaxBlockDimX"]
-    except (AttributeError, KeyError, CUDARuntimeError, CUDADriverError):
+    except (
+        AttributeError,
+        KeyError,
+        runtime.CUDARuntimeError,
+        driver.CUDADriverError,
+    ):
         warnings.warn("Unable to autodetect maxThreadsPerBlock, trying 512...")
         max_threads_per_block = 512
 
