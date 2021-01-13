@@ -16,7 +16,8 @@ __all__ = ["get_1D_block_table_gridding"]
 def get_1D_block_table_gridding(
     n_samples, dev, BLOCKSIZE_TABLE=512, kernel=None
 ):
-    from cupy.cuda import driver, runtime
+    from cupy.cuda import runtime
+    from cupy.cuda import driver
 
     try:
         if kernel is not None:

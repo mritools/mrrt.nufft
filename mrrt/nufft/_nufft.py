@@ -1381,28 +1381,7 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
         x = obj.interp_table(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        if xp is np:
-            x = obj.p * xk  # [M, n_reps]
-        else:
-            # cannot use the notation above because it seems there is a bug in
-            # COO->CSC/CSR conversion that causes issues
-            # can avoid by calling cusparse.csrmv directly
-
-            # obj.p is CSC so use obj.p.T with transa=True to do a CSR multiplication
-            if obj.p_csr is not None:
-                if xk.ndim == 1:
-                    x = cupy.cusparse.csrmv(
-                        obj.p_csr, xk, transa=False
-                    )  # [*Kd,  n_reps]
-                else:
-                    x = cupy.cusparse.csrmm(obj.p_csr, xk, transa=False)
-            else:
-                if xk.ndim == 1:
-                    x = cupy.cusparse.csrmv(
-                        obj.p.T, xk, transa=True
-                    )  # [*Kd,  n_reps]
-                else:
-                    x = cupy.cusparse.csrmm(obj.p.T, xk, transa=True)
+        x = obj.p * xk  # [M, n_reps]
 
     x = xp.reshape(x, (obj.M, n_reps), order="F")
     if grid_only:
@@ -1523,17 +1502,7 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
         xk_all = obj.interp_table_adj(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        if xp is np:
-            xk_all = obj.p.H * xk  # [*Kd, *L]
-        else:
-            # cannot use the notation above because it seems there is a bug in
-            # COO->CSC/CSR conversion that causes issues
-            # can avoid by calling cusparse.csrmv directly
-            if xk.ndim == 1:
-                # xk_all will have shape [*Kd, *L]
-                xk_all = cupy.cusparse.csrmv(obj.p.H, xk, transa=False)
-            else:
-                xk_all = cupy.cusparse.csrmm(obj.p.H, xk, transa=False)
+        xk_all = obj.p.H * xk  # [*Kd, *L]
 
     if grid_only:
         # return raw gridded samples prior to FFT and truncation
