@@ -125,7 +125,6 @@ def _get_gridding_funcs(
     else:
         raise ValueError("precision must be single or double")
 
-    # cuda_version = cupy.cuda.driver.get_build_version()
     compile_options = tuple(compile_options)
 
     """ compile with many things hardcoded to reduce the number of
