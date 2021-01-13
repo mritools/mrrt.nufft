@@ -94,6 +94,14 @@ supported_cplx_types = [np.complex64, np.complex128]
 #     Jd -> kernel_sizes
 
 
+def _consistent_contiguity(arr, plan):
+    if hasattr(plan, 'order'):
+        if plan.order == 'C' and not arr.flags.c_contiguous:
+            arr = cupy.ascontiguousarray(arr)
+        elif plan.order == 'F' and not arr.flags.f_contiguous:
+            arr = cupy.asfortranarray(arr)
+    return arr
+
 def _get_legend_text(ax):
     l = ax.get_legend()
     if l is None:
@@ -1335,13 +1343,17 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
                 if obj.cufft_plan.shape == Kd:
                     with obj.cufft_plan:
                         if n_reps == 1:
+                            xk = _consistent_contiguity(xk, obj.cufft_plan)
                             xk = cupy_fftn(xk, Kd, axes=axes, overwrite_x=True)
                         else:
                             xk_in = xk.copy()
                             xk = cupy.empty(Kd + (n_reps,), dtype=xk_in.dtype)
                             for rep in range(n_reps):
+                                x_rep = _consistent_contiguity(
+                                    xk_in[..., rep], obj.cufft_plan
+                                )
                                 xk[..., rep] = cupy_fftn(
-                                    xk_in[..., rep],
+                                    x_rep,
                                     Kd,
                                     axes=axes,
                                     overwrite_x=True,
@@ -1365,28 +1377,7 @@ def nufft_forward(obj, x, copy_x=True, grid_only=False, xp=None):
         x = obj.interp_table(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        if xp is np:
-            x = obj.p * xk  # [M, n_reps]
-        else:
-            # cannot use the notation above because it seems there is a bug in
-            # COO->CSC/CSR conversion that causes issues
-            # can avoid by calling cusparse.csrmv directly
-
-            # obj.p is CSC so use obj.p.T with transa=True to do a CSR multiplication
-            if obj.p_csr is not None:
-                if xk.ndim == 1:
-                    x = cupy.cusparse.csrmv(
-                        obj.p_csr, xk, transa=False
-                    )  # [*Kd,  n_reps]
-                else:
-                    x = cupy.cusparse.csrmm(obj.p_csr, xk, transa=False)
-            else:
-                if xk.ndim == 1:
-                    x = cupy.cusparse.csrmv(
-                        obj.p.T, xk, transa=True
-                    )  # [*Kd,  n_reps]
-                else:
-                    x = cupy.cusparse.csrmm(obj.p.T, xk, transa=True)
+        x = obj.p * xk  # [M, n_reps]
 
     x = xp.reshape(x, (obj.M, n_reps), order="F")
     if grid_only:
@@ -1507,17 +1498,7 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
         xk_all = obj.interp_table_adj(obj, xk)
     else:
         # interpolate using precomputed sparse matrix
-        if xp is np:
-            xk_all = obj.p.H * xk  # [*Kd, *L]
-        else:
-            # cannot use the notation above because it seems there is a bug in
-            # COO->CSC/CSR conversion that causes issues
-            # can avoid by calling cusparse.csrmv directly
-            if xk.ndim == 1:
-                # xk_all will have shape [*Kd, *L]
-                xk_all = cupy.cusparse.csrmv(obj.p.H, xk, transa=False)
-            else:
-                xk_all = cupy.cusparse.csrmm(obj.p.H, xk, transa=False)
+        xk_all = obj.p.H * xk  # [*Kd, *L]
 
     if grid_only:
         # return raw gridded samples prior to FFT and truncation
@@ -1542,12 +1523,16 @@ def nufft_adj(obj, xk, copy=True, return_psf=False, grid_only=False, xp=None):
             if obj.cufft_plan.shape == Kd:
                 with obj.cufft_plan:
                     if n_reps == 1:
+                        xk_all = _consistent_contiguity(xk_all, obj.cufft_plan)
                         x = cupy_ifftn(xk_all, Kd, axes=axes, overwrite_x=True)
                     else:
                         x = cupy.empty(Kd + (n_reps,), dtype=xk_all.dtype)
                         for rep in range(n_reps):
+                            xk_rep = _consistent_contiguity(
+                                xk_all[..., rep], obj.cufft_plan
+                            )
                             x[..., rep] = cupy_ifftn(
-                                xk_all[..., rep],
+                                xk_rep,
                                 Kd,
                                 axes=axes,
                                 overwrite_x=True,
